@@ -1,0 +1,100 @@
+"use client";
+
+import { useActionState } from "react";
+import {
+  updateIncomeAction,
+  updateNextPaycheckAction,
+} from "@/app/actions/monthly";
+import { formatCents } from "@/lib/money";
+import { initialFormState } from "@/lib/formActionState";
+
+export function DashboardPanel({
+  yearMonth,
+  incomeCents,
+  nextPaycheckDate,
+}: {
+  yearMonth: string;
+  incomeCents: number;
+  nextPaycheckDate: Date | null;
+}) {
+  const [incomeState, saveIncome, incomePending] = useActionState(
+    updateIncomeAction,
+    initialFormState,
+  );
+  const [payState, savePay, payPending] = useActionState(
+    updateNextPaycheckAction,
+    initialFormState,
+  );
+
+  const payInput =
+    nextPaycheckDate != null
+      ? nextPaycheckDate.toISOString().slice(0, 10)
+      : "";
+
+  return (
+    <div className="mt-4 space-y-6">
+      <form action={saveIncome} className="space-y-2">
+        <input type="hidden" name="yearMonth" value={yearMonth} />
+        <label className="text-sm font-medium" htmlFor="income">
+          Planned income this month
+        </label>
+        <div className="flex flex-wrap gap-2">
+          <input
+            id="income"
+            name="income"
+            type="text"
+            inputMode="decimal"
+            defaultValue={(incomeCents / 100).toFixed(2)}
+            className="min-w-[10rem] flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+          />
+          <button
+            type="submit"
+            disabled={incomePending}
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-60"
+          >
+            Save
+          </button>
+        </div>
+        {incomeState?.error ? (
+          <p className="text-sm text-red-600">{incomeState.error}</p>
+        ) : null}
+      </form>
+
+      <form action={savePay} className="space-y-2">
+        <label className="text-sm font-medium" htmlFor="nextPaycheck">
+          Next paycheck date
+        </label>
+        <p className="text-xs text-zinc-500">
+          Unpaid bills due on or before this date count toward &quot;bills before
+          next paycheck&quot;.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <input
+            id="nextPaycheck"
+            name="nextPaycheck"
+            type="date"
+            defaultValue={payInput}
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+          />
+          <button
+            type="submit"
+            disabled={payPending}
+            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+          >
+            Save
+          </button>
+        </div>
+        {payState?.error ? (
+          <p className="text-sm text-red-600">{payState.error}</p>
+        ) : null}
+      </form>
+
+      <p className="text-xs text-zinc-500">
+        Current income on file:{" "}
+        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+          {formatCents(incomeCents)}
+        </span>
+      </p>
+    </div>
+  );
+}

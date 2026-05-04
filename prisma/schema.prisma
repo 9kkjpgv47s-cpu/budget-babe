@@ -1,0 +1,117 @@
+// Household money app — SQLite for simple two-user self-hosting
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  expenses     Expense[]
+  receipts     Receipt[]
+}
+
+/// One row per calendar month (YYYY-MM) for income and rollups
+model MonthlyPeriod {
+  id           String   @id @default(cuid())
+  yearMonth    String   @unique
+  incomeCents  Int      @default(0)
+  notes        String?
+  expenses     Expense[]
+  bills        Bill[]
+  budgetPlans  BudgetPlan[]
+  receipts     Receipt[]
+}
+
+model Expense {
+  id              String        @id @default(cuid())
+  monthlyPeriodId String
+  monthlyPeriod   MonthlyPeriod @relation(fields: [monthlyPeriodId], references: [id], onDelete: Cascade)
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id])
+  amountCents     Int
+  description     String
+  spentAt         DateTime      @default(now())
+}
+
+model Bill {
+  id              String        @id @default(cuid())
+  monthlyPeriodId String
+  monthlyPeriod   MonthlyPeriod @relation(fields: [monthlyPeriodId], references: [id], onDelete: Cascade)
+  title           String
+  amountCents     Int
+  dueDate         DateTime
+  paid            Boolean       @default(false)
+}
+
+model BudgetPlan {
+  id              String        @id @default(cuid())
+  monthlyPeriodId String
+  monthlyPeriod   MonthlyPeriod @relation(fields: [monthlyPeriodId], references: [id], onDelete: Cascade)
+  name            String
+  category        String?
+  limitCents      Int
+  note            String?
+}
+
+model Receipt {
+  id              String         @id @default(cuid())
+  monthlyPeriodId String?
+  monthlyPeriod   MonthlyPeriod? @relation(fields: [monthlyPeriodId], references: [id])
+  userId          String?
+  user            User?          @relation(fields: [userId], references: [id])
+  filename        String
+  note            String?
+  totalCents      Int?
+  uploadedAt      DateTime       @default(now())
+}
+
+model ShoppingTrip {
+  id         String             @id @default(cuid())
+  storeName  String?
+  shoppedAt  DateTime           @default(now())
+  totalCents Int                @default(0)
+  items      ShoppingTripItem[]
+}
+
+model ShoppingTripItem {
+  id         String       @id @default(cuid())
+  tripId     String
+  trip       ShoppingTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  name       String
+  quantity   Int          @default(1)
+  priceCents Int?
+}
+
+model SavingsGoal {
+  id                String               @id @default(cuid())
+  title             String
+  targetAmountCents Int
+  savedAmountCents  Int                  @default(0)
+  deadline          DateTime?
+  adjustments       SpendingAdjustment[]
+}
+
+/// Planned cuts or extra savings toward a goal (monthly-style amount in cents)
+model SpendingAdjustment {
+  id            String       @id @default(cuid())
+  savingsGoalId String?
+  savingsGoal   SavingsGoal? @relation(fields: [savingsGoalId], references: [id])
+  label         String
+  amountCents   Int
+  startsOn      DateTime     @default(now())
+}
+
+/// Singleton row (id = 1) for shared household dates
+model HouseholdSettings {
+  id               Int       @id @default(1)
+  nextPaycheckDate DateTime?
+}
