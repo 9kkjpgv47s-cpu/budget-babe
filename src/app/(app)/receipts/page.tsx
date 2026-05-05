@@ -37,8 +37,9 @@ export default async function ReceiptsPage({
         <p className="mt-1 text-sm text-zinc-500">
           Upload photos or PDFs. <strong>Images</strong> are run through{" "}
           <span className="font-medium">Tesseract</span> OCR on the server.{" "}
-          <strong>PDFs</strong> use embedded text when available (scanned PDFs
-          need a photo for OCR).
+          <strong>PDFs</strong> use embedded text when there is enough of it;
+          otherwise the first pages are rendered and OCR’d (slower; long PDFs
+          may need a photo instead).
         </p>
         <p className="mt-2 text-sm">
           <Link href="/" className="text-emerald-600 underline">

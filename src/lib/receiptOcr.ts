@@ -3,6 +3,10 @@ import { readFile } from "fs/promises";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { parseMoneyToCents } from "@/lib/money";
+import {
+  extractPdfTextViaRasterOcr,
+  pdfHasRichEmbeddedText,
+} from "@/lib/pdfRasterOcr";
 
 export type ParsedReceiptLine = {
   description: string;
@@ -134,22 +138,50 @@ export async function processReceiptOcrFile(receiptId: string): Promise<void> {
 
     if (ext === ".pdf") {
       const buf = await readFile(filePath);
-      rawText = await extractPdfText(buf);
-      if (!rawText.trim()) {
-        await prisma.receipt.update({
-          where: { id: receiptId },
-          data: {
-            ocrStatus: "completed",
-            ocrRawText: "",
-            ocrParsedLines: JSON.stringify([]),
-            ocrConfidence: null,
-            ocrError:
-              "No embedded text found in this PDF (likely a scan). Use a photo instead for OCR.",
-          },
-        });
-        revalidatePath("/");
-        revalidatePath("/receipts");
-        return;
+      const embedded = await extractPdfText(buf);
+      if (pdfHasRichEmbeddedText(embedded)) {
+        rawText = embedded;
+        confidence = null;
+      } else {
+        try {
+          const raster = await extractPdfTextViaRasterOcr(buf);
+          rawText = raster.text.trim()
+            ? raster.text
+            : embedded.trim() || raster.text;
+          confidence = raster.confidence;
+          if (!rawText.trim()) {
+            await prisma.receipt.update({
+              where: { id: receiptId },
+              data: {
+                ocrStatus: "failed",
+                ocrError:
+                  "Could not read text from this PDF. If it is password-protected or unusual, try exporting as images or use a photo.",
+              },
+            });
+            revalidatePath("/");
+            revalidatePath("/receipts");
+            return;
+          }
+        } catch (pdfOcrErr) {
+          const hint =
+            pdfOcrErr instanceof Error ? pdfOcrErr.message : String(pdfOcrErr);
+          const isCanvas =
+            /canvas|Cannot find module 'canvas'/i.test(hint) ||
+            hint.includes("canvas");
+          await prisma.receipt.update({
+            where: { id: receiptId },
+            data: {
+              ocrStatus: "failed",
+              ocrError: isCanvas
+                ? "PDF page rendering needs the native `canvas` package installed on the server (e.g. `npm install canvas` with build tools). " +
+                  hint.slice(0, 400)
+                : hint.slice(0, 2000),
+            },
+          });
+          revalidatePath("/");
+          revalidatePath("/receipts");
+          return;
+        }
       }
     } else if (IMAGE_EXT.has(ext)) {
       const buf = await readFile(filePath);
