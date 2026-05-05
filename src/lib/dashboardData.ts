@@ -25,6 +25,8 @@ export async function getDashboardData(yearMonth: string) {
     where: { id: 1 },
   });
   const nextPay = settings?.nextPaycheckDate ?? null;
+  const savingsRatePercentTarget = settings?.savingsRatePercentTarget ?? 10;
+  const payPeriodsPerMonth = settings?.payPeriodsPerMonth ?? 2;
 
   const [expenses, bills, budgetPlans, receipts] = await Promise.all([
     prisma.expense.findMany({
@@ -75,5 +77,7 @@ export async function getDashboardData(yearMonth: string) {
     unpaidBillsSum,
     leftAfterUpcomingBills,
     leftAfterAllBills,
+    savingsRatePercentTarget,
+    payPeriodsPerMonth,
   };
 }

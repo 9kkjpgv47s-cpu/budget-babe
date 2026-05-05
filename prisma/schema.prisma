@@ -120,6 +120,10 @@ model SpendingAdjustment {
 
 /// Singleton row (id = 1) for shared household dates
 model HouseholdSettings {
-  id               Int       @id @default(1)
-  nextPaycheckDate DateTime?
+  id                       Int       @id @default(1)
+  nextPaycheckDate         DateTime?
+  /// Target percent of each paycheck to set aside (5, 10, …, 40)
+  savingsRatePercentTarget Int       @default(10)
+  /// How many paychecks fall in a typical month (splits monthly income for coach math)
+  payPeriodsPerMonth       Int       @default(2)
 }

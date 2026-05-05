@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { addMonths, format } from "date-fns";
 import { toggleBillPaidAction } from "@/app/actions/monthly";
 import { getDashboardData } from "@/lib/dashboardData";
@@ -88,6 +89,26 @@ export default async function HomePage({
           value={formatCents(data.leftAfterAllBills)}
           hint="Income minus spending minus every bill still marked unpaid"
         />
+      </section>
+
+      <section className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/30">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-medium text-emerald-900 dark:text-emerald-100">
+              Paycheck coach
+            </h2>
+            <p className="mt-1 text-sm text-emerald-800/90 dark:text-emerald-200/90">
+              Savings rate (5–40%), grocery and free-spending caps, and a two-week
+              bill plan after your next pay date.
+            </p>
+          </div>
+          <Link
+            href={`/coach?ym=${yearMonth}`}
+            className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+          >
+            Open coach
+          </Link>
+        </div>
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">

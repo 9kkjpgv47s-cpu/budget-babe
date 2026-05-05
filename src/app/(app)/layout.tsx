@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 
 const links = [
   { href: "/", label: "Overview" },
+  { href: "/coach", label: "Coach" },
   { href: "/receipts", label: "Receipts" },
   { href: "/shopping", label: "Shopping" },
   { href: "/goals", label: "Goals" },
