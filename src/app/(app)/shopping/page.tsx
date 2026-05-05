@@ -3,7 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { formatCents } from "@/lib/money";
 import { currentYearMonth } from "@/lib/yearMonth";
-import { buildShoppingSuggestions, estimateTripCostCents } from "@/lib/shoppingSuggest";
+import {
+  buildLastTripPrefill,
+  buildShoppingSuggestions,
+  buildTypicalStaplePrefill,
+  estimateTripCostCents,
+} from "@/lib/shoppingSuggest";
 import { deleteTripAction } from "@/app/actions/shopping";
 import { TripForm } from "./TripForm";
 
@@ -28,17 +33,26 @@ export default async function ShoppingPage() {
   });
 
   const { suggested, lastTripItemNames } = await buildShoppingSuggestions(12);
-  const estCost = await estimateTripCostCents(suggested.slice(0, 15));
+  const [staplesPrefill, lastTripPrefill] = await Promise.all([
+    buildTypicalStaplePrefill(15, 35),
+    buildLastTripPrefill(),
+  ]);
+  const estCost = estimateTripCostCents(
+    suggested.slice(0, 15).map((s) => ({
+      quantity: s.suggestedQty,
+      priceCents: s.avgPriceCents,
+    })),
+  );
 
   return (
     <div className="space-y-10">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Shopping memory</h1>
         <p className="mt-1 max-w-2xl text-sm text-zinc-500">
-          Log each grocery trip with line items. The app remembers what you buy
-          often and suggests a list based on trips you did not take yet this
-          cycle — items that used to show up regularly but were missing from
-          your last trip.
+          Log trips with line items. The form can pre-fill a <strong>usual basket</strong>{" "}
+          from items that repeat across past trips, <strong>repeat your last trip</strong>, or{" "}
+          <strong>append suggested picks</strong> you often buy but skipped last time — then
+          edit and save.
         </p>
         <p className="mt-2 text-sm">
           <Link href="/" className="text-emerald-600 underline">
@@ -115,7 +129,17 @@ export default async function ShoppingPage() {
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">Log a trip</h2>
-        <TripForm />
+        <p className="mt-1 text-xs text-zinc-500">
+          With history, the form starts as your <strong>usual basket</strong>. Use the
+          buttons to swap templates or add suggestions without retyping everything.
+        </p>
+        <div className="mt-4">
+          <TripForm
+            staplesPrefill={staplesPrefill}
+            lastTripPrefill={lastTripPrefill}
+            suggestedItems={suggested}
+          />
+        </div>
       </section>
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">

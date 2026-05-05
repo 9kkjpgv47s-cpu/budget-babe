@@ -19,6 +19,8 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000), register the first account, then the second (registration is blocked after two users).
 
+On **Shopping**, the trip form pre-fills a **usual basket** from items that repeat across recent trips. Use **Same as last trip** or **Add suggested picks** to avoid retyping; edit rows before saving.
+
 ### Production
 
 Set a long random `SESSION_PASSWORD` (32+ characters) in the environment. The app validates this at startup in production via `src/instrumentation.ts`.
