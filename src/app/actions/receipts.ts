@@ -2,6 +2,7 @@
 
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
@@ -34,14 +35,18 @@ export async function uploadReceiptCore(
   await mkdir(uploadDir, { recursive: true });
   const bytes = Buffer.from(await file.arrayBuffer());
   await writeFile(path.join(uploadDir, filename), bytes);
-  await prisma.receipt.create({
+  const rec = await prisma.receipt.create({
     data: {
       monthlyPeriodId: period.id,
       userId: user.userId,
       filename,
       note,
       totalCents: total,
+      ocrStatus: "pending",
     },
+  });
+  after(() => {
+    void import("@/lib/receiptOcr").then((m) => m.processReceiptOcrFile(rec.id));
   });
   revalidatePath("/");
   revalidatePath("/receipts");
@@ -60,6 +65,27 @@ export async function deleteReceiptAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await prisma.receipt.delete({ where: { id } });
+  revalidatePath("/");
+  revalidatePath("/receipts");
+}
+
+export async function reprocessReceiptOcrAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await prisma.receipt.update({
+    where: { id },
+    data: {
+      ocrStatus: "pending",
+      ocrError: null,
+      ocrRawText: null,
+      ocrParsedLines: null,
+      ocrConfidence: null,
+    },
+  });
+  after(() => {
+    void import("@/lib/receiptOcr").then((m) => m.processReceiptOcrFile(id));
+  });
   revalidatePath("/");
   revalidatePath("/receipts");
 }

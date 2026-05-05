@@ -72,6 +72,14 @@ model Receipt {
   note            String?
   totalCents      Int?
   uploadedAt      DateTime       @default(now())
+  /// pending | processing | completed | failed | skipped (e.g. unsupported type)
+  ocrStatus       String         @default("pending")
+  ocrError        String?
+  ocrRawText      String?
+  /// JSON array: [{ "description": string, "amountCents": number | null }]
+  ocrParsedLines  String?
+  /// 0–100 from Tesseract when available
+  ocrConfidence   Int?
 }
 
 model ShoppingTrip {

@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-import { formatCents } from "@/lib/money";
 import { currentYearMonth } from "@/lib/yearMonth";
-import { deleteReceiptAction } from "@/app/actions/receipts";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { ReceiptUploadForm } from "./ReceiptUploadForm";
+import { ReceiptListItem } from "./ReceiptOcrSection";
+import { OcrStatusPoller } from "./OcrStatusPoller";
 
 export default async function ReceiptsPage({
   searchParams,
@@ -25,13 +25,20 @@ export default async function ReceiptsPage({
     include: { user: { select: { name: true } } },
   });
 
+  const ocrPending = receipts.some(
+    (r) => r.ocrStatus === "pending" || r.ocrStatus === "processing",
+  );
+
   return (
     <div className="space-y-8">
+      <OcrStatusPoller active={ocrPending} />
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Receipts</h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Store images for expense tracking. Enter totals when you know them so
-          they show up on the overview.
+          Upload photos or PDFs. <strong>Images</strong> are run through{" "}
+          <span className="font-medium">Tesseract</span> OCR on the server.{" "}
+          <strong>PDFs</strong> use embedded text when available (scanned PDFs
+          need a photo for OCR).
         </p>
         <p className="mt-2 text-sm">
           <Link href="/" className="text-emerald-600 underline">
@@ -57,40 +64,7 @@ export default async function ReceiptsPage({
         <h2 className="font-medium">This month</h2>
         <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
           {receipts.map((r) => (
-            <li
-              key={r.id}
-              className="flex flex-wrap items-center justify-between gap-3 py-4 text-sm"
-            >
-              <div>
-                <a
-                  href={`/api/receipts/${r.id}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-medium text-emerald-700 underline dark:text-emerald-400"
-                >
-                  {r.filename}
-                </a>
-                <div className="text-xs text-zinc-500">
-                  {r.uploadedAt.toLocaleString()}
-                  {r.user ? ` · ${r.user.name}` : ""}
-                </div>
-                {r.totalCents != null ? (
-                  <div className="mt-1 font-medium tabular-nums">
-                    {formatCents(r.totalCents)}
-                  </div>
-                ) : null}
-                {r.note ? <div className="text-zinc-600">{r.note}</div> : null}
-              </div>
-              <form action={deleteReceiptAction}>
-                <input type="hidden" name="id" value={r.id} />
-                <button
-                  type="submit"
-                  className="text-xs text-red-600 underline hover:no-underline"
-                >
-                  Delete
-                </button>
-              </form>
-            </li>
+            <ReceiptListItem key={r.id} receipt={r} />
           ))}
         </ul>
         {receipts.length === 0 ? (

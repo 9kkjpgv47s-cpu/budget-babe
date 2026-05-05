@@ -25,6 +25,17 @@ Set a long random `SESSION_PASSWORD` (32+ characters) in the environment. The ap
 
 Receipt files are stored under `data/receipts/` (not in git) and served only to signed-in users via `/api/receipts/[id]`.
 
+### Receipt OCR
+
+After each upload, the server runs **OCR in the background** (`next/after`):
+
+- **Photos** (JPEG, PNG, WebP, GIF, BMP): [Tesseract.js](https://github.com/naptha/tesseract.js) extracts text. TIFF inputs are converted with Sharp first.
+- **PDFs**: [pdf-parse](https://www.npmjs.com/package/pdf-parse) reads **embedded** text only. Image-only (scanned) PDFs cannot be OCR’d with this stack; upload a **camera photo** instead for Tesseract.
+
+Parsed **line items** (description + trailing price) and a **likely total** (from keywords like `TOTAL`) are stored on the receipt row when the parser finds them. The Receipts page polls until processing finishes.
+
+First production deploy may download Tesseract language data on demand (~few MB for `eng`).
+
 ## PWA
 
 The app exposes a [Web App Manifest](https://developer.mozilla.org/en-US/docs/Web/Manifest) (`src/app/manifest.ts`). Install from the browser “Add to Home screen” on supported devices.
