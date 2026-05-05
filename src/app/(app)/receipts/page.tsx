@@ -35,11 +35,12 @@ export default async function ReceiptsPage({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Receipts</h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Upload photos or PDFs. <strong>Images</strong> are run through{" "}
-          <span className="font-medium">Tesseract</span> OCR on the server.{" "}
-          <strong>PDFs</strong> use embedded text when there is enough of it;
-          otherwise the first pages are rendered and OCR’d (slower; long PDFs
-          may need a photo instead).
+          <strong className="text-zinc-800 dark:text-zinc-200">
+            Use your camera or photo library
+          </strong>{" "}
+          for receipts — that is the path we optimize for (sharp picture, good
+          light). PDFs still work; scanned PDFs take longer and only the first
+          pages are OCR’d.
         </p>
         <p className="mt-2 text-sm">
           <Link href="/" className="text-emerald-600 underline">

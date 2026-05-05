@@ -29,10 +29,12 @@ Receipt files are stored under `data/receipts/` (not in git) and served only to 
 
 ### Receipt OCR
 
+**Recommended:** capture the receipt with your phone camera or pick a photo from your gallery (JPEG/PNG/WebP, etc.). That is the fastest and most reliable input.
+
 After each upload, the server runs **OCR in the background** (`next/after`):
 
-- **Photos** (JPEG, PNG, WebP, GIF, BMP): [Tesseract.js](https://github.com/naptha/tesseract.js) extracts text. TIFF inputs are converted with Sharp first.
-- **PDFs**: [pdf-parse](https://www.npmjs.com/package/pdf-parse) first reads **embedded** text. If the PDF looks like a scan (little or no text), the server **renders the first five pages** to images and runs **Tesseract** on each (requires the native [`canvas`](https://www.npmjs.com/package/canvas) package — on Linux you typically need `build-essential`, `libcairo2-dev`, `libpango1.0-dev`, `libjpeg-dev`, `libgif-dev`, and `librsvg2-dev` for `npm install` to compile it).
+- **Photos**: [Tesseract.js](https://github.com/naptha/tesseract.js) extracts text. TIFF inputs are converted with Sharp first.
+- **PDFs** (optional): [pdf-parse](https://www.npmjs.com/package/pdf-parse) reads **embedded** text when present; otherwise the server **renders the first five pages** and runs Tesseract (requires the native [`canvas`](https://www.npmjs.com/package/canvas) package — on Linux you typically need `build-essential`, `libcairo2-dev`, `libpango1.0-dev`, `libjpeg-dev`, `libgif-dev`, and `librsvg2-dev` for `npm install` to compile it).
 
 Parsed **line items** (description + trailing price) and a **likely total** (from keywords like `TOTAL`) are stored on the receipt row when the parser finds them. The Receipts page polls until processing finishes.
 

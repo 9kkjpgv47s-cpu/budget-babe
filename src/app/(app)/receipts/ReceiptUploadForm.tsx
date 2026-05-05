@@ -16,16 +16,22 @@ export function ReceiptUploadForm({ yearMonth }: { yearMonth: string }) {
       {state?.error ? (
         <p className="text-sm text-red-600">{state.error}</p>
       ) : null}
+      <p className="text-xs text-zinc-500">
+        <strong className="text-zinc-700 dark:text-zinc-300">Tip:</strong> a clear
+        photo of the receipt (camera or gallery) gives the fastest, most accurate
+        OCR. PDF is optional if you already have one.
+      </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label className="text-sm font-medium" htmlFor="file">
-            Photo or PDF
+            Receipt photo (recommended)
           </label>
           <input
             id="file"
             name="file"
             type="file"
             accept="image/*,application/pdf"
+            capture="environment"
             required
             className="mt-1 block w-full text-sm"
           />
