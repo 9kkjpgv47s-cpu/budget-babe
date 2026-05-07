@@ -8,7 +8,13 @@ import {
 } from "@/app/actions/monthly";
 import { initialFormState } from "@/lib/formActionState";
 
-export function QuickForms({ yearMonth }: { yearMonth: string }) {
+export function QuickForms({
+  yearMonth,
+  budgetPlans,
+}: {
+  yearMonth: string;
+  budgetPlans: { id: string; name: string }[];
+}) {
   const [expState, addExpense, expPending] = useActionState(
     addExpenseAction,
     initialFormState,
@@ -31,13 +37,35 @@ export function QuickForms({ yearMonth }: { yearMonth: string }) {
           <input
             name="description"
             placeholder="Coffee, gas, …"
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
           />
           <input
             name="amount"
             placeholder="Amount"
             inputMode="decimal"
             className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+          />
+          <select
+            name="budgetPlanId"
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            defaultValue=""
+          >
+            <option value="">Budget (optional)</option>
+            {budgetPlans.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <input
+            name="tags"
+            placeholder="Tags: groceries, work (comma)"
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
+          />
+          <input
+            name="splitGroupId"
+            placeholder="Split group id (optional, same for split lines)"
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
           />
           <button
             type="submit"

@@ -4,21 +4,16 @@ import { toggleBillPaidAction } from "@/app/actions/monthly";
 import { getDashboardData } from "@/lib/dashboardData";
 import { formatCents } from "@/lib/money";
 import { currentYearMonth, parseYearMonth } from "@/lib/yearMonth";
+import {
+  spentForBudgetPlan,
+  type BudgetPlanForRollup,
+  type ExpenseForRollup,
+} from "@/lib/budgetRollup";
 import { DashboardPanel } from "./DashboardPanel";
 import { QuickForms } from "./QuickForms";
 
 function shiftYearMonth(ym: string, delta: number) {
   return format(addMonths(parseYearMonth(ym), delta), "yyyy-MM");
-}
-
-function spentForBudget(
-  plan: { name: string; category: string | null },
-  expenses: { description: string; amountCents: number }[],
-) {
-  const needle = (plan.category || plan.name).toLowerCase();
-  return expenses
-    .filter((e) => e.description.toLowerCase().includes(needle))
-    .reduce((s, e) => s + e.amountCents, 0);
 }
 
 export default async function HomePage({
@@ -33,8 +28,21 @@ export default async function HomePage({
   const prevYm = shiftYearMonth(yearMonth, -1);
   const nextYm = shiftYearMonth(yearMonth, 1);
 
+  const expForRollup: ExpenseForRollup[] = data.expenses.map((e) => ({
+    id: e.id,
+    description: e.description,
+    amountCents: e.amountCents,
+    budgetPlanId: e.budgetPlanId,
+    tagsJson: e.tagsJson,
+  }));
+
   const budgetRows = data.budgetPlans.map((p) => {
-    const spent = spentForBudget(p, data.expenses);
+    const planR: BudgetPlanForRollup = {
+      id: p.id,
+      name: p.name,
+      category: p.category,
+    };
+    const spent = spentForBudgetPlan(planR, expForRollup);
     const remaining = p.limitCents - spent;
     return { plan: p, spent, remaining };
   });
@@ -125,7 +133,10 @@ export default async function HomePage({
           <p className="mt-1 text-sm text-zinc-500">
             Log spending, bills, and budget buckets for {yearMonth}.
           </p>
-          <QuickForms yearMonth={yearMonth} />
+          <QuickForms
+            yearMonth={yearMonth}
+            budgetPlans={data.budgetPlans.map((p) => ({ id: p.id, name: p.name }))}
+          />
         </div>
       </section>
 

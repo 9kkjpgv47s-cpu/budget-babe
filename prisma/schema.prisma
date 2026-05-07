@@ -40,6 +40,18 @@ model Expense {
   amountCents     Int
   description     String
   spentAt         DateTime      @default(now())
+  source          String        @default("manual")
+  /// Dedupe key for CSV imports (e.g. sha256 of date|amount|description)
+  importHash      String?
+  payee           String?
+  /// JSON string array of tags, e.g. ["groceries","work"]
+  tagsJson        String?
+  /// Same id groups split lines for one purchase
+  splitGroupId    String?
+  budgetPlanId    String?
+  budgetPlan      BudgetPlan?   @relation(fields: [budgetPlanId], references: [id], onDelete: SetNull)
+
+  @@index([monthlyPeriodId, importHash])
 }
 
 model Bill {
@@ -60,6 +72,27 @@ model BudgetPlan {
   category        String?
   limitCents      Int
   note            String?
+  expenses        Expense[]
+}
+
+/// Global: if expense description contains pattern, add tag (for budget rollups & filters)
+model MerchantRule {
+  id        String   @id @default(cuid())
+  pattern   String
+  tag       String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+/// Simple manual debt tracking (no bank sync)
+model DebtAccount {
+  id                  String   @id @default(cuid())
+  name                String
+  balanceCents        Int
+  minimumPaymentCents Int?
+  aprPercent          Float?
+  note                String?
+  createdAt           DateTime @default(now())
 }
 
 model Receipt {

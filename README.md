@@ -23,6 +23,14 @@ On **Shopping**, the trip form pre-fills a **usual basket** from items that repe
 
 **Paycheck coach** (`/coach`): set saving **5%–40%** of each paycheck and **paychecks per month**; get grocery and free-spending caps, a **two-week bill plan** after your next pay date, and short recommendations toward ending each check with extra.
 
+### Import, rules, exports, and insights
+
+- **`/import`**: paste a bank **CSV** (headers like Date, Amount, Description or Debit/Credit). Rows are deduped per month. **Merchant rules** (pattern → tag) run on import and on manual expenses; tags help match **budget lines** by name.
+- **Export**: while signed in, use **Download expenses CSV** / **Download bills CSV** on the Import page, or `GET /api/export/expenses?ym=YYYY-MM` and `GET /api/export/bills?ym=YYYY-MM`.
+- **`/flow`**: chronological view of income anchor, next paycheck, bills, and expenses.
+- **`/insights`**: spending by budget line (with bar strips), uncategorized total, and **often-repeated** merchants (possible subscriptions).
+- **`/debt`**: manual debt accounts (balance, optional minimum and APR) — no bank sync.
+
 ### Production
 
 Set a long random `SESSION_PASSWORD` (32+ characters) in the environment. The app validates this at startup in production via `src/instrumentation.ts`.

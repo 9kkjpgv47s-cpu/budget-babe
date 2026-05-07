@@ -9,6 +9,8 @@ import {
   ensureHouseholdSettings,
 } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
+import { mergeTagLists } from "@/lib/budgetRollup";
+import { applyMerchantRulesToTags } from "@/lib/merchantRules";
 
 async function periodFromYearMonth(yearMonth: string) {
   return getOrCreateMonthlyPeriod(yearMonth);
@@ -29,6 +31,7 @@ export async function updateIncomeCore(
     data: { incomeCents: income },
   });
   revalidatePath("/");
+  revalidatePath("/coach");
   return { ok: true };
 }
 
@@ -54,6 +57,7 @@ export async function updateNextPaycheckCore(
     data: { nextPaycheckDate },
   });
   revalidatePath("/");
+  revalidatePath("/coach");
   return { ok: true };
 }
 
@@ -75,15 +79,41 @@ export async function addExpenseCore(
     return { error: "Month, amount, and description are required." };
   }
   const period = await periodFromYearMonth(yearMonth);
+  const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
+  let budgetPlanId: string | null = budgetPlanIdRaw || null;
+  if (budgetPlanId) {
+    const plan = await prisma.budgetPlan.findFirst({
+      where: { id: budgetPlanId, monthlyPeriodId: period.id },
+    });
+    if (!plan) budgetPlanId = null;
+  }
+  const tagsRaw = String(formData.get("tags") ?? "")
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+  const manualTagsJson = tagsRaw.length ? mergeTagLists(tagsRaw) : null;
+  const tagsJson = await applyMerchantRulesToTags(
+    description,
+    manualTagsJson,
+  );
+  const splitGroupId =
+    String(formData.get("splitGroupId") ?? "").trim() || null;
+
   await prisma.expense.create({
     data: {
       monthlyPeriodId: period.id,
       userId: user.userId,
       amountCents: amount,
       description,
+      budgetPlanId,
+      tagsJson,
+      splitGroupId,
+      source: "manual",
     },
   });
   revalidatePath("/");
+  revalidatePath("/insights");
+  revalidatePath("/flow");
   return { ok: true };
 }
 
@@ -117,6 +147,9 @@ export async function addBillCore(formData: FormData): Promise<FormActionState> 
     },
   });
   revalidatePath("/");
+  revalidatePath("/insights");
+  revalidatePath("/flow");
+  revalidatePath("/coach");
   return { ok: true };
 }
 
@@ -137,6 +170,9 @@ export async function toggleBillPaidAction(formData: FormData): Promise<void> {
     data: { paid },
   });
   revalidatePath("/");
+  revalidatePath("/insights");
+  revalidatePath("/flow");
+  revalidatePath("/coach");
 }
 
 export async function addBudgetPlanCore(
@@ -162,6 +198,9 @@ export async function addBudgetPlanCore(
     },
   });
   revalidatePath("/");
+  revalidatePath("/insights");
+  revalidatePath("/flow");
+  revalidatePath("/coach");
   return { ok: true };
 }
 
