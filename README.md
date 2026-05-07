@@ -36,10 +36,12 @@ On **Shopping**, the trip form pre-fills a **usual basket** from items that repe
 
 - **`/import`**: paste **CSV** (optional 0-based column overrides), **OFX/QFX** (STMTTRN), or **QIF** (`!Type:Bank`). Same dedupe and merchant rules as CSV. **Split wizard** creates multiple lines with one shared split group id.
 - **Export**: while signed in, use **Download expenses CSV** / **Download bills CSV** on the Import page, or `GET /api/export/expenses?ym=YYYY-MM` and `GET /api/export/bills?ym=YYYY-MM`.
-- **`/expenses`**: list, **edit**, and **delete** transactions for the month.
+- **`/expenses`**: list, **edit**, and **delete** transactions for the month; **search** by description or payee (case-insensitive).
 - **`/flow`**: chronological view of income anchor, next paycheck, bills, and expenses.
 - **`/insights`**: spending by budget line (with bar strips), uncategorized total, and **often-repeated** merchants (possible subscriptions).
 - **`/debt`**: manual debt accounts with **in-place edit** (balance, minimum, APR) or remove.
+- Overview **bills**: **copy from last month** (due dates +1 month), **edit**, **delete**, and mark paid.
+- Overview **budget lines**: **delete** a line (linked expenses keep their amounts; budget link clears via schema).
 
 ### Production
 

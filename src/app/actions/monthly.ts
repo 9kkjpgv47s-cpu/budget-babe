@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { addMonths, format } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
@@ -8,6 +9,7 @@ import {
   getOrCreateMonthlyPeriod,
   ensureHouseholdSettings,
 } from "@/lib/dashboardData";
+import { parseYearMonth } from "@/lib/yearMonth";
 import type { FormActionState } from "@/lib/formActionState";
 import { mergeTagLists } from "@/lib/budgetRollup";
 import { applyMerchantRulesToTags } from "@/lib/merchantRules";
@@ -169,10 +171,79 @@ export async function toggleBillPaidAction(formData: FormData): Promise<void> {
     where: { id: billId },
     data: { paid },
   });
+  revalidateBills();
+}
+
+function revalidateBills() {
   revalidatePath("/");
   revalidatePath("/insights");
   revalidatePath("/flow");
   revalidatePath("/coach");
+}
+
+export async function updateBillAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const billId = String(formData.get("billId") ?? "");
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  const amount = parseMoneyToCents(String(formData.get("amount") ?? ""));
+  const dueRaw = String(formData.get("dueDate") ?? "").trim();
+  const paid = String(formData.get("paid") ?? "") === "on";
+  if (!billId || !yearMonth || !title || amount == null || !dueRaw) return;
+  const dueDate = new Date(dueRaw);
+  if (Number.isNaN(dueDate.getTime())) return;
+  const period = await periodFromYearMonth(yearMonth);
+  const bill = await prisma.bill.findFirst({
+    where: { id: billId, monthlyPeriodId: period.id },
+  });
+  if (!bill) return;
+  await prisma.bill.update({
+    where: { id: billId },
+    data: { title, amountCents: amount, dueDate, paid },
+  });
+  revalidateBills();
+}
+
+export async function deleteBillAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const billId = String(formData.get("billId") ?? "");
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  if (!billId || !yearMonth) return;
+  const period = await periodFromYearMonth(yearMonth);
+  await prisma.bill.deleteMany({
+    where: { id: billId, monthlyPeriodId: period.id },
+  });
+  revalidateBills();
+}
+
+/** Clone last month’s bills into this month with due dates shifted +1 calendar month. */
+export async function copyBillsFromPreviousMonthAction(
+  formData: FormData,
+): Promise<void> {
+  await requireUser();
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  if (!yearMonth.match(/^\d{4}-\d{2}$/)) return;
+  const prevYm = format(addMonths(parseYearMonth(yearMonth), -1), "yyyy-MM");
+  const [curPeriod, prevPeriod] = await Promise.all([
+    getOrCreateMonthlyPeriod(yearMonth),
+    prisma.monthlyPeriod.findUnique({ where: { yearMonth: prevYm } }),
+  ]);
+  if (!prevPeriod) return;
+  const prevBills = await prisma.bill.findMany({
+    where: { monthlyPeriodId: prevPeriod.id },
+  });
+  for (const b of prevBills) {
+    await prisma.bill.create({
+      data: {
+        monthlyPeriodId: curPeriod.id,
+        title: b.title,
+        amountCents: b.amountCents,
+        dueDate: addMonths(b.dueDate, 1),
+        paid: false,
+      },
+    });
+  }
+  revalidateBills();
 }
 
 export async function addBudgetPlanCore(

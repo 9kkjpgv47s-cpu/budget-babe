@@ -10,6 +10,8 @@ function rev(ym: string) {
   revalidatePath("/");
   revalidatePath("/insights");
   revalidatePath("/coach");
+  revalidatePath("/flow");
+  revalidatePath("/import");
   revalidatePath(`/expenses?ym=${ym}`);
   revalidatePath("/net-worth");
 }
@@ -40,5 +42,19 @@ export async function updateBudgetPlanAction(formData: FormData): Promise<void> 
       note,
     },
   });
+  rev(yearMonth);
+}
+
+export async function deleteBudgetPlanAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const id = String(formData.get("id") ?? "");
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  if (!id || !yearMonth) return;
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const existing = await prisma.budgetPlan.findFirst({
+    where: { id, monthlyPeriodId: period.id },
+  });
+  if (!existing) return;
+  await prisma.budgetPlan.delete({ where: { id } });
   rev(yearMonth);
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { addMonths, format } from "date-fns";
-import { toggleBillPaidAction } from "@/app/actions/monthly";
+import { prisma } from "@/lib/prisma";
 import { getDashboardData } from "@/lib/dashboardData";
 import { formatCents } from "@/lib/money";
 import { currentYearMonth, parseYearMonth } from "@/lib/yearMonth";
@@ -10,6 +10,7 @@ import {
   type BudgetPlanForRollup,
   type ExpenseForRollup,
 } from "@/lib/budgetRollup";
+import { BillRow, BillsSectionHeader } from "./BillRow";
 import { BudgetPlanRow } from "./BudgetPlanRow";
 import { DashboardPanel } from "./DashboardPanel";
 import { QuickForms } from "./QuickForms";
@@ -30,6 +31,9 @@ export default async function HomePage({
   const data = await getDashboardData(yearMonth);
   const prevYm = shiftYearMonth(yearMonth, -1);
   const nextYm = shiftYearMonth(yearMonth, 1);
+  const prevPeriodExists =
+    (await prisma.monthlyPeriod.findUnique({ where: { yearMonth: prevYm } })) !=
+    null;
 
   const expForRollup: ExpenseForRollup[] = data.expenses.map((e) => ({
     id: e.id,
@@ -188,34 +192,14 @@ export default async function HomePage({
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="font-medium">Bills</h2>
+          <BillsSectionHeader
+            yearMonth={yearMonth}
+            prevYm={prevYm}
+            hasPrevPeriod={prevPeriodExists}
+          />
           <ul className="mt-3 space-y-2 text-sm">
             {data.bills.map((b) => (
-              <li
-                key={b.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-100 px-3 py-2 dark:border-zinc-800"
-              >
-                <div>
-                  <div className="font-medium">{b.title}</div>
-                  <div className="text-xs text-zinc-500">
-                    Due {b.dueDate.toLocaleDateString()} ·{" "}
-                    {formatCents(b.amountCents)}
-                  </div>
-                </div>
-                <form action={toggleBillPaidAction}>
-                  <input type="hidden" name="billId" value={b.id} />
-                  <input type="hidden" name="paid" value={(!b.paid).toString()} />
-                  <button
-                    type="submit"
-                    className={`rounded-md px-2 py-1 text-xs font-medium ${
-                      b.paid
-                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
-                        : "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
-                    }`}
-                  >
-                    {b.paid ? "Paid" : "Mark paid"}
-                  </button>
-                </form>
-              </li>
+              <BillRow key={b.id} yearMonth={yearMonth} bill={b} />
             ))}
             {data.bills.length === 0 ? (
               <li className="text-zinc-500">No bills for this month.</li>

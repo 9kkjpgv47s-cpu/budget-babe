@@ -1,5 +1,5 @@
 import { formatCents } from "@/lib/money";
-import { updateBudgetPlanAction } from "@/app/actions/budgetPlan";
+import { deleteBudgetPlanAction, updateBudgetPlanAction } from "@/app/actions/budgetPlan";
 
 export function BudgetPlanRow({
   yearMonth,
@@ -87,6 +87,13 @@ export function BudgetPlanRow({
             className="sm:col-span-2 rounded bg-zinc-200 py-1 text-xs font-medium dark:bg-zinc-800"
           >
             Save
+          </button>
+        </form>
+        <form action={deleteBudgetPlanAction} className="mt-2">
+          <input type="hidden" name="yearMonth" value={yearMonth} />
+          <input type="hidden" name="id" value={plan.id} />
+          <button type="submit" className="text-xs text-red-600 underline hover:no-underline">
+            Delete budget line
           </button>
         </form>
       </details>

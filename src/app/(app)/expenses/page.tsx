@@ -25,23 +25,33 @@ function parseTagsDisplay(raw: string | null): string {
 export default async function ExpensesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ym?: string }>;
+  searchParams: Promise<{ ym?: string; q?: string }>;
 }) {
   await requireUser();
   const sp = await searchParams;
   const ym = sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
+  const q = (sp.q ?? "").trim();
   const period = await getOrCreateMonthlyPeriod(ym);
-  const [expenses, plans] = await Promise.all([
-    prisma.expense.findMany({
-      where: { monthlyPeriodId: period.id },
-      orderBy: { spentAt: "desc" },
-      include: { user: { select: { name: true } } },
-    }),
-    prisma.budgetPlan.findMany({
-      where: { monthlyPeriodId: period.id },
-      orderBy: { name: "asc" },
-    }),
-  ]);
+
+  const allExpenses = await prisma.expense.findMany({
+    where: { monthlyPeriodId: period.id },
+    orderBy: { spentAt: "desc" },
+    include: { user: { select: { name: true } } },
+  });
+  const ql = q.toLowerCase();
+  const expenses =
+    q.length > 0
+      ? allExpenses.filter(
+          (e) =>
+            e.description.toLowerCase().includes(ql) ||
+            (e.payee?.toLowerCase().includes(ql) ?? false),
+        )
+      : allExpenses;
+
+  const plans = await prisma.budgetPlan.findMany({
+    where: { monthlyPeriodId: period.id },
+    orderBy: { name: "asc" },
+  });
 
   return (
     <div className="space-y-6">
@@ -59,6 +69,29 @@ export default async function ExpensesPage({
             Import
           </Link>
         </p>
+        <form method="get" action="/expenses" className="mt-4 flex flex-wrap gap-2">
+          <input type="hidden" name="ym" value={ym} />
+          <input
+            name="q"
+            defaultValue={q}
+            placeholder="Search description or payee"
+            className="min-w-[12rem] flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+          />
+          <button
+            type="submit"
+            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900"
+          >
+            Search
+          </button>
+          {q ? (
+            <Link
+              href={`/expenses?ym=${ym}`}
+              className="self-center text-sm text-zinc-500 underline"
+            >
+              Clear
+            </Link>
+          ) : null}
+        </form>
       </div>
       <ul className="space-y-4">
         {expenses.map((e) => (
@@ -135,7 +168,11 @@ export default async function ExpensesPage({
         ))}
       </ul>
       {expenses.length === 0 ? (
-        <p className="text-sm text-zinc-500">No expenses this month.</p>
+        <p className="text-sm text-zinc-500">
+          {q && allExpenses.length > 0
+            ? "No expenses match your search."
+            : "No expenses this month."}
+        </p>
       ) : null}
     </div>
   );
