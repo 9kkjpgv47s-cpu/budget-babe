@@ -31,7 +31,8 @@ export function BillsSectionHeader({
         Copy bills from {prevYm}
       </button>
       <p className="mt-1 text-xs text-zinc-500">
-        Adds unpaid-style rows for this month; due dates move forward one month.
+        Skips a row if this month already has the same title, amount, and due
+        date (stops duplicate runs).
       </p>
     </form>
   );

@@ -1,13 +1,16 @@
 "use server";
 
+import { addMonths, format } from "date-fns";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
+import { parseYearMonth } from "@/lib/yearMonth";
 
 function rev(ym: string) {
   revalidatePath("/");
+  revalidatePath("/bills");
   revalidatePath("/insights");
   revalidatePath("/coach");
   revalidatePath("/flow");
@@ -56,5 +59,41 @@ export async function deleteBudgetPlanAction(formData: FormData): Promise<void> 
   });
   if (!existing) return;
   await prisma.budgetPlan.delete({ where: { id } });
+  rev(yearMonth);
+}
+
+/** Clone prior month’s budget lines (same name/category/limit/note); rolled-in = 0. */
+export async function copyBudgetPlansFromPreviousMonthAction(
+  formData: FormData,
+): Promise<void> {
+  await requireUser();
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  if (!yearMonth.match(/^\d{4}-\d{2}$/)) return;
+  const prevYm = format(addMonths(parseYearMonth(yearMonth), -1), "yyyy-MM");
+  const [curPeriod, prevPeriod] = await Promise.all([
+    getOrCreateMonthlyPeriod(yearMonth),
+    prisma.monthlyPeriod.findUnique({ where: { yearMonth: prevYm } }),
+  ]);
+  if (!prevPeriod) return;
+  const prevPlans = await prisma.budgetPlan.findMany({
+    where: { monthlyPeriodId: prevPeriod.id },
+    orderBy: { name: "asc" },
+  });
+  for (const p of prevPlans) {
+    const dup = await prisma.budgetPlan.findFirst({
+      where: { monthlyPeriodId: curPeriod.id, name: p.name },
+    });
+    if (dup) continue;
+    await prisma.budgetPlan.create({
+      data: {
+        monthlyPeriodId: curPeriod.id,
+        name: p.name,
+        category: p.category,
+        limitCents: p.limitCents,
+        rolledInCents: 0,
+        note: p.note,
+      },
+    });
+  }
   rev(yearMonth);
 }

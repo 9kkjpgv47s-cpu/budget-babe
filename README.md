@@ -40,8 +40,8 @@ On **Shopping**, the trip form pre-fills a **usual basket** from items that repe
 - **`/flow`**: chronological view of income anchor, next paycheck, bills, and expenses.
 - **`/insights`**: spending by budget line (with bar strips), uncategorized total, and **often-repeated** merchants (possible subscriptions).
 - **`/debt`**: manual debt accounts with **in-place edit** (balance, minimum, APR) or remove.
-- Overview **bills**: **copy from last month** (due dates +1 month), **edit**, **delete**, and mark paid.
-- Overview **budget lines**: **delete** a line (linked expenses keep their amounts; budget link clears via schema).
+- Overview **bills**: **copy from last month** (due dates +1 month; skips exact duplicates), **edit**, **delete**, and mark paid. Dedicated **`/bills?ym=`** page with month navigation.
+- Overview **budget lines**: **delete** a line; **copy lines from last month** (same name/limit/note; rolled-in zero; skips existing names). **Apply suggested rollovers** still sets rolled-in from unused balance.
 
 ### Production
 

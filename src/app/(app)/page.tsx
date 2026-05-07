@@ -10,6 +10,7 @@ import {
   type BudgetPlanForRollup,
   type ExpenseForRollup,
 } from "@/lib/budgetRollup";
+import { BudgetCopyHeader } from "./BudgetCopyHeader";
 import { BillRow, BillsSectionHeader } from "./BillRow";
 import { BudgetPlanRow } from "./BudgetPlanRow";
 import { DashboardPanel } from "./DashboardPanel";
@@ -172,6 +173,11 @@ export default async function HomePage({
             the same name.
           </p>
         </form>
+        <BudgetCopyHeader
+          yearMonth={yearMonth}
+          prevYm={prevYm}
+          hasPrevPeriod={prevPeriodExists}
+        />
         {budgetRows.length === 0 ? (
           <p className="mt-4 text-sm text-zinc-500">No budget lines yet.</p>
         ) : (
@@ -192,6 +198,11 @@ export default async function HomePage({
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="font-medium">Bills</h2>
+          <p className="mt-1 text-sm">
+            <Link href={`/bills?ym=${yearMonth}`} className="text-emerald-600 underline">
+              Full bills page
+            </Link>
+          </p>
           <BillsSectionHeader
             yearMonth={yearMonth}
             prevYm={prevYm}

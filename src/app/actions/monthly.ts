@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addMonths, format } from "date-fns";
+import { addMonths, endOfDay, format, startOfDay } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
@@ -148,10 +148,7 @@ export async function addBillCore(formData: FormData): Promise<FormActionState> 
       dueDate,
     },
   });
-  revalidatePath("/");
-  revalidatePath("/insights");
-  revalidatePath("/flow");
-  revalidatePath("/coach");
+  revalidateBills();
   return { ok: true };
 }
 
@@ -176,6 +173,7 @@ export async function toggleBillPaidAction(formData: FormData): Promise<void> {
 
 function revalidateBills() {
   revalidatePath("/");
+  revalidatePath("/bills");
   revalidatePath("/insights");
   revalidatePath("/flow");
   revalidatePath("/coach");
@@ -233,12 +231,25 @@ export async function copyBillsFromPreviousMonthAction(
     where: { monthlyPeriodId: prevPeriod.id },
   });
   for (const b of prevBills) {
+    const newDue = addMonths(b.dueDate, 1);
+    const dup = await prisma.bill.findFirst({
+      where: {
+        monthlyPeriodId: curPeriod.id,
+        title: b.title,
+        amountCents: b.amountCents,
+        dueDate: {
+          gte: startOfDay(newDue),
+          lte: endOfDay(newDue),
+        },
+      },
+    });
+    if (dup) continue;
     await prisma.bill.create({
       data: {
         monthlyPeriodId: curPeriod.id,
         title: b.title,
         amountCents: b.amountCents,
-        dueDate: addMonths(b.dueDate, 1),
+        dueDate: newDue,
         paid: false,
       },
     });
@@ -272,6 +283,7 @@ export async function addBudgetPlanCore(
     },
   });
   revalidatePath("/");
+  revalidatePath("/bills");
   revalidatePath("/insights");
   revalidatePath("/flow");
   revalidatePath("/coach");
