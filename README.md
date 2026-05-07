@@ -21,7 +21,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000), register the first account, then the second (registration is blocked after two users). Use **Household settings → Month notes** on the overview for shared reminders for the selected calendar month.
 
-On **Shopping**, the trip form pre-fills a **usual basket** from items that repeat across recent trips. Use **Same as last trip** or **Add suggested picks** to avoid retyping; edit rows before saving.
+On **Shopping**, the trip form pre-fills a **usual basket** from items that repeat across recent trips. Use **Same as last trip** or **Add suggested picks** to avoid retyping; edit rows before saving. **Duplicate as new trip** clones a saved trip in the list; **Start from last trip** (button or `/shopping?from=last`) opens the log form with your most recent trip’s lines as a new draft.
 
 **Paycheck coach** (`/coach`): set saving **5%–40%** of each paycheck and **paychecks per month**; get grocery and free-spending caps, a **two-week bill plan** after your next pay date, and short recommendations toward ending each check with extra.
 
