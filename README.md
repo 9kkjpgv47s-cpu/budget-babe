@@ -40,7 +40,7 @@ On **Shopping**, the trip form pre-fills a **usual basket** from items that repe
 
 - **`/import`**: paste **CSV** (optional 0-based column overrides), **OFX/QFX** (STMTTRN), or **QIF** (`!Type:Bank`). Same dedupe and merchant rules as CSV. **Split wizard** creates multiple lines with one shared split group id.
 - **Export**: while signed in, use **Download expenses CSV** / **Download bills CSV** / **Download budgets CSV** on the Import page, or `GET /api/export/expenses?ym=YYYY-MM`, `GET /api/export/bills?ym=YYYY-MM`, and `GET /api/export/budgets?ym=YYYY-MM`.
-- **`/expenses`**: list, **edit**, and **delete** transactions for the month; **search** by description or payee (case-insensitive).
+- **`/expenses`**: edit/delete; **search**; **bulk** append/replace tags and set/clear budget link on selected rows (checkboxes).
 - **`/flow`**: chronological view of income anchor, next paycheck, bills, and expenses.
 - **`/insights`**: spending by budget line (with bar strips), uncategorized total, and **often-repeated** merchants (possible subscriptions).
 - **`/debt`**: manual debt accounts with **in-place edit** (balance, minimum, APR) or remove.
@@ -51,7 +51,7 @@ On **Shopping**, the trip form pre-fills a **usual basket** from items that repe
 
 Set a long random `SESSION_PASSWORD` (32+ characters) in the environment. The app validates this at startup in production via `src/instrumentation.ts`.
 
-Receipt files are stored under `data/receipts/` (not in git) and served only to signed-in users via `/api/receipts/[id]`.
+Receipt files are stored under `data/receipts/` (not in git) and served only to signed-in users via `/api/receipts/[id]`. You can **move a receipt** to another month from the receipt list (month picker).
 
 ### Receipt OCR
 

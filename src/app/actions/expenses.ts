@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
-import { mergeTagLists } from "@/lib/budgetRollup";
+import { mergeTagLists, parseTagsJson } from "@/lib/budgetRollup";
 import { applyMerchantRulesToTags } from "@/lib/merchantRules";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 
@@ -18,6 +18,66 @@ function revalidateAll(yearMonth: string) {
   revalidatePath("/insights");
   revalidatePath("/flow");
   revalidatePath("/coach");
+}
+
+function parseExpenseIds(raw: string): string[] {
+  return raw
+    .split(/[\s,;]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+export async function bulkApplyTagsToExpensesAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  const ids = parseExpenseIds(String(formData.get("expenseIds") ?? ""));
+  const tagsRaw = String(formData.get("tags") ?? "")
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+  const tagMode = String(formData.get("tagMode") ?? "append");
+  if (!yearMonth || ids.length === 0 || tagsRaw.length === 0) return;
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  for (const id of ids) {
+    const exp = await prisma.expense.findFirst({
+      where: { id, monthlyPeriodId: period.id },
+    });
+    if (!exp) continue;
+    const manual =
+      tagMode === "replace"
+        ? mergeTagLists(tagsRaw)
+        : mergeTagLists(parseTagsJson(exp.tagsJson), tagsRaw);
+    const tagsJson = await applyMerchantRulesToTags(exp.description, manual);
+    await prisma.expense.update({ where: { id }, data: { tagsJson } });
+  }
+  revalidateAll(yearMonth);
+}
+
+export async function bulkSetBudgetForExpensesAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  const ids = parseExpenseIds(String(formData.get("expenseIds") ?? ""));
+  const raw = String(formData.get("bulkBudgetPlanId") ?? "").trim();
+  if (!yearMonth || ids.length === 0 || !raw) return;
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  let budgetPlanId: string | null = null;
+  if (raw === "none") {
+    budgetPlanId = null;
+  } else {
+    const plan = await prisma.budgetPlan.findFirst({
+      where: { id: raw, monthlyPeriodId: period.id },
+    });
+    if (!plan) return;
+    budgetPlanId = plan.id;
+  }
+  for (const id of ids) {
+    const exp = await prisma.expense.findFirst({
+      where: { id, monthlyPeriodId: period.id },
+    });
+    if (!exp) continue;
+    await prisma.expense.update({ where: { id }, data: { budgetPlanId } });
+  }
+  revalidateAll(yearMonth);
 }
 
 export async function updateExpenseAction(formData: FormData): Promise<void> {

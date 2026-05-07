@@ -14,11 +14,13 @@ Living checklist for the household budget PWA. Update this file when major capab
 - [x] Goals: add, update saved, **edit goal**, **delete adjustments**, delete goal
 - [x] Overview **savings goals** strip (top goals + link to `/goals`)
 
+- [x] Shopping: **duplicate trip** as a new draft (same lines, today’s date, “(copy)” in store name)
+- [x] Receipts: **move receipt** to another calendar month (±6 months picker)
+- [x] Expenses: **bulk tags** (append or replace) and **bulk budget link** (or clear) for selected rows
+
 ## Next (suggested)
 
-- [ ] Shopping: duplicate trip as template, or “copy last trip to new draft”
-- [ ] Receipts: assign receipt to a different month after upload
-- [ ] Expenses: bulk tag / bulk link to budget
+- [ ] Shopping: “copy last trip to new draft” one-click beside log form
 - [ ] Optional Plaid or file-based bank sync (high complexity; needs credentials)
 - [ ] PWA offline shell / push reminders (optional)
 

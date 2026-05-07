@@ -199,6 +199,29 @@ export async function createExpensesFromReceiptLinesAction(
   return { ok: true, message: `Posted ${created} expense line(s) with one split group.` };
 }
 
+export async function moveReceiptToMonthAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const receiptId = String(formData.get("receiptId") ?? "");
+  const targetYm = String(formData.get("targetYearMonth") ?? "").trim();
+  if (!receiptId || !targetYm.match(/^\d{4}-\d{2}$/)) return;
+  const rec = await prisma.receipt.findUnique({
+    where: { id: receiptId },
+    include: { monthlyPeriod: { select: { yearMonth: true } } },
+  });
+  if (!rec) return;
+  const oldYm = rec.monthlyPeriod?.yearMonth ?? null;
+  const period = await getOrCreateMonthlyPeriod(targetYm);
+  await prisma.receipt.update({
+    where: { id: receiptId },
+    data: { monthlyPeriodId: period.id },
+  });
+  revalidatePath("/receipts");
+  revalidateMoneyFromReceipt(targetYm);
+  if (oldYm && oldYm !== targetYm) {
+    revalidateMoneyFromReceipt(oldYm);
+  }
+}
+
 export async function deleteReceiptAction(formData: FormData): Promise<void> {
   await requireUser();
   const id = String(formData.get("id") ?? "");

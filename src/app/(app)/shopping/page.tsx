@@ -9,7 +9,7 @@ import {
   buildTypicalStaplePrefill,
   estimateTripCostCents,
 } from "@/lib/shoppingSuggest";
-import { deleteTripAction } from "@/app/actions/shopping";
+import { deleteTripAction, duplicateTripAction } from "@/app/actions/shopping";
 import { TripForm } from "./TripForm";
 import { TripEditForm } from "./TripEditForm";
 
@@ -163,7 +163,17 @@ export default async function ShoppingPage() {
                     Total tracked: {formatCents(t.totalCents)}
                   </div>
                 </div>
-                <form action={deleteTripAction}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <form action={duplicateTripAction}>
+                    <input type="hidden" name="tripId" value={t.id} />
+                    <button
+                      type="submit"
+                      className="text-xs text-emerald-700 underline hover:no-underline dark:text-emerald-400"
+                    >
+                      Duplicate as new trip
+                    </button>
+                  </form>
+                  <form action={deleteTripAction}>
                   <input type="hidden" name="tripId" value={t.id} />
                   <button
                     type="submit"
@@ -173,7 +183,8 @@ export default async function ShoppingPage() {
                   </button>
                 </form>
               </div>
-                <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
+              </div>
+              <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
                   {t.items.map((i) => (
                     <li key={i.id} className="text-zinc-700 dark:text-zinc-300">
                       {i.name}{" "}

@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { addMonths, format } from "date-fns";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth";
-import { currentYearMonth } from "@/lib/yearMonth";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
+import { requireUser } from "@/lib/auth";
+import { currentYearMonth, parseYearMonth } from "@/lib/yearMonth";
 import { ReceiptUploadForm } from "./ReceiptUploadForm";
 import { ReceiptListItem } from "./ReceiptOcrSection";
 import { OcrStatusPoller } from "./OcrStatusPoller";
@@ -18,6 +19,10 @@ export default async function ReceiptsPage({
     sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
 
   const period = await getOrCreateMonthlyPeriod(yearMonth);
+
+  const monthOptions = Array.from({ length: 13 }, (_, i) =>
+    format(addMonths(parseYearMonth(yearMonth), i - 6), "yyyy-MM"),
+  );
 
   const [receipts, budgetPlans] = await Promise.all([
     prisma.receipt.findMany({
@@ -78,6 +83,7 @@ export default async function ReceiptsPage({
               receipt={r}
               yearMonth={yearMonth}
               budgetPlans={budgetPlans}
+              monthOptions={monthOptions}
             />
           ))}
         </ul>

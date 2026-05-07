@@ -124,6 +124,37 @@ export async function updateFullTripAction(
   return updateFullTripCore(formData);
 }
 
+export async function duplicateTripAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const tripId = String(formData.get("tripId") ?? "");
+  if (!tripId) return;
+  const src = await prisma.shoppingTrip.findUnique({
+    where: { id: tripId },
+    include: { items: true },
+  });
+  if (!src) return;
+  const totalCents = src.items.reduce((s, it) => {
+    if (it.priceCents == null) return s;
+    return s + it.priceCents * it.quantity;
+  }, 0);
+  const baseName = src.storeName?.trim() || "Grocery trip";
+  await prisma.shoppingTrip.create({
+    data: {
+      storeName: `${baseName} (copy)`,
+      shoppedAt: new Date(),
+      totalCents,
+      items: {
+        create: src.items.map((it) => ({
+          name: it.name,
+          quantity: it.quantity,
+          priceCents: it.priceCents ?? undefined,
+        })),
+      },
+    },
+  });
+  revalidatePath("/shopping");
+}
+
 export async function deleteTripAction(formData: FormData): Promise<void> {
   await requireUser();
   const tripId = String(formData.get("tripId") ?? "");
