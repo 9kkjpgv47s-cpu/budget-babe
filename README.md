@@ -23,13 +23,23 @@ On **Shopping**, the trip form pre-fills a **usual basket** from items that repe
 
 **Paycheck coach** (`/coach`): set saving **5%–40%** of each paycheck and **paychecks per month**; get grocery and free-spending caps, a **two-week bill plan** after your next pay date, and short recommendations toward ending each check with extra.
 
-### Import, rules, exports, and insights
+### Net worth
 
-- **`/import`**: paste a bank **CSV** (headers like Date, Amount, Description or Debit/Credit). Rows are deduped per month. **Merchant rules** (pattern → tag) run on import and on manual expenses; tags help match **budget lines** by name.
+- **`/net-worth`**: manual **asset** and **liability** accounts, live totals, **record snapshot** history (no bank sync).
+
+### Envelope rollover
+
+- Each **budget line** has **rolled-in** cents plus the monthly limit. **Available** = rolled in + limit − matched spending.
+- Overview: **Apply suggested rollovers from previous month** sets rolled-in from the **same-named** line’s unused balance last month.
+
+### Import, rules, exports, insights, debt
+
+- **`/import`**: paste **CSV** (optional 0-based column overrides), **OFX/QFX** (STMTTRN), or **QIF** (`!Type:Bank`). Same dedupe and merchant rules as CSV. **Split wizard** creates multiple lines with one shared split group id.
 - **Export**: while signed in, use **Download expenses CSV** / **Download bills CSV** on the Import page, or `GET /api/export/expenses?ym=YYYY-MM` and `GET /api/export/bills?ym=YYYY-MM`.
+- **`/expenses`**: list, **edit**, and **delete** transactions for the month.
 - **`/flow`**: chronological view of income anchor, next paycheck, bills, and expenses.
 - **`/insights`**: spending by budget line (with bar strips), uncategorized total, and **often-repeated** merchants (possible subscriptions).
-- **`/debt`**: manual debt accounts (balance, optional minimum and APR) — no bank sync.
+- **`/debt`**: manual debt accounts with **in-place edit** (balance, minimum, APR) or remove.
 
 ### Production
 

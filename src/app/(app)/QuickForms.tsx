@@ -134,9 +134,15 @@ export function QuickForms({
             className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
           />
           <input
+            name="rolledIn"
+            placeholder="Rolled in (optional)"
+            inputMode="decimal"
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+          />
+          <input
             name="note"
             placeholder="Note (optional)"
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
           />
           <button
             type="submit"

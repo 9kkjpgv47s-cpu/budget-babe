@@ -16,6 +16,7 @@ export type CoachBudgetLine = {
   name: string;
   category: string | null;
   limitCents: number;
+  rolledInCents: number;
 };
 
 export type PaycheckCoachInput = {
@@ -72,7 +73,7 @@ function findGroceryLimit(plans: CoachBudgetLine[]): number | null {
       p.name.toLowerCase().includes("grocer") ||
       (p.category?.toLowerCase().includes("grocer") ?? false),
   );
-  return g?.limitCents ?? null;
+  return g ? g.limitCents + g.rolledInCents : null;
 }
 
 /**

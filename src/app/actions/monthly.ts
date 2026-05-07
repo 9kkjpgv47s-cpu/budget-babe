@@ -183,6 +183,8 @@ export async function addBudgetPlanCore(
   const name = String(formData.get("name") ?? "").trim();
   const category = String(formData.get("category") ?? "").trim() || null;
   const limit = parseMoneyToCents(String(formData.get("limit") ?? ""));
+  const rolledIn =
+    parseMoneyToCents(String(formData.get("rolledIn") ?? "0")) ?? 0;
   const note = String(formData.get("note") ?? "").trim() || null;
   if (!yearMonth || !name || limit == null) {
     return { error: "Name and limit are required." };
@@ -194,6 +196,7 @@ export async function addBudgetPlanCore(
       name,
       category,
       limitCents: limit,
+      rolledInCents: rolledIn,
       note,
     },
   });

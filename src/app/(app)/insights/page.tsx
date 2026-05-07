@@ -6,6 +6,7 @@ import { formatCents } from "@/lib/money";
 import {
   expenseMatchesBudgetPlan,
   spentForBudgetPlan,
+  envelopeRemaining,
   type BudgetPlanForRollup,
   type ExpenseForRollup,
 } from "@/lib/budgetRollup";
@@ -42,13 +43,16 @@ export default async function InsightsPage({
     id: p.id,
     name: p.name,
     category: p.category,
+    limitCents: p.limitCents,
+    rolledInCents: p.rolledInCents,
   }));
 
-  const byPlan = planRollup.map((p) => ({
-    plan: p,
-    spent: spentForBudgetPlan(p, expRollup),
-    limit: data.budgetPlans.find((x) => x.id === p.id)!.limitCents,
-  }));
+  const byPlan = planRollup.map((p) => {
+    const spent = spentForBudgetPlan(p, expRollup);
+    const cap = p.rolledInCents + p.limitCents;
+    const remaining = envelopeRemaining(p, spent);
+    return { plan: p, spent, cap, remaining };
+  });
 
   const uncategorized = data.expenses.filter(
     (e) => !planRollup.some((p) => expenseMatchesBudgetPlan(
@@ -80,7 +84,7 @@ export default async function InsightsPage({
 
   const maxBar = Math.max(
     1,
-    ...byPlan.map((b) => b.spent),
+    ...byPlan.map((b) => Math.max(b.spent, b.cap)),
     uncSum,
   );
 
@@ -102,15 +106,23 @@ export default async function InsightsPage({
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">By budget line</h2>
         <ul className="mt-4 space-y-3">
-          {byPlan.map(({ plan, spent, limit }) => {
+          {byPlan.map(({ plan, spent, cap, remaining }) => {
             const pct = Math.min(100, Math.round((spent / maxBar) * 100));
-            const over = spent > limit;
+            const over = spent > cap;
             return (
               <li key={plan.id}>
                 <div className="flex justify-between text-sm">
                   <span className="font-medium">{plan.name}</span>
                   <span className="tabular-nums text-zinc-600">
-                    {formatCents(spent)} / {formatCents(limit)}
+                    {formatCents(spent)} / {formatCents(cap)}
+                    <span className="text-xs text-zinc-500">
+                      {" "}
+                      (limit {formatCents(plan.limitCents)}
+                      {plan.rolledInCents > 0
+                        ? ` + in ${formatCents(plan.rolledInCents)}`
+                        : ""}
+                      )
+                    </span>
                   </span>
                 </div>
                 <div className="mt-1 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
@@ -119,6 +131,9 @@ export default async function InsightsPage({
                     style={{ width: `${pct}%` }}
                   />
                 </div>
+                <p className="mt-1 text-xs text-zinc-500">
+                  {remaining >= 0 ? "Left" : "Over"} {formatCents(Math.abs(remaining))} in envelope
+                </p>
               </li>
             );
           })}

@@ -6,11 +6,14 @@ import { formatCents } from "@/lib/money";
 import { currentYearMonth, parseYearMonth } from "@/lib/yearMonth";
 import {
   spentForBudgetPlan,
+  envelopeRemaining,
   type BudgetPlanForRollup,
   type ExpenseForRollup,
 } from "@/lib/budgetRollup";
+import { BudgetPlanRow } from "./BudgetPlanRow";
 import { DashboardPanel } from "./DashboardPanel";
 import { QuickForms } from "./QuickForms";
+import { applySuggestedRolloversAction } from "@/app/actions/rollover";
 
 function shiftYearMonth(ym: string, delta: number) {
   return format(addMonths(parseYearMonth(ym), delta), "yyyy-MM");
@@ -41,9 +44,11 @@ export default async function HomePage({
       id: p.id,
       name: p.name,
       category: p.category,
+      limitCents: p.limitCents,
+      rolledInCents: p.rolledInCents,
     };
     const spent = spentForBudgetPlan(planR, expForRollup);
-    const remaining = p.limitCents - spent;
+    const remaining = envelopeRemaining(planR, spent);
     return { plan: p, spent, remaining };
   });
 
@@ -131,7 +136,10 @@ export default async function HomePage({
         <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="font-medium">Quick add</h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Log spending, bills, and budget buckets for {yearMonth}.
+            Log spending, bills, and budget buckets for {yearMonth}.{" "}
+            <Link href={`/expenses?ym=${yearMonth}`} className="text-emerald-600 underline">
+              View all expenses
+            </Link>
           </p>
           <QuickForms
             yearMonth={yearMonth}
@@ -143,32 +151,35 @@ export default async function HomePage({
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">Budget plans</h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Spending is matched to a plan when the expense description contains the
-          plan name or optional category text (case insensitive).
+          Spending matches by description, tags, or linked budget on each
+          expense. Each line has a monthly limit plus optional{" "}
+          <strong>rolled-in</strong> balance from last month.
         </p>
+        <form action={applySuggestedRolloversAction} className="mt-3">
+          <input type="hidden" name="yearMonth" value={yearMonth} />
+          <button
+            type="submit"
+            className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100"
+          >
+            Apply suggested rollovers from {prevYm}
+          </button>
+          <p className="mt-1 text-xs text-zinc-500">
+            Sets rolled-in to unused balance from the prior month for lines with
+            the same name.
+          </p>
+        </form>
         {budgetRows.length === 0 ? (
           <p className="mt-4 text-sm text-zinc-500">No budget lines yet.</p>
         ) : (
           <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
             {budgetRows.map(({ plan, spent, remaining }) => (
-              <li
+              <BudgetPlanRow
                 key={plan.id}
-                className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"
-              >
-                <span className="font-medium">{plan.name}</span>
-                <span className="tabular-nums text-zinc-600 dark:text-zinc-400">
-                  {formatCents(spent)} / {formatCents(plan.limitCents)}
-                  <span
-                    className={
-                      remaining < 0 ? " text-red-600" : " text-emerald-600"
-                    }
-                  >
-                    {" "}
-                    ({remaining >= 0 ? "left " : "over "}
-                    {formatCents(Math.abs(remaining))})
-                  </span>
-                </span>
-              </li>
+                yearMonth={yearMonth}
+                plan={plan}
+                spent={spent}
+                remaining={remaining}
+              />
             ))}
           </ul>
         )}

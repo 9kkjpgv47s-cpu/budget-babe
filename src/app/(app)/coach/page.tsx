@@ -32,6 +32,7 @@ export default async function CoachPage({
       name: p.name,
       category: p.category,
       limitCents: p.limitCents,
+      rolledInCents: p.rolledInCents,
     })),
     monthSpendCents: data.spentTotal,
   });

@@ -72,6 +72,8 @@ model BudgetPlan {
   category        String?
   limitCents      Int
   note            String?
+  /// Money carried into this month for this envelope (from prior month or manual)
+  rolledInCents   Int           @default(0)
   expenses        Expense[]
 }
 
@@ -93,6 +95,29 @@ model DebtAccount {
   aprPercent          Float?
   note                String?
   createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+/// Manual asset/liability for net worth (no bank sync)
+model NetWorthAccount {
+  id           String   @id @default(cuid())
+  kind         String
+  name         String
+  balanceCents Int
+  sortOrder    Int      @default(0)
+  note         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+/// Point-in-time net worth (totals + optional JSON breakdown)
+model NetWorthSnapshot {
+  id               String   @id @default(cuid())
+  recordedAt       DateTime @default(now())
+  assetsCents      Int
+  liabilitiesCents Int
+  netCents         Int
+  note             String?
 }
 
 model Receipt {

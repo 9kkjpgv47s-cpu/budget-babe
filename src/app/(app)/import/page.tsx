@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { currentYearMonth } from "@/lib/yearMonth";
 import { deleteMerchantRuleAction, addMerchantRuleAction } from "@/app/actions/rules";
-import { CsvImportSection } from "./CsvImportSection";
+import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
+import { ImportBulkSection } from "./ImportBulkSection";
 
 export default async function ImportPage({
   searchParams,
@@ -17,15 +18,22 @@ export default async function ImportPage({
   const rules = await prisma.merchantRule.findMany({
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const budgetPlans = await prisma.budgetPlan.findMany({
+    where: { monthlyPeriodId: period.id },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
 
   return (
     <div className="space-y-10">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Import & rules</h1>
         <p className="mt-1 max-w-2xl text-sm text-zinc-500">
-          Paste bank CSV exports (Date, Amount, Description). Duplicates in the
-          same month are skipped. Rules add tags when a description contains your
-          pattern — tags help match budget lines by name.
+          Paste bank **CSV**, **OFX/QFX**, or **QIF** exports. Duplicates in the
+          same month are skipped. Optional column numbers fix weird CSV layouts.
+          Rules add tags when a description contains your pattern — tags help
+          match budget lines.
         </p>
         <p className="mt-2 text-sm">
           <Link href={`/?ym=${yearMonth}`} className="text-emerald-600 underline">
@@ -48,7 +56,7 @@ export default async function ImportPage({
         </p>
       </div>
 
-      <CsvImportSection yearMonth={yearMonth} />
+      <ImportBulkSection yearMonth={yearMonth} budgetPlans={budgetPlans} />
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">Merchant rules</h2>
