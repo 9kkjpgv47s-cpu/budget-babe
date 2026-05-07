@@ -50,6 +50,9 @@ model Expense {
   splitGroupId    String?
   budgetPlanId    String?
   budgetPlan      BudgetPlan?   @relation(fields: [budgetPlanId], references: [id], onDelete: SetNull)
+  /// Optional link when this row was posted from a receipt (one expense per receipt)
+  receiptId       String?       @unique
+  receipt         Receipt?      @relation(fields: [receiptId], references: [id], onDelete: SetNull)
 
   @@index([monthlyPeriodId, importHash])
 }
@@ -138,6 +141,7 @@ model Receipt {
   ocrParsedLines  String?
   /// 0–100 from Tesseract when available
   ocrConfidence   Int?
+  expenses        Expense[]
 }
 
 model ShoppingTrip {

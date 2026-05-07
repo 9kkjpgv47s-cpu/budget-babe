@@ -4,6 +4,7 @@ import {
   deleteReceiptAction,
   reprocessReceiptOcrAction,
 } from "@/app/actions/receipts";
+import { ReceiptPostExpenseForm } from "./ReceiptPostExpenseForm";
 
 type ReceiptRow = {
   id: string;
@@ -37,7 +38,15 @@ function statusBadge(status: string) {
   }
 }
 
-export function ReceiptOcrSection({ receipt }: { receipt: ReceiptRow }) {
+export function ReceiptOcrSection({
+  receipt,
+  yearMonth,
+  budgetPlans,
+}: {
+  receipt: ReceiptRow;
+  yearMonth: string;
+  budgetPlans: { id: string; name: string }[];
+}) {
   let parsed: ParsedReceiptLine[] = [];
   if (receipt.ocrParsedLines) {
     try {
@@ -106,11 +115,26 @@ export function ReceiptOcrSection({ receipt }: { receipt: ReceiptRow }) {
           </pre>
         </details>
       ) : null}
+      <ReceiptPostExpenseForm
+        receiptId={receipt.id}
+        yearMonth={yearMonth}
+        filename={receipt.filename}
+        totalCents={receipt.totalCents}
+        budgetPlans={budgetPlans}
+      />
     </div>
   );
 }
 
-export function ReceiptListItem({ receipt }: { receipt: ReceiptRow }) {
+export function ReceiptListItem({
+  receipt,
+  yearMonth,
+  budgetPlans,
+}: {
+  receipt: ReceiptRow;
+  yearMonth: string;
+  budgetPlans: { id: string; name: string }[];
+}) {
   return (
     <li className="flex flex-wrap items-start justify-between gap-3 py-4 text-sm">
       <div className="min-w-0 flex-1">
@@ -132,7 +156,7 @@ export function ReceiptListItem({ receipt }: { receipt: ReceiptRow }) {
           </div>
         ) : null}
         {receipt.note ? <div className="text-zinc-600">{receipt.note}</div> : null}
-        <ReceiptOcrSection receipt={receipt} />
+        <ReceiptOcrSection receipt={receipt} yearMonth={yearMonth} budgetPlans={budgetPlans} />
       </div>
       <form action={deleteReceiptAction}>
         <input type="hidden" name="id" value={receipt.id} />

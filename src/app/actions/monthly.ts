@@ -70,6 +70,23 @@ export async function updateNextPaycheckAction(
   return updateNextPaycheckCore(formData);
 }
 
+export async function updateMonthlyNotesAction(
+  _prev: FormActionState | undefined,
+  formData: FormData,
+): Promise<FormActionState> {
+  await requireUser();
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+  if (!yearMonth) return { error: "Missing month." };
+  const period = await periodFromYearMonth(yearMonth);
+  await prisma.monthlyPeriod.update({
+    where: { id: period.id },
+    data: { notes },
+  });
+  revalidatePath("/");
+  return { ok: true };
+}
+
 export async function addExpenseCore(
   formData: FormData,
 ): Promise<FormActionState> {

@@ -19,11 +19,18 @@ export default async function ReceiptsPage({
 
   const period = await getOrCreateMonthlyPeriod(yearMonth);
 
-  const receipts = await prisma.receipt.findMany({
-    where: { monthlyPeriodId: period.id },
-    orderBy: { uploadedAt: "desc" },
-    include: { user: { select: { name: true } } },
-  });
+  const [receipts, budgetPlans] = await Promise.all([
+    prisma.receipt.findMany({
+      where: { monthlyPeriodId: period.id },
+      orderBy: { uploadedAt: "desc" },
+      include: { user: { select: { name: true } } },
+    }),
+    prisma.budgetPlan.findMany({
+      where: { monthlyPeriodId: period.id },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   const ocrPending = receipts.some(
     (r) => r.ocrStatus === "pending" || r.ocrStatus === "processing",
@@ -66,7 +73,12 @@ export default async function ReceiptsPage({
         <h2 className="font-medium">This month</h2>
         <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
           {receipts.map((r) => (
-            <ReceiptListItem key={r.id} receipt={r} />
+            <ReceiptListItem
+              key={r.id}
+              receipt={r}
+              yearMonth={yearMonth}
+              budgetPlans={budgetPlans}
+            />
           ))}
         </ul>
         {receipts.length === 0 ? (

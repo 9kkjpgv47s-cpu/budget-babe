@@ -53,6 +53,13 @@ export default async function ImportPage({
           >
             Download bills CSV
           </a>
+          {" · "}
+          <a
+            href={`/api/export/budgets?ym=${yearMonth}`}
+            className="text-emerald-600 underline"
+          >
+            Download budgets CSV
+          </a>
         </p>
       </div>
 

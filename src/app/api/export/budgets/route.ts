@@ -21,36 +21,26 @@ export async function GET(request: Request) {
     return new NextResponse("Missing ym", { status: 400 });
   }
   const period = await getOrCreateMonthlyPeriod(ym);
-  const rows = await prisma.expense.findMany({
+  const rows = await prisma.budgetPlan.findMany({
     where: { monthlyPeriodId: period.id },
-    orderBy: { spentAt: "asc" },
-    include: { user: { select: { name: true } } },
+    orderBy: { name: "asc" },
   });
   const header = [
-    "date",
-    "amount_dollars",
-    "description",
-    "payee",
-    "tags_json",
-    "budget_plan_id",
-    "receipt_id",
-    "source",
-    "user",
+    "name",
+    "category",
+    "limit_dollars",
+    "rolled_in_dollars",
+    "note",
   ];
   const lines = [header.join(",")];
   for (const r of rows) {
-    const amt = (r.amountCents / 100).toFixed(2);
     lines.push(
       [
-        r.spentAt.toISOString().slice(0, 10),
-        amt,
-        csvEscape(r.description),
-        csvEscape(r.payee ?? ""),
-        csvEscape(r.tagsJson ?? ""),
-        r.budgetPlanId ?? "",
-        r.receiptId ?? "",
-        r.source,
-        csvEscape(r.user?.name ?? ""),
+        csvEscape(r.name),
+        csvEscape(r.category ?? ""),
+        (r.limitCents / 100).toFixed(2),
+        (r.rolledInCents / 100).toFixed(2),
+        csvEscape(r.note ?? ""),
       ].join(","),
     );
   }
@@ -58,7 +48,7 @@ export async function GET(request: Request) {
   return new NextResponse(body, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="expenses-${ym}.csv"`,
+      "Content-Disposition": `attachment; filename="budgets-${ym}.csv"`,
     },
   });
 }

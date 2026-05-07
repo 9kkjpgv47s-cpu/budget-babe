@@ -9,6 +9,20 @@ import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
+import { applyMerchantRulesToTags } from "@/lib/merchantRules";
+
+function revalidateMoneyFromReceipt(yearMonth: string) {
+  revalidatePath("/");
+  revalidatePath("/receipts");
+  revalidatePath("/expenses");
+  revalidatePath(`/expenses?ym=${yearMonth}`);
+  revalidatePath("/insights");
+  revalidatePath("/flow");
+  revalidatePath("/coach");
+  revalidatePath("/budgets");
+  revalidatePath("/bills");
+  revalidatePath("/import");
+}
 
 export async function uploadReceiptCore(
   formData: FormData,
@@ -48,8 +62,7 @@ export async function uploadReceiptCore(
   after(() => {
     void import("@/lib/receiptOcr").then((m) => m.processReceiptOcrFile(rec.id));
   });
-  revalidatePath("/");
-  revalidatePath("/receipts");
+  revalidateMoneyFromReceipt(yearMonth);
   return { ok: true };
 }
 
@@ -60,13 +73,75 @@ export async function uploadReceiptAction(
   return uploadReceiptCore(formData);
 }
 
+export async function createExpenseFromReceiptAction(
+  _prev: FormActionState | undefined,
+  formData: FormData,
+): Promise<FormActionState> {
+  const user = await requireUser();
+  const receiptId = String(formData.get("receiptId") ?? "");
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  const amountRaw = String(formData.get("amount") ?? "").trim();
+  let description = String(formData.get("description") ?? "").trim();
+  const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
+  if (!receiptId || !yearMonth.match(/^\d{4}-\d{2}$/)) {
+    return { error: "Missing receipt or month." };
+  }
+  const receipt = await prisma.receipt.findUnique({ where: { id: receiptId } });
+  if (!receipt) return { error: "Receipt not found." };
+  const dup = await prisma.expense.findUnique({ where: { receiptId } });
+  if (dup) return { error: "This receipt already has a linked expense." };
+  let amountCents = parseMoneyToCents(amountRaw);
+  if (amountCents == null && receipt.totalCents != null && receipt.totalCents > 0) {
+    amountCents = receipt.totalCents;
+  }
+  if (amountCents == null || amountCents <= 0) {
+    return {
+      error: "Enter an amount in dollars, or wait for OCR to set a receipt total.",
+    };
+  }
+  if (!description) description = `Receipt: ${receipt.filename}`;
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  let budgetPlanId: string | null = budgetPlanIdRaw || null;
+  if (budgetPlanId) {
+    const plan = await prisma.budgetPlan.findFirst({
+      where: { id: budgetPlanId, monthlyPeriodId: period.id },
+    });
+    if (!plan) budgetPlanId = null;
+  }
+  const tagsJson = await applyMerchantRulesToTags(description, null);
+  await prisma.expense.create({
+    data: {
+      monthlyPeriodId: period.id,
+      userId: user.userId,
+      amountCents,
+      description,
+      spentAt: new Date(),
+      source: "ocr",
+      receiptId,
+      budgetPlanId,
+      tagsJson,
+    },
+  });
+  revalidateMoneyFromReceipt(yearMonth);
+  return { ok: true };
+}
+
 export async function deleteReceiptAction(formData: FormData): Promise<void> {
   await requireUser();
   const id = String(formData.get("id") ?? "");
   if (!id) return;
+  const existing = await prisma.receipt.findUnique({
+    where: { id },
+    include: { monthlyPeriod: { select: { yearMonth: true } } },
+  });
   await prisma.receipt.delete({ where: { id } });
-  revalidatePath("/");
-  revalidatePath("/receipts");
+  const ym = existing?.monthlyPeriod?.yearMonth;
+  if (ym) revalidateMoneyFromReceipt(ym);
+  else {
+    revalidatePath("/");
+    revalidatePath("/receipts");
+    revalidatePath("/expenses");
+  }
 }
 
 export async function reprocessReceiptOcrAction(formData: FormData): Promise<void> {
