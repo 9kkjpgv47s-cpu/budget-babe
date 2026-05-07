@@ -2,6 +2,8 @@
 
 Private money app for **two people in one household**: monthly income and spending, bills due before the next paycheck, budget lines, receipt uploads, grocery trip memory with suggested lists, and savings goals with spending adjustments.
 
+See **[ROADMAP.md](./ROADMAP.md)** for shipped vs planned features.
+
 ## Stack
 
 - Next.js 15 (App Router), React 19, Tailwind CSS 4
@@ -60,7 +62,7 @@ After each upload, the server runs **OCR in the background** (`next/after`):
 - **Photos**: [Tesseract.js](https://github.com/naptha/tesseract.js) extracts text. TIFF inputs are converted with Sharp first.
 - **PDFs** (optional): [pdf-parse](https://www.npmjs.com/package/pdf-parse) reads **embedded** text when present; otherwise the server **renders the first five pages** and runs Tesseract (requires the native [`canvas`](https://www.npmjs.com/package/canvas) package — on Linux you typically need `build-essential`, `libcairo2-dev`, `libpango1.0-dev`, `libjpeg-dev`, `libgif-dev`, and `librsvg2-dev` for `npm install` to compile it).
 
-Parsed **line items** (description + trailing price) and a **likely total** (from keywords like `TOTAL`) are stored on the receipt row when the parser finds them. The Receipts page polls until processing finishes. You can **post an expense** from a receipt (links one expense per receipt; uses OCR total if you leave amount blank).
+Parsed **line items** (description + trailing price) and a **likely total** (from keywords like `TOTAL`) are stored on the receipt row when the parser finds them. The Receipts page polls until processing finishes. You can **post an expense** from a receipt (uses OCR total if amount is blank), or **post all parsed lines** as linked split expenses when amounts exist.
 
 First production deploy may download Tesseract language data on demand (~few MB for `eng`).
 

@@ -50,11 +50,12 @@ model Expense {
   splitGroupId    String?
   budgetPlanId    String?
   budgetPlan      BudgetPlan?   @relation(fields: [budgetPlanId], references: [id], onDelete: SetNull)
-  /// Optional link when this row was posted from a receipt (one expense per receipt)
-  receiptId       String?       @unique
+  /// Optional link when this row was posted from a receipt (may share receipt with split lines)
+  receiptId       String?
   receipt         Receipt?      @relation(fields: [receiptId], references: [id], onDelete: SetNull)
 
   @@index([monthlyPeriodId, importHash])
+  @@index([receiptId])
 }
 
 model Bill {

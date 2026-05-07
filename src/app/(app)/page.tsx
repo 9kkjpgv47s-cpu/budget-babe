@@ -129,6 +129,43 @@ export default async function HomePage({
         </div>
       </section>
 
+      {data.savingsGoals.length > 0 ? (
+        <section className="rounded-xl border border-violet-200 bg-violet-50/50 p-4 dark:border-violet-900/40 dark:bg-violet-950/20">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-medium text-violet-900 dark:text-violet-100">
+                Savings goals
+              </h2>
+              <ul className="mt-2 space-y-1 text-sm text-violet-950/90 dark:text-violet-100/90">
+                {data.savingsGoals.map((g) => {
+                  const pct =
+                    g.targetAmountCents > 0
+                      ? Math.min(
+                          100,
+                          Math.round(
+                            (g.savedAmountCents / g.targetAmountCents) * 100,
+                          ),
+                        )
+                      : 0;
+                  return (
+                    <li key={g.id} className="flex justify-between gap-2 tabular-nums">
+                      <span>{g.title}</span>
+                      <span>{pct}% saved</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+            <Link
+              href="/goals"
+              className="shrink-0 rounded-lg bg-violet-700 px-4 py-2 text-sm font-medium text-white hover:bg-violet-600 dark:bg-violet-500 dark:hover:bg-violet-400"
+            >
+              View goals
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="font-medium">Household settings</h2>

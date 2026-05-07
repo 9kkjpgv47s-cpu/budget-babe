@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { after } from "next/server";
@@ -10,6 +11,7 @@ import { parseMoneyToCents } from "@/lib/money";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
 import { applyMerchantRulesToTags } from "@/lib/merchantRules";
+import type { ParsedReceiptLine } from "@/lib/receiptOcr";
 
 function revalidateMoneyFromReceipt(yearMonth: string) {
   revalidatePath("/");
@@ -88,8 +90,13 @@ export async function createExpenseFromReceiptAction(
   }
   const receipt = await prisma.receipt.findUnique({ where: { id: receiptId } });
   if (!receipt) return { error: "Receipt not found." };
-  const dup = await prisma.expense.findUnique({ where: { receiptId } });
-  if (dup) return { error: "This receipt already has a linked expense." };
+  const dup = await prisma.expense.findFirst({ where: { receiptId } });
+  if (dup) {
+    return {
+      error:
+        "This receipt already has linked expenses. Remove them in Expenses before posting again.",
+    };
+  }
   let amountCents = parseMoneyToCents(amountRaw);
   if (amountCents == null && receipt.totalCents != null && receipt.totalCents > 0) {
     amountCents = receipt.totalCents;
@@ -124,6 +131,72 @@ export async function createExpenseFromReceiptAction(
   });
   revalidateMoneyFromReceipt(yearMonth);
   return { ok: true };
+}
+
+export async function createExpensesFromReceiptLinesAction(
+  _prev: FormActionState | undefined,
+  formData: FormData,
+): Promise<FormActionState> {
+  const user = await requireUser();
+  const receiptId = String(formData.get("receiptId") ?? "");
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  if (!receiptId || !yearMonth.match(/^\d{4}-\d{2}$/)) {
+    return { error: "Missing receipt or month." };
+  }
+  const dup = await prisma.expense.findFirst({ where: { receiptId } });
+  if (dup) {
+    return {
+      error:
+        "This receipt already has linked expenses. Remove them in Expenses before posting parsed lines.",
+    };
+  }
+  const receipt = await prisma.receipt.findUnique({ where: { id: receiptId } });
+  if (!receipt?.ocrParsedLines?.trim()) {
+    return { error: "No parsed lines on this receipt." };
+  }
+  let parsed: ParsedReceiptLine[];
+  try {
+    parsed = JSON.parse(receipt.ocrParsedLines) as ParsedReceiptLine[];
+    if (!Array.isArray(parsed)) return { error: "Invalid parsed lines data." };
+  } catch {
+    return { error: "Could not read parsed lines." };
+  }
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const splitGroupId = randomUUID();
+  let created = 0;
+  for (const line of parsed) {
+    const cents =
+      typeof line.amountCents === "number" && line.amountCents > 0
+        ? line.amountCents
+        : null;
+    if (cents == null) continue;
+    const desc =
+      String(line.description ?? "Receipt item").trim().slice(0, 500) ||
+      "Receipt item";
+    const tagsJson = await applyMerchantRulesToTags(desc, null);
+    await prisma.expense.create({
+      data: {
+        monthlyPeriodId: period.id,
+        userId: user.userId,
+        amountCents: cents,
+        description: desc,
+        spentAt: new Date(),
+        source: "ocr",
+        receiptId,
+        splitGroupId,
+        tagsJson,
+      },
+    });
+    created++;
+  }
+  if (created === 0) {
+    return {
+      error:
+        "No lines with positive amounts. Use the total form, fix OCR, or re-run OCR.",
+    };
+  }
+  revalidateMoneyFromReceipt(yearMonth);
+  return { ok: true, message: `Posted ${created} expense line(s) with one split group.` };
 }
 
 export async function deleteReceiptAction(formData: FormData): Promise<void> {

@@ -5,6 +5,7 @@ import {
   reprocessReceiptOcrAction,
 } from "@/app/actions/receipts";
 import { ReceiptPostExpenseForm } from "./ReceiptPostExpenseForm";
+import { ReceiptBatchExpensesForm } from "./ReceiptBatchExpensesForm";
 
 type ReceiptRow = {
   id: string;
@@ -56,6 +57,10 @@ export function ReceiptOcrSection({
       parsed = [];
     }
   }
+
+  const linesWithAmount = parsed.filter(
+    (l) => typeof l.amountCents === "number" && l.amountCents > 0,
+  );
 
   return (
     <div className="mt-3 w-full space-y-2 border-t border-zinc-100 pt-3 text-xs dark:border-zinc-800">
@@ -114,6 +119,13 @@ export function ReceiptOcrSection({
             {receipt.ocrRawText}
           </pre>
         </details>
+      ) : null}
+      {linesWithAmount.length > 0 ? (
+        <ReceiptBatchExpensesForm
+          receiptId={receipt.id}
+          yearMonth={yearMonth}
+          lineCount={linesWithAmount.length}
+        />
       ) : null}
       <ReceiptPostExpenseForm
         receiptId={receipt.id}

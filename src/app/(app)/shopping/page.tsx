@@ -11,6 +11,7 @@ import {
 } from "@/lib/shoppingSuggest";
 import { deleteTripAction } from "@/app/actions/shopping";
 import { TripForm } from "./TripForm";
+import { TripEditForm } from "./TripEditForm";
 
 export default async function ShoppingPage() {
   await requireUser();
@@ -172,19 +173,20 @@ export default async function ShoppingPage() {
                   </button>
                 </form>
               </div>
-              <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
-                {t.items.map((i) => (
-                  <li key={i.id} className="text-zinc-700 dark:text-zinc-300">
-                    {i.name}{" "}
-                    <span className="text-zinc-400">
-                      ×{i.quantity}
-                      {i.priceCents != null
-                        ? ` @ ${formatCents(i.priceCents)}`
-                        : ""}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+                <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
+                  {t.items.map((i) => (
+                    <li key={i.id} className="text-zinc-700 dark:text-zinc-300">
+                      {i.name}{" "}
+                      <span className="text-zinc-400">
+                        ×{i.quantity}
+                        {i.priceCents != null
+                          ? ` @ ${formatCents(i.priceCents)}`
+                          : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <TripEditForm trip={t} />
             </li>
           ))}
         </ul>

@@ -28,7 +28,7 @@ export async function getDashboardData(yearMonth: string) {
   const savingsRatePercentTarget = settings?.savingsRatePercentTarget ?? 10;
   const payPeriodsPerMonth = settings?.payPeriodsPerMonth ?? 2;
 
-  const [expenses, bills, budgetPlans, receipts] = await Promise.all([
+  const [expenses, bills, budgetPlans, receipts, savingsGoals] = await Promise.all([
     prisma.expense.findMany({
       where: { monthlyPeriodId: period.id },
       orderBy: { spentAt: "desc" },
@@ -46,6 +46,16 @@ export async function getDashboardData(yearMonth: string) {
       where: { monthlyPeriodId: period.id },
       orderBy: { uploadedAt: "desc" },
       take: 20,
+    }),
+    prisma.savingsGoal.findMany({
+      orderBy: { title: "asc" },
+      take: 5,
+      select: {
+        id: true,
+        title: true,
+        targetAmountCents: true,
+        savedAmountCents: true,
+      },
     }),
   ]);
 
@@ -79,5 +89,6 @@ export async function getDashboardData(yearMonth: string) {
     leftAfterAllBills,
     savingsRatePercentTarget,
     payPeriodsPerMonth,
+    savingsGoals,
   };
 }
