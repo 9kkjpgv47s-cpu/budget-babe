@@ -16,6 +16,8 @@ import type { FormActionState } from "@/lib/formActionState";
 
 function rev(yearMonth: string) {
   revalidatePath("/");
+  revalidatePath("/budgets");
+  revalidatePath("/bills");
   revalidatePath("/import");
   revalidatePath("/insights");
   revalidatePath("/flow");

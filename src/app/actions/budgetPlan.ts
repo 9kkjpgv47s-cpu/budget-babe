@@ -7,9 +7,11 @@ import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { parseYearMonth } from "@/lib/yearMonth";
+import { applySuggestedRolloversForYearMonth } from "@/app/actions/rollover";
 
 function rev(ym: string) {
   revalidatePath("/");
+  revalidatePath("/budgets");
   revalidatePath("/bills");
   revalidatePath("/insights");
   revalidatePath("/coach");
@@ -95,5 +97,10 @@ export async function copyBudgetPlansFromPreviousMonthAction(
       },
     });
   }
-  rev(yearMonth);
+  const withRollover = formData.get("withRollover") === "on";
+  if (withRollover) {
+    await applySuggestedRolloversForYearMonth(yearMonth);
+  } else {
+    rev(yearMonth);
+  }
 }

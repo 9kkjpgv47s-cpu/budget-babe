@@ -16,10 +16,27 @@ function normName(s: string): string {
   return s.trim().toLowerCase();
 }
 
-export async function applySuggestedRolloversAction(formData: FormData): Promise<void> {
-  await requireUser();
-  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+function revalidateAfterRollover(yearMonth: string) {
+  revalidatePath("/");
+  revalidatePath("/budgets");
+  revalidatePath("/bills");
+  revalidatePath("/insights");
+  revalidatePath("/coach");
+  revalidatePath("/flow");
+  revalidatePath("/import");
+  revalidatePath(`/expenses?ym=${yearMonth}`);
+  revalidatePath("/net-worth");
+}
+
+/**
+ * For each budget line in `yearMonth`, set rolledInCents from the previous
+ * month’s unused envelope for the same name (when a matching prior line exists).
+ */
+export async function applySuggestedRolloversForYearMonth(
+  yearMonth: string,
+): Promise<void> {
   if (!yearMonth.match(/^\d{4}-\d{2}$/)) return;
+  await requireUser();
   const prevYm = format(addMonths(parseYearMonth(yearMonth), -1), "yyyy-MM");
   const [curPeriod, prevPeriod] = await Promise.all([
     getOrCreateMonthlyPeriod(yearMonth),
@@ -60,7 +77,10 @@ export async function applySuggestedRolloversAction(formData: FormData): Promise
     });
   }
 
-  revalidatePath("/");
-  revalidatePath("/insights");
-  revalidatePath("/coach");
+  revalidateAfterRollover(yearMonth);
+}
+
+export async function applySuggestedRolloversAction(formData: FormData): Promise<void> {
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  await applySuggestedRolloversForYearMonth(yearMonth);
 }

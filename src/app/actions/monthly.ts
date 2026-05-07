@@ -114,6 +114,7 @@ export async function addExpenseCore(
     },
   });
   revalidatePath("/");
+  revalidatePath("/budgets");
   revalidatePath("/insights");
   revalidatePath("/flow");
   return { ok: true };
@@ -174,6 +175,7 @@ export async function toggleBillPaidAction(formData: FormData): Promise<void> {
 function revalidateBills() {
   revalidatePath("/");
   revalidatePath("/bills");
+  revalidatePath("/budgets");
   revalidatePath("/insights");
   revalidatePath("/flow");
   revalidatePath("/coach");
@@ -283,7 +285,7 @@ export async function addBudgetPlanCore(
     },
   });
   revalidatePath("/");
-  revalidatePath("/bills");
+  revalidatePath("/budgets");
   revalidatePath("/insights");
   revalidatePath("/flow");
   revalidatePath("/coach");

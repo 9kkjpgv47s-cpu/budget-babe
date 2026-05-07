@@ -10,6 +10,8 @@ import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 
 function revalidateAll(yearMonth: string) {
   revalidatePath("/");
+  revalidatePath("/budgets");
+  revalidatePath("/bills");
   revalidatePath("/expenses");
   revalidatePath(`/expenses?ym=${yearMonth}`);
   revalidatePath("/import");

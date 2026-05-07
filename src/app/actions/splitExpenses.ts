@@ -71,9 +71,13 @@ export async function createSplitExpensesAction(
     });
   }
   revalidatePath("/");
+  revalidatePath("/budgets");
+  revalidatePath("/bills");
   revalidatePath("/expenses");
   revalidatePath(`/expenses?ym=${yearMonth}`);
   revalidatePath("/insights");
   revalidatePath("/import");
+  revalidatePath("/flow");
+  revalidatePath("/coach");
   return { ok: true, message: `Saved ${parsed.length} split lines (${splitGroupId.slice(0, 8)}…).` };
 }

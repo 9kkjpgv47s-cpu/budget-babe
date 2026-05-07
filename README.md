@@ -30,7 +30,7 @@ On **Shopping**, the trip form pre-fills a **usual basket** from items that repe
 ### Envelope rollover
 
 - Each **budget line** has **rolled-in** cents plus the monthly limit. **Available** = rolled in + limit − matched spending.
-- Overview: **Apply suggested rollovers from previous month** sets rolled-in from the **same-named** line’s unused balance last month.
+- Overview and **`/budgets`**: **Apply suggested rollovers** sets rolled-in from the **same-named** line’s unused balance last month. **Copy budget lines** can run that step in one submit via checkbox.
 
 ### Import, rules, exports, insights, debt
 
@@ -41,7 +41,7 @@ On **Shopping**, the trip form pre-fills a **usual basket** from items that repe
 - **`/insights`**: spending by budget line (with bar strips), uncategorized total, and **often-repeated** merchants (possible subscriptions).
 - **`/debt`**: manual debt accounts with **in-place edit** (balance, minimum, APR) or remove.
 - Overview **bills**: **copy from last month** (due dates +1 month; skips exact duplicates), **edit**, **delete**, and mark paid. Dedicated **`/bills?ym=`** page with month navigation.
-- Overview **budget lines**: **delete** a line; **copy lines from last month** (same name/limit/note; rolled-in zero; skips existing names). **Apply suggested rollovers** still sets rolled-in from unused balance.
+- **`/budgets?ym=`**: month navigation, **apply rolled-in**, **copy lines** (optional checkbox to apply rolled-in after copy), edit/delete lines, quick add.
 
 ### Production
 

@@ -155,6 +155,11 @@ export default async function HomePage({
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">Budget plans</h2>
+        <p className="mt-1 text-sm">
+          <Link href={`/budgets?ym=${yearMonth}`} className="text-emerald-600 underline">
+            Full budgets page
+          </Link>
+        </p>
         <p className="mt-1 text-sm text-zinc-500">
           Spending matches by description, tags, or linked budget on each
           expense. Each line has a monthly limit plus optional{" "}
