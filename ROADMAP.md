@@ -19,8 +19,7 @@ Living checklist for the household budget PWA. Update this file when major capab
 - [x] Shopping: **Start from last trip** one-click (`/shopping?from=last` + prominent button); duplicates last lines as a new unsaved draft
 - [x] **Plaid** (`/plaid`): Link token + public token exchange, store item, **sync** posted transactions → expenses (`/transactions/sync`), per-user disconnect
 - [x] **PWA offline shell**: Serwist service worker (production `next build`), precache + runtime cache, document fallback to **`/~offline`**
-
-## Next (suggested)
+- [x] **Tax** (`/tax`): qualifying expense **folder** by calendar year, **audit notes** + **reviewed** stamp, **TaxExpenseAudit** log, bulk add-to-folder, **`/api/export/tax?year=`** CSV; tax block on **`/expenses`**
 
 - [ ] File-based bank sync polish (beyond CSV/OFX/QIF) if desired
 - [ ] Web **push** bill reminders (optional; needs VAPID + user consent)

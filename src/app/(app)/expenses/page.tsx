@@ -44,6 +44,10 @@ export default async function ExpensesPage({
     tagsJson: e.tagsJson,
     splitGroupId: e.splitGroupId,
     userName: e.user?.name ?? null,
+    taxQualifying: e.taxQualifying,
+    taxCategory: e.taxCategory,
+    taxNote: e.taxNote,
+    taxReviewedAt: e.taxReviewedAt?.toISOString() ?? null,
   }));
 
   return (

@@ -1,0 +1,225 @@
+import Link from "next/link";
+import { requireUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { formatCents } from "@/lib/money";
+import { localCalendarYearBounds, parseTaxYear } from "@/lib/taxYear";
+import { taxCategoryLabel } from "@/lib/taxCategories";
+import { TaxBulkAssign } from "./TaxBulkAssign";
+import { TaxCategoryTotals, TaxFolderRows } from "./TaxFolderRows";
+
+export default async function TaxPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string }>;
+}) {
+  await requireUser();
+  const sp = await searchParams;
+  const nowY = new Date().getFullYear();
+  const year = parseTaxYear(sp.year, nowY);
+  const { start, end } = localCalendarYearBounds(year);
+
+  const expenses = await prisma.expense.findMany({
+    where: { spentAt: { gte: start, lt: end } },
+    orderBy: { spentAt: "desc" },
+    include: {
+      user: { select: { name: true } },
+      monthlyPeriod: { select: { yearMonth: true } },
+      taxReviewedBy: { select: { name: true } },
+    },
+  });
+
+  const qualifying = expenses.filter((e) => e.taxQualifying);
+  const folderRows = qualifying.map((e) => ({
+    id: e.id,
+    description: e.description,
+    amountCents: e.amountCents,
+    spentAt: e.spentAt,
+    yearMonth: e.monthlyPeriod.yearMonth,
+    payee: e.payee,
+    source: e.source,
+    userName: e.user?.name ?? null,
+    taxQualifying: e.taxQualifying,
+    taxCategory: e.taxCategory,
+    taxNote: e.taxNote,
+    taxReviewedAt: e.taxReviewedAt,
+    reviewerName: e.taxReviewedBy?.name ?? null,
+  }));
+
+  const categoryMap = new Map<string, { count: number; cents: number }>();
+  for (const e of qualifying) {
+    const c = e.taxCategory ?? "other_qualifying";
+    const cur = categoryMap.get(c) ?? { count: 0, cents: 0 };
+    cur.count += 1;
+    cur.cents += e.amountCents;
+    categoryMap.set(c, cur);
+  }
+  const totals = [...categoryMap.entries()]
+    .map(([category, v]) => ({ category, ...v }))
+    .sort((a, b) => b.cents - a.cents);
+
+  const qualifyingCents = qualifying.reduce((s, e) => s + e.amountCents, 0);
+  const reviewedCount = qualifying.filter((e) => e.taxReviewedAt).length;
+
+  const audits = await prisma.taxExpenseAudit.findMany({
+    where: { expense: { spentAt: { gte: start, lt: end } } },
+    orderBy: { createdAt: "desc" },
+    take: 40,
+    include: {
+      user: { select: { name: true } },
+      expense: { select: { description: true, amountCents: true } },
+    },
+  });
+
+  const bulkRows = expenses.map((e) => ({
+    id: e.id,
+    description: e.description,
+    amountCents: e.amountCents,
+    spentAt: e.spentAt.toISOString(),
+    yearMonth: e.monthlyPeriod.yearMonth,
+    taxQualifying: e.taxQualifying,
+    taxCategory: e.taxCategory,
+  }));
+
+  const prevYear = year - 1;
+  const nextYear = year + 1;
+
+  return (
+    <div className="space-y-10">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Tax records</h1>
+        <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
+          Flag expenses by <strong>calendar year</strong> (transaction date), assign a <strong>folder</strong> for your
+          preparer, add <strong>audit notes</strong>, and <strong>mark reviewed</strong> when both of you agree the line
+          is documented. This is record-keeping only — it does not compute tax owed or guarantee deductibility.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+          <span className="font-medium text-zinc-700 dark:text-zinc-200">Year:</span>
+          <Link
+            href={`/tax?year=${prevYear}`}
+            className="rounded border border-zinc-300 px-2 py-1 hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
+          >
+            {prevYear}
+          </Link>
+          <span className="rounded bg-emerald-100 px-3 py-1 font-semibold text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100">
+            {year}
+          </span>
+          <Link
+            href={`/tax?year=${nextYear}`}
+            className="rounded border border-zinc-300 px-2 py-1 hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
+          >
+            {nextYear}
+          </Link>
+          <a
+            href={`/api/export/tax?year=${year}`}
+            className="ml-auto rounded-md bg-zinc-900 px-3 py-1.5 text-white dark:bg-zinc-100 dark:text-zinc-900"
+          >
+            Download qualifying CSV ({year})
+          </a>
+        </div>
+      </div>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium">Summary</h2>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+            <p className="text-zinc-500">Qualifying lines</p>
+            <p className="text-xl font-semibold tabular-nums">{qualifying.length}</p>
+          </div>
+          <div className="rounded-lg border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+            <p className="text-zinc-500">Reviewed</p>
+            <p className="text-xl font-semibold tabular-nums">
+              {reviewedCount}
+              <span className="text-sm font-normal text-zinc-400"> / {qualifying.length || "—"}</span>
+            </p>
+          </div>
+          <div className="rounded-lg border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+            <p className="text-zinc-500">Total (qualifying)</p>
+            <p className="text-xl font-semibold tabular-nums">{formatCents(qualifyingCents)}</p>
+          </div>
+        </div>
+        <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">By folder</h3>
+        <TaxCategoryTotals year={year} totals={totals} />
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium">Qualifying tax folder ({year})</h2>
+        <TaxFolderRows year={year} rows={folderRows} />
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium">Add to folder (not yet qualifying)</h2>
+        <TaxBulkAssign year={year} rows={bulkRows} />
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium">Recent audit log</h2>
+        <p className="text-xs text-zinc-500">
+          Append-only trail when tax fields change (household accountability). Newest first.
+        </p>
+        {audits.length === 0 ? (
+          <p className="text-sm text-zinc-500">No tax audits yet.</p>
+        ) : (
+          <ul className="space-y-2 text-sm">
+            {audits.map((a) => {
+              let detail = "";
+              try {
+                const j = JSON.parse(a.detailsJson ?? "{}") as {
+                  before?: TaxSnapshotLite;
+                  after?: TaxSnapshotLite;
+                };
+                detail = summarizeDelta(j.before, j.after);
+              } catch {
+                detail = a.detailsJson ?? "";
+              }
+              return (
+                <li
+                  key={a.id}
+                  className="rounded-lg border border-zinc-200 bg-zinc-50/80 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900/50"
+                >
+                  <span className="font-medium text-emerald-800 dark:text-emerald-300">{a.action}</span>
+                  <span className="text-zinc-500"> · </span>
+                  <span>{a.createdAt.toLocaleString()}</span>
+                  {a.user?.name ? (
+                    <>
+                      <span className="text-zinc-500"> · </span>
+                      <span>{a.user.name}</span>
+                    </>
+                  ) : null}
+                  <p className="mt-1 text-zinc-700 dark:text-zinc-300">
+                    {formatCents(a.expense.amountCents)} — {a.expense.description}
+                  </p>
+                  {detail ? <p className="mt-1 text-xs text-zinc-500">{detail}</p> : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <p className="text-xs text-zinc-500">
+        <Link href="/expenses" className="underline">
+          Expenses
+        </Link>{" "}
+        lists include the same tax fields for quick edits while you reconcile a month.
+      </p>
+    </div>
+  );
+}
+
+type TaxSnapshotLite = {
+  qualifying?: boolean;
+  category?: string | null;
+  note?: string | null;
+  reviewedAt?: string | null;
+};
+
+function summarizeDelta(b?: TaxSnapshotLite, a?: TaxSnapshotLite): string {
+  if (!b || !a) return "";
+  const parts: string[] = [];
+  if (b.qualifying !== a.qualifying) parts.push(`qualifying ${b.qualifying} → ${a.qualifying}`);
+  if (b.category !== a.category)
+    parts.push(`folder ${taxCategoryLabel(b.category ?? null)} → ${taxCategoryLabel(a.category ?? null)}`);
+  if ((b.note ?? "") !== (a.note ?? "")) parts.push("note updated");
+  if (b.reviewedAt !== a.reviewedAt) parts.push("review status changed");
+  return parts.join("; ") || "updated";
+}

@@ -18,6 +18,7 @@ function revalidateAll(yearMonth: string) {
   revalidatePath("/insights");
   revalidatePath("/flow");
   revalidatePath("/coach");
+  revalidatePath("/tax");
 }
 
 function parseExpenseIds(raw: string): string[] {

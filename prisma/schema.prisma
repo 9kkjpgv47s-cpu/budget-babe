@@ -15,7 +15,9 @@ model User {
   name         String
   passwordHash String
   createdAt    DateTime  @default(now())
-  expenses     Expense[]
+  expenses     Expense[] @relation("ExpenseRecordedBy")
+  taxReviewed  Expense[] @relation("ExpenseTaxReviewedBy")
+  taxAudits    TaxExpenseAudit[]
   receipts     Receipt[]
   plaidItems   PlaidItem[]
 }
@@ -37,7 +39,7 @@ model Expense {
   monthlyPeriodId String
   monthlyPeriod   MonthlyPeriod @relation(fields: [monthlyPeriodId], references: [id], onDelete: Cascade)
   userId          String?
-  user            User?         @relation(fields: [userId], references: [id])
+  user            User?         @relation("ExpenseRecordedBy", fields: [userId], references: [id])
   amountCents     Int
   description     String
   spentAt         DateTime      @default(now())
@@ -54,9 +56,36 @@ model Expense {
   /// Optional link when this row was posted from a receipt (may share receipt with split lines)
   receiptId       String?
   receipt         Receipt?      @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+  /// Tax folder: include in qualifying list for a calendar year (see spentAt)
+  taxQualifying       Boolean   @default(false)
+  /// Folder key, e.g. medical, charitable — see src/lib/taxCategories.ts
+  taxCategory         String?
+  taxNote             String?
+  taxReviewedAt       DateTime?
+  taxReviewedByUserId String?
+  taxReviewedBy       User?     @relation("ExpenseTaxReviewedBy", fields: [taxReviewedByUserId], references: [id], onDelete: SetNull)
+  taxAudits           TaxExpenseAudit[]
 
   @@index([monthlyPeriodId, importHash])
   @@index([receiptId])
+  @@index([taxQualifying, spentAt])
+}
+
+/// Append-only log when tax fields on an expense change (household audit trail)
+model TaxExpenseAudit {
+  id          String   @id @default(cuid())
+  expenseId   String
+  expense     Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// classify | review | clear | note_update
+  action      String
+  /// JSON: { qualifying?, category?, note?, reviewed? } before/after snapshots
+  detailsJson String?
+  createdAt   DateTime @default(now())
+
+  @@index([expenseId, createdAt])
+  @@index([createdAt])
 }
 
 model Bill {

@@ -10,6 +10,7 @@ const links = [
   { href: "/budgets", label: "Budgets" },
   { href: "/import", label: "Import" },
   { href: "/plaid", label: "Plaid" },
+  { href: "/tax", label: "Tax" },
   { href: "/flow", label: "Flow" },
   { href: "/insights", label: "Insights" },
   { href: "/debt", label: "Debt" },
