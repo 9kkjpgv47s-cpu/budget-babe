@@ -75,6 +75,8 @@ First production deploy may download Tesseract language data on demand (~few MB 
 
 The app exposes a [Web App Manifest](https://developer.mozilla.org/en-US/docs/Web/Manifest) (`src/app/manifest.ts`). Install from the browser “Add to Home screen” on supported devices.
 
+**Offline shell (production builds):** After `next build` / deploy, Serwist registers **`/sw.js`**, precaches the app shell (including the static **`/~offline`** page), and uses Workbox-style runtime caching for navigations and assets. If a document request fails while offline, you should see the offline page instead of the browser’s generic error. Service worker integration is **disabled during `next dev`** to avoid conflicting with hot reload; test with `npm run build && npm start`. The generated `public/sw.js` is gitignored and produced at build time.
+
 ## Scripts
 
 | Command | Description |
