@@ -31,6 +31,11 @@ On **Shopping**, the trip form pre-fills a **usual basket** from items that repe
 
 - **`/net-worth`**: manual **asset** and **liability** accounts, live totals, **record snapshot** history (no bank sync).
 
+### Plaid (optional bank sync)
+
+- **`/plaid`**: connect an institution with **Plaid Link** (Transactions product), then **Sync transactions** to import posted rows as expenses (deduped by Plaid transaction id). Each household user links under their own login; **Disconnect** revokes the item at Plaid when possible and removes the local row.
+- Environment: `PLAID_CLIENT_ID`, `PLAID_SECRET`, and `PLAID_ENV` (`sandbox` | `development` | `production`). See `.env.example`. Treat stored access tokens as secrets (encrypt at rest in production).
+
 ### Envelope rollover
 
 - Each **budget line** has **rolled-in** cents plus the monthly limit. **Available** = rolled in + limit − matched spending.

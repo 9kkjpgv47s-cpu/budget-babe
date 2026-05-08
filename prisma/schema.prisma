@@ -17,6 +17,7 @@ model User {
   createdAt    DateTime  @default(now())
   expenses     Expense[]
   receipts     Receipt[]
+  plaidItems   PlaidItem[]
 }
 
 /// One row per calendar month (YYYY-MM) for income and rollups
@@ -88,6 +89,20 @@ model MerchantRule {
   tag       String
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
+}
+
+/// Linked bank institution via Plaid Link (access token stored — encrypt in production)
+model PlaidItem {
+  id                  String    @id @default(cuid())
+  itemId              String    @unique
+  accessToken         String
+  institutionId       String?
+  institutionName     String?
+  userId              String?
+  user                User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  transactionsCursor  String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 }
 
 /// Simple manual debt tracking (no bank sync)

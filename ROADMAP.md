@@ -16,12 +16,12 @@ Living checklist for the household budget PWA. Update this file when major capab
 - [x] Shopping: **duplicate trip** as a new draft (same lines, today’s date, “(copy)” in store name)
 - [x] Receipts: **move receipt** to another calendar month (±6 months picker)
 - [x] Expenses: **bulk tags** (append or replace) and **bulk budget link** (or clear) for selected rows
-
 - [x] Shopping: **Start from last trip** one-click (`/shopping?from=last` + prominent button); duplicates last lines as a new unsaved draft
+- [x] **Plaid** (`/plaid`): Link token + public token exchange, store item, **sync** posted transactions → expenses (`/transactions/sync`), per-user disconnect
 
 ## Next (suggested)
 
-- [ ] Optional Plaid or file-based bank sync (high complexity; needs credentials)
+- [ ] File-based bank sync polish (beyond CSV/OFX/QIF) if desired
 - [ ] PWA offline shell / push reminders (optional)
 
 ## Principles
