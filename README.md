@@ -45,7 +45,7 @@ On **Shopping**, the trip form pre-fills a **usual basket** from items that repe
 
 - **`/import`**: paste **CSV** (optional 0-based column overrides), **OFX/QFX** (STMTTRN), or **QIF** (`!Type:Bank`). Same dedupe and merchant rules as CSV. **Split wizard** creates multiple lines with one shared split group id.
 - **Export**: while signed in, use **Download expenses CSV** / **Download bills CSV** / **Download budgets CSV** on the Import page, or `GET /api/export/expenses?ym=YYYY-MM`, `GET /api/export/bills?ym=YYYY-MM`, `GET /api/export/budgets?ym=YYYY-MM`, and **`GET /api/export/tax?year=YYYY`** (qualifying tax-folder lines only).
-- **`/tax`**: calendar-year view of **qualifying** expenses with folder categories (informational labels, not tax advice), **audit notes**, **mark reviewed**, append-only **audit log**, and bulk “add to folder”. Same fields appear on **`/expenses`** per row.
+- **`/tax`**: calendar-year **workpaper** for expenses marked **Applicable** or **Applicable with proper documentation**; each row uses a three-way **applicability** status, an IRC-oriented **guidance** pick list, **View tax guidance** modal (with disclaimer), preparer **folder**, **audit notes**, and **mark reviewed**. **Applicable with proper documentation** requires a short audit note when no receipt is linked. **`GET /api/export/tax?year=`** CSV includes applicability and guidance title.
 - **`/expenses`**: edit/delete; **search**; **bulk** tags and budget link; **tax** block per row (folder, notes, reviewed).
 - **`/flow`**: chronological view of income anchor, next paycheck, bills, and expenses.
 - **`/insights`**: spending by budget line (with bar strips), uncategorized total, and **often-repeated** merchants (possible subscriptions).

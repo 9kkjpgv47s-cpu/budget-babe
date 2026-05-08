@@ -4,19 +4,22 @@ import { prisma } from "@/lib/prisma";
 import { formatCents } from "@/lib/money";
 import { localCalendarYearBounds, parseTaxYear } from "@/lib/taxYear";
 import { taxCategoryLabel } from "@/lib/taxCategories";
+import { isInTaxWorkpaperFolder, resolveGuidance } from "@/lib/taxCodeGuidance";
 import { TaxBulkAssign } from "./TaxBulkAssign";
-import { TaxCategoryTotals, TaxFolderRows } from "./TaxFolderRows";
+import { TaxCategoryTotals, TaxFolderTable } from "./TaxFolderRows";
 
 export default async function TaxPage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string }>;
+  searchParams: Promise<{ year?: string; taxErr?: string }>;
 }) {
   await requireUser();
   const sp = await searchParams;
   const nowY = new Date().getFullYear();
   const year = parseTaxYear(sp.year, nowY);
   const { start, end } = localCalendarYearBounds(year);
+  const taxErrRaw = sp.taxErr?.trim();
+  const taxErr = taxErrRaw ? decodeURIComponent(taxErrRaw.replace(/\+/g, " ")) : null;
 
   const expenses = await prisma.expense.findMany({
     where: { spentAt: { gte: start, lt: end } },
@@ -28,8 +31,8 @@ export default async function TaxPage({
     },
   });
 
-  const qualifying = expenses.filter((e) => e.taxQualifying);
-  const folderRows = qualifying.map((e) => ({
+  const workpaper = expenses.filter((e) => isInTaxWorkpaperFolder(e.taxApplicability));
+  const folderRows = workpaper.map((e) => ({
     id: e.id,
     description: e.description,
     amountCents: e.amountCents,
@@ -38,15 +41,16 @@ export default async function TaxPage({
     payee: e.payee,
     source: e.source,
     userName: e.user?.name ?? null,
-    taxQualifying: e.taxQualifying,
+    receiptId: e.receiptId,
+    taxApplicability: e.taxApplicability,
+    taxCodeRefId: e.taxCodeRefId,
     taxCategory: e.taxCategory,
     taxNote: e.taxNote,
     taxReviewedAt: e.taxReviewedAt,
-    reviewerName: e.taxReviewedBy?.name ?? null,
   }));
 
   const categoryMap = new Map<string, { count: number; cents: number }>();
-  for (const e of qualifying) {
+  for (const e of workpaper) {
     const c = e.taxCategory ?? "other_qualifying";
     const cur = categoryMap.get(c) ?? { count: 0, cents: 0 };
     cur.count += 1;
@@ -57,8 +61,8 @@ export default async function TaxPage({
     .map(([category, v]) => ({ category, ...v }))
     .sort((a, b) => b.cents - a.cents);
 
-  const qualifyingCents = qualifying.reduce((s, e) => s + e.amountCents, 0);
-  const reviewedCount = qualifying.filter((e) => e.taxReviewedAt).length;
+  const workpaperCents = workpaper.reduce((s, e) => s + e.amountCents, 0);
+  const reviewedCount = workpaper.filter((e) => e.taxReviewedAt).length;
 
   const audits = await prisma.taxExpenseAudit.findMany({
     where: { expense: { spentAt: { gte: start, lt: end } } },
@@ -76,7 +80,7 @@ export default async function TaxPage({
     amountCents: e.amountCents,
     spentAt: e.spentAt.toISOString(),
     yearMonth: e.monthlyPeriod.yearMonth,
-    taxQualifying: e.taxQualifying,
+    taxApplicability: e.taxApplicability,
     taxCategory: e.taxCategory,
   }));
 
@@ -88,9 +92,10 @@ export default async function TaxPage({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Tax records</h1>
         <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Flag expenses by <strong>calendar year</strong> (transaction date), assign a <strong>folder</strong> for your
-          preparer, add <strong>audit notes</strong>, and <strong>mark reviewed</strong> when both of you agree the line
-          is documented. This is record-keeping only — it does not compute tax owed or guarantee deductibility.
+          Each expense can be <strong>not applicable</strong>, <strong>applicable</strong>, or{" "}
+          <strong>applicable with proper documentation</strong> (for example when you have notes but no official receipt
+          in this app). Pick the IRC-oriented <strong>guidance</strong> snippet and open <strong>View tax guidance</strong>{" "}
+          for the full text. This is record-keeping only — not tax advice.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
           <span className="font-medium text-zinc-700 dark:text-zinc-200">Year:</span>
@@ -113,41 +118,47 @@ export default async function TaxPage({
             href={`/api/export/tax?year=${year}`}
             className="ml-auto rounded-md bg-zinc-900 px-3 py-1.5 text-white dark:bg-zinc-100 dark:text-zinc-900"
           >
-            Download qualifying CSV ({year})
+            Download workpaper CSV ({year})
           </a>
         </div>
       </div>
+
+      {taxErr ? (
+        <p className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+          {taxErr}
+        </p>
+      ) : null}
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Summary</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-lg border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/40">
-            <p className="text-zinc-500">Qualifying lines</p>
-            <p className="text-xl font-semibold tabular-nums">{qualifying.length}</p>
+            <p className="text-zinc-500">Applicable lines</p>
+            <p className="text-xl font-semibold tabular-nums">{workpaper.length}</p>
           </div>
           <div className="rounded-lg border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/40">
             <p className="text-zinc-500">Reviewed</p>
             <p className="text-xl font-semibold tabular-nums">
               {reviewedCount}
-              <span className="text-sm font-normal text-zinc-400"> / {qualifying.length || "—"}</span>
+              <span className="text-sm font-normal text-zinc-400"> / {workpaper.length || "—"}</span>
             </p>
           </div>
           <div className="rounded-lg border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/40">
-            <p className="text-zinc-500">Total (qualifying)</p>
-            <p className="text-xl font-semibold tabular-nums">{formatCents(qualifyingCents)}</p>
+            <p className="text-zinc-500">Total (applicable)</p>
+            <p className="text-xl font-semibold tabular-nums">{formatCents(workpaperCents)}</p>
           </div>
         </div>
-        <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">By folder</h3>
+        <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">By preparer folder</h3>
         <TaxCategoryTotals year={year} totals={totals} />
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium">Qualifying tax folder ({year})</h2>
-        <TaxFolderRows year={year} rows={folderRows} />
+        <h2 className="text-lg font-medium">Tax workpaper folder ({year})</h2>
+        <TaxFolderTable year={year} rows={folderRows} />
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium">Add to folder (not yet qualifying)</h2>
+        <h2 className="text-lg font-medium">Mark applicable (bulk)</h2>
         <TaxBulkAssign year={year} rows={bulkRows} />
       </section>
 
@@ -200,26 +211,38 @@ export default async function TaxPage({
         <Link href="/expenses" className="underline">
           Expenses
         </Link>{" "}
-        lists include the same tax fields for quick edits while you reconcile a month.
+        uses the same controls while you reconcile a month.
       </p>
     </div>
   );
 }
 
 type TaxSnapshotLite = {
-  qualifying?: boolean;
+  applicability?: string | null;
+  codeRef?: string | null;
   category?: string | null;
   note?: string | null;
   reviewedAt?: string | null;
 };
 
+function guidanceTitle(id: string | null | undefined): string {
+  return resolveGuidance(id ?? null)?.title ?? id ?? "—";
+}
+
 function summarizeDelta(b?: TaxSnapshotLite, a?: TaxSnapshotLite): string {
   if (!b || !a) return "";
   const parts: string[] = [];
-  if (b.qualifying !== a.qualifying) parts.push(`qualifying ${b.qualifying} → ${a.qualifying}`);
+  if (b.applicability !== a.applicability) parts.push(`status ${b.applicability ?? "—"} → ${a.applicability ?? "—"}`);
+  if (b.codeRef !== a.codeRef) parts.push(`guidance ${guidanceTitle(b.codeRef)} → ${guidanceTitle(a.codeRef)}`);
   if (b.category !== a.category)
     parts.push(`folder ${taxCategoryLabel(b.category ?? null)} → ${taxCategoryLabel(a.category ?? null)}`);
   if ((b.note ?? "") !== (a.note ?? "")) parts.push("note updated");
   if (b.reviewedAt !== a.reviewedAt) parts.push("review status changed");
+  // legacy audits
+  if ("qualifying" in b || "qualifying" in a) {
+    const bq = (b as { qualifying?: boolean }).qualifying;
+    const aq = (a as { qualifying?: boolean }).qualifying;
+    if (bq !== aq) parts.push(`legacy qualifying ${bq} → ${aq}`);
+  }
   return parts.join("; ") || "updated";
 }

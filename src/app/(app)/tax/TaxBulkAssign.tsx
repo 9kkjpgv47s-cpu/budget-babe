@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { bulkQualifyTaxExpensesAction } from "@/app/actions/tax";
 import { formatCents } from "@/lib/money";
 import { TAX_CATEGORY_OPTIONS } from "@/lib/taxCategories";
+import { isInTaxWorkpaperFolder } from "@/lib/taxCodeGuidance";
 
 export type TaxPickRow = {
   id: string;
@@ -11,7 +12,7 @@ export type TaxPickRow = {
   amountCents: number;
   spentAt: string;
   yearMonth: string;
-  taxQualifying: boolean;
+  taxApplicability: string | null;
   taxCategory: string | null;
 };
 
@@ -28,13 +29,13 @@ export function TaxBulkAssign({ year, rows }: { year: number; rows: TaxPickRow[]
     });
   };
 
-  const unmarked = rows.filter((r) => !r.taxQualifying);
+  const unmarked = rows.filter((r) => !isInTaxWorkpaperFolder(r.taxApplicability));
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
-        Select expenses from {year}, then assign a shared tax folder. Already-foldered rows are hidden here to reduce
-        noise; remove a folder flag on the card above if you need to re-file.
+        Select expenses from {year}, then set them to <strong>Applicable</strong> with a shared preparer folder.
+        Lines already marked applicable are hidden here.
       </p>
       {selected.size > 0 ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-4 dark:border-amber-900/40 dark:bg-amber-950/40">
@@ -61,7 +62,7 @@ export function TaxBulkAssign({ year, rows }: { year: number; rows: TaxPickRow[]
               type="submit"
               className="rounded-md bg-amber-700 px-3 py-1.5 text-sm font-medium text-white dark:bg-amber-600"
             >
-              Add selected to tax folder
+              Add selected as applicable
             </button>
           </form>
         </div>

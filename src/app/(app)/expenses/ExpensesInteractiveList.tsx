@@ -8,13 +8,8 @@ import {
   deleteExpenseAction,
   updateExpenseAction,
 } from "@/app/actions/expenses";
-import {
-  clearExpenseTaxAction,
-  markExpenseTaxReviewedAction,
-  saveExpenseTaxAction,
-} from "@/app/actions/tax";
 import { formatCents } from "@/lib/money";
-import { TAX_CATEGORY_OPTIONS } from "@/lib/taxCategories";
+import { ExpenseTaxApplicabilityForm } from "../tax/ExpenseTaxApplicabilityForm";
 
 export type ExpenseRowDTO = {
   id: string;
@@ -25,7 +20,9 @@ export type ExpenseRowDTO = {
   tagsJson: string | null;
   splitGroupId: string | null;
   userName: string | null;
-  taxQualifying: boolean;
+  receiptId: string | null;
+  taxApplicability: string | null;
+  taxCodeRefId: string | null;
   taxCategory: string | null;
   taxNote: string | null;
   taxReviewedAt: string | null;
@@ -54,12 +51,14 @@ export function ExpensesInteractiveList({
   expenses,
   allExpenseCount,
   plans,
+  taxErr,
 }: {
   yearMonth: string;
   searchQuery: string;
   expenses: ExpenseRowDTO[];
   allExpenseCount: number;
   plans: { id: string; name: string }[];
+  taxErr?: string | null;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const idsCsv = useMemo(() => [...selected].join(","), [selected]);
@@ -80,6 +79,11 @@ export function ExpensesInteractiveList({
         <p className="mt-1 text-sm text-zinc-500">
           Select rows to apply tags or a budget link in bulk. Edit or delete individually below.
         </p>
+        {taxErr ? (
+          <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+            {taxErr}
+          </p>
+        ) : null}
         <p className="mt-2 text-sm">
           <Link href={`/?ym=${yearMonth}`} className="text-emerald-600 underline">
             ← Overview ({yearMonth})
@@ -252,71 +256,18 @@ export function ExpensesInteractiveList({
               </button>
             </form>
             <div className="mt-4 border-t border-zinc-100 pt-3 dark:border-zinc-800">
-              <p className="mb-2 text-xs font-medium text-zinc-600 dark:text-zinc-400">Tax record</p>
-              {e.taxReviewedAt ? (
-                <p className="mb-2 text-xs text-emerald-700 dark:text-emerald-400">
-                  Reviewed {new Date(e.taxReviewedAt).toLocaleDateString()}
-                </p>
-              ) : e.taxQualifying ? (
-                <p className="mb-2 text-xs text-amber-700 dark:text-amber-400">In tax folder — not reviewed</p>
-              ) : null}
-              <form action={saveExpenseTaxAction} className="grid gap-2 sm:grid-cols-2">
-                <input type="hidden" name="expenseId" value={e.id} />
-                <input type="hidden" name="taxYear" value={String(new Date(e.spentAt).getFullYear())} />
-                <label className="flex items-center gap-2 text-xs sm:col-span-2">
-                  <input type="checkbox" name="taxQualifying" value="on" defaultChecked={e.taxQualifying} />
-                  Qualifying tax folder
-                </label>
-                <label className="text-xs text-zinc-500 sm:col-span-2">
-                  Folder
-                  <select
-                    name="taxCategory"
-                    defaultValue={e.taxCategory ?? "record_only"}
-                    className="mt-1 w-full rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-950"
-                  >
-                    {TAX_CATEGORY_OPTIONS.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="text-xs text-zinc-500 sm:col-span-2">
-                  Audit note
-                  <textarea
-                    name="taxNote"
-                    rows={2}
-                    defaultValue={e.taxNote ?? ""}
-                    className="mt-1 w-full rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-950"
-                  />
-                </label>
-                <div className="flex flex-wrap gap-2 sm:col-span-2">
-                  <button type="submit" className="rounded bg-zinc-800 px-2 py-1 text-xs text-white dark:bg-zinc-200 dark:text-zinc-900">
-                    Save tax
-                  </button>
-                  <button
-                    type="submit"
-                    formAction={markExpenseTaxReviewedAction}
-                    disabled={!e.taxQualifying}
-                    className="rounded border border-zinc-300 px-2 py-1 text-xs disabled:opacity-40 dark:border-zinc-600"
-                  >
-                    Mark reviewed
-                  </button>
-                  <button
-                    type="submit"
-                    formAction={clearExpenseTaxAction}
-                    className="rounded border border-red-200 px-2 py-1 text-xs text-red-700 dark:border-red-900 dark:text-red-300"
-                  >
-                    Clear tax
-                  </button>
-                  <Link
-                    href={`/tax?year=${new Date(e.spentAt).getFullYear()}`}
-                    className="self-center text-xs text-emerald-600 underline"
-                  >
-                    Open tax year
-                  </Link>
-                </div>
-              </form>
+            <ExpenseTaxApplicabilityForm
+              expenseId={e.id}
+              taxYear={new Date(e.spentAt).getFullYear()}
+              yearMonth={yearMonth}
+              initialApplicability={e.taxApplicability}
+              initialCodeRef={e.taxCodeRefId}
+              initialCategory={e.taxCategory}
+              initialNote={e.taxNote}
+              receiptId={e.receiptId}
+              taxReviewedAt={e.taxReviewedAt}
+              compact
+            />
             </div>
           </li>
         ))}

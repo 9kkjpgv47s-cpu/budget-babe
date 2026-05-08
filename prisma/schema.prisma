@@ -56,9 +56,11 @@ model Expense {
   /// Optional link when this row was posted from a receipt (may share receipt with split lines)
   receiptId       String?
   receipt         Receipt?      @relation(fields: [receiptId], references: [id], onDelete: SetNull)
-  /// Tax folder: include in qualifying list for a calendar year (see spentAt)
-  taxQualifying       Boolean   @default(false)
-  /// Folder key, e.g. medical, charitable — see src/lib/taxCategories.ts
+  /// not_applicable | applicable | applicable_with_documentation — see src/lib/taxCodeGuidance.ts
+  taxApplicability String?
+  /// Key into built-in guidance (IRC-oriented summaries); viewer link in UI
+  taxCodeRefId     String?
+  /// Folder key for preparer buckets — see src/lib/taxCategories.ts
   taxCategory         String?
   taxNote             String?
   taxReviewedAt       DateTime?
@@ -68,7 +70,7 @@ model Expense {
 
   @@index([monthlyPeriodId, importHash])
   @@index([receiptId])
-  @@index([taxQualifying, spentAt])
+  @@index([taxApplicability, spentAt])
 }
 
 /// Append-only log when tax fields on an expense change (household audit trail)
@@ -80,7 +82,7 @@ model TaxExpenseAudit {
   user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   /// classify | review | clear | note_update
   action      String
-  /// JSON: { qualifying?, category?, note?, reviewed? } before/after snapshots
+  /// JSON: { applicability?, codeRef?, category?, note?, reviewed? } before/after snapshots
   detailsJson String?
   createdAt   DateTime @default(now())
 

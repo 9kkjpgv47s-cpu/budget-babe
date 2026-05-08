@@ -1,9 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { isValidTaxCategory } from "@/lib/taxCategories";
+import {
+  defaultGuidanceId,
+  isInTaxWorkpaperFolder,
+  isValidGuidanceRefForApplicability,
+  isValidTaxApplicability,
+  type TaxApplicabilityId,
+} from "@/lib/taxCodeGuidance";
 import { localCalendarYearBounds } from "@/lib/taxYear";
 
 function revalidateTax(year: string) {
@@ -14,31 +22,49 @@ function revalidateTax(year: string) {
 }
 
 type TaxSnapshot = {
-  qualifying: boolean;
+  applicability: string | null;
+  codeRef: string | null;
   category: string | null;
   note: string | null;
   reviewedAt: string | null;
 };
 
 function snap(e: {
-  taxQualifying: boolean;
+  taxApplicability: string | null;
+  taxCodeRefId: string | null;
   taxCategory: string | null;
   taxNote: string | null;
   taxReviewedAt: Date | null;
 }): TaxSnapshot {
   return {
-    qualifying: e.taxQualifying,
+    applicability: e.taxApplicability,
+    codeRef: e.taxCodeRefId,
     category: e.taxCategory,
     note: e.taxNote,
     reviewedAt: e.taxReviewedAt?.toISOString() ?? null,
   };
 }
 
+function redirectTaxValidationError(
+  message: string,
+  opts: { taxYear: string; from: string; yearMonth?: string },
+) {
+  const q = encodeURIComponent(message);
+  if (opts.from === "expenses" && opts.yearMonth) {
+    redirect(`/expenses?ym=${encodeURIComponent(opts.yearMonth)}&taxErr=${q}`);
+  }
+  redirect(`/tax?year=${encodeURIComponent(opts.taxYear)}&taxErr=${q}`);
+}
+
 export async function saveExpenseTaxAction(formData: FormData): Promise<void> {
   const user = await requireUser();
   const expenseId = String(formData.get("expenseId") ?? "").trim();
   const redirectYear = String(formData.get("taxYear") ?? "").trim() || new Date().getFullYear().toString();
-  const qualifying = formData.get("taxQualifying") === "on" || formData.get("taxQualifying") === "true";
+  const from = String(formData.get("from") ?? "tax").trim();
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+
+  const appRaw = String(formData.get("taxApplicability") ?? "").trim();
+  const refRaw = String(formData.get("taxCodeRefId") ?? "").trim();
   const categoryRaw = String(formData.get("taxCategory") ?? "").trim();
   const note = String(formData.get("taxNote") ?? "").trim() || null;
 
@@ -50,31 +76,53 @@ export async function saveExpenseTaxAction(formData: FormData): Promise<void> {
   });
   if (!exp) return;
 
+  if (!isValidTaxApplicability(appRaw)) {
+    redirectTaxValidationError("Choose a valid tax applicability.", { taxYear: redirectYear, from, yearMonth });
+  }
+  const taxApplicability = appRaw as TaxApplicabilityId;
+
+  let taxCodeRefId = refRaw;
+  if (!taxCodeRefId || !isValidGuidanceRefForApplicability(taxCodeRefId, taxApplicability)) {
+    taxCodeRefId = defaultGuidanceId(taxApplicability);
+  }
+
+  if (taxApplicability === "applicable_with_documentation" && !exp.receiptId) {
+    const n = note?.trim().length ?? 0;
+    if (n < 4) {
+      redirectTaxValidationError(
+        "“Applicable with proper documentation” requires a short audit note when no receipt is linked (describe bank evidence, calendar, mileage, etc.).",
+        { taxYear: redirectYear, from, yearMonth: yearMonth || exp.monthlyPeriod.yearMonth },
+      );
+    }
+  }
+
   const before = snap(exp);
 
   let taxCategory: string | null = null;
-  if (qualifying) {
+  if (taxApplicability !== "not_applicable") {
     taxCategory = isValidTaxCategory(categoryRaw) ? categoryRaw : "record_only";
   }
 
-  const taxNote = qualifying ? note : null;
-  const taxQualifying = qualifying;
+  const taxNote = taxApplicability === "not_applicable" ? null : note;
+
   let taxReviewedAt = exp.taxReviewedAt;
   let taxReviewedByUserId = exp.taxReviewedByUserId;
-  if (!taxQualifying) {
+  if (taxApplicability === "not_applicable") {
     taxReviewedAt = null;
     taxReviewedByUserId = null;
   }
 
   const after = snap({
-    taxQualifying,
+    taxApplicability,
+    taxCodeRefId,
     taxCategory,
     taxNote,
     taxReviewedAt,
   });
 
   const same =
-    before.qualifying === after.qualifying &&
+    before.applicability === after.applicability &&
+    before.codeRef === after.codeRef &&
     before.category === after.category &&
     before.note === after.note &&
     before.reviewedAt === after.reviewedAt;
@@ -84,7 +132,8 @@ export async function saveExpenseTaxAction(formData: FormData): Promise<void> {
     prisma.expense.update({
       where: { id: expenseId },
       data: {
-        taxQualifying,
+        taxApplicability,
+        taxCodeRefId,
         taxCategory,
         taxNote,
         taxReviewedAt,
@@ -116,12 +165,13 @@ export async function markExpenseTaxReviewedAction(formData: FormData): Promise<
     where: { id: expenseId },
     include: { monthlyPeriod: { select: { yearMonth: true } } },
   });
-  if (!exp || !exp.taxQualifying) return;
+  if (!exp || !isInTaxWorkpaperFolder(exp.taxApplicability)) return;
 
   const before = snap(exp);
   const now = new Date();
   const after = snap({
-    taxQualifying: exp.taxQualifying,
+    taxApplicability: exp.taxApplicability,
+    taxCodeRefId: exp.taxCodeRefId,
     taxCategory: exp.taxCategory,
     taxNote: exp.taxNote,
     taxReviewedAt: now,
@@ -164,14 +214,16 @@ export async function clearExpenseTaxAction(formData: FormData): Promise<void> {
 
   const before = snap(exp);
   const after = snap({
-    taxQualifying: false,
+    taxApplicability: null,
+    taxCodeRefId: null,
     taxCategory: null,
     taxNote: null,
     taxReviewedAt: null,
   });
 
   if (
-    before.qualifying === after.qualifying &&
+    before.applicability === after.applicability &&
+    before.codeRef === after.codeRef &&
     before.category === after.category &&
     before.note === after.note &&
     before.reviewedAt === after.reviewedAt
@@ -183,7 +235,8 @@ export async function clearExpenseTaxAction(formData: FormData): Promise<void> {
     prisma.expense.update({
       where: { id: expenseId },
       data: {
-        taxQualifying: false,
+        taxApplicability: null,
+        taxCodeRefId: null,
         taxCategory: null,
         taxNote: null,
         taxReviewedAt: null,
@@ -205,7 +258,6 @@ export async function clearExpenseTaxAction(formData: FormData): Promise<void> {
   revalidatePath("/expenses");
 }
 
-/** Bulk: mark selected expenses as qualifying with a shared folder (from Tax page). */
 export async function bulkQualifyTaxExpensesAction(formData: FormData): Promise<void> {
   const user = await requireUser();
   const year = String(formData.get("taxYear") ?? "").trim() || new Date().getFullYear().toString();
@@ -221,6 +273,9 @@ export async function bulkQualifyTaxExpensesAction(formData: FormData): Promise<
   if (Number.isNaN(y)) return;
   const { start, end } = localCalendarYearBounds(y);
 
+  const taxApplicability: TaxApplicabilityId = "applicable";
+  const taxCodeRefId = defaultGuidanceId(taxApplicability);
+
   for (const expenseId of ids) {
     const exp = await prisma.expense.findFirst({
       where: { id: expenseId, spentAt: { gte: start, lt: end } },
@@ -228,13 +283,15 @@ export async function bulkQualifyTaxExpensesAction(formData: FormData): Promise<
     if (!exp) continue;
     const before = snap(exp);
     const after = snap({
-      taxQualifying: true,
+      taxApplicability,
+      taxCodeRefId,
       taxCategory: categoryRaw,
       taxNote: exp.taxNote,
       taxReviewedAt: exp.taxReviewedAt,
     });
     if (
-      before.qualifying === after.qualifying &&
+      before.applicability === after.applicability &&
+      before.codeRef === after.codeRef &&
       before.category === after.category &&
       before.note === after.note &&
       before.reviewedAt === after.reviewedAt
@@ -245,7 +302,8 @@ export async function bulkQualifyTaxExpensesAction(formData: FormData): Promise<
       prisma.expense.update({
         where: { id: expenseId },
         data: {
-          taxQualifying: true,
+          taxApplicability,
+          taxCodeRefId,
           taxCategory: categoryRaw,
         },
       }),
