@@ -174,22 +174,22 @@ export function HomeMobileInsights({
               key={m.yearMonth}
               type="button"
               onClick={() => setTrendIdx(idx)}
-              className={`min-h-10 rounded-lg border px-2 py-1 text-xs font-semibold ${
+              className={`min-h-10 rounded-lg border px-2 py-1 text-xs font-semibold transition-all duration-200 active:scale-[0.98] motion-reduce:transition-none ${
                 idx === trendIdx
-                  ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
-                  : "border-zinc-300 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
+                  ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm dark:bg-emerald-950/30 dark:text-emerald-300"
+                  : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
               }`}
             >
               {m.yearMonth}
             </button>
           ))}
         </div>
-        <div className="mt-3 overflow-x-auto">
-          <div className="flex snap-x gap-3 pb-1">
+        <div className="mt-3 overflow-x-auto scroll-smooth">
+          <div className="flex snap-x snap-mandatory gap-3 pb-1">
             {selectedTrend.slices.map((slice) => (
               <div
                 key={slice.label}
-                className="min-w-[88%] snap-start rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-950 sm:min-w-[48%]"
+                className="min-w-[88%] snap-start rounded-xl border border-zinc-200 bg-zinc-50 p-3 transition-shadow duration-200 hover:shadow-sm dark:border-zinc-700 dark:bg-zinc-950 sm:min-w-[48%]"
               >
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-medium">{slice.label}</div>
@@ -229,6 +229,14 @@ export function HomeMobileInsights({
               </div>
             ))}
           </div>
+        </div>
+        <div className="mt-2 flex items-center justify-center gap-1.5">
+          {selectedTrend.slices.map((slice) => (
+            <span
+              key={`dot-${slice.label}`}
+              className="h-1.5 w-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700"
+            />
+          ))}
         </div>
         <div className="mt-3 rounded-xl bg-zinc-50 p-3 text-xs dark:bg-zinc-950">
           <div className="flex justify-between">
@@ -335,7 +343,10 @@ function TrendBar({
         <span className="tabular-nums">{formatCents(value)}</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-        <div className={`h-full ${color}`} style={{ width: `${width}%` }} />
+        <div
+          className={`h-full ${color} transition-all duration-300 motion-reduce:transition-none`}
+          style={{ width: `${width}%` }}
+        />
       </div>
     </div>
   );
@@ -360,7 +371,7 @@ function MonthCalendarCard({
   const monthTotal = sumCents([...totals.values()]);
 
   return (
-    <div className="rounded-xl border border-zinc-200 p-3 dark:border-zinc-700">
+    <div className="rounded-xl border border-zinc-200 p-3 transition-shadow duration-200 hover:shadow-sm dark:border-zinc-700">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold">{yearMonth}</h3>
         <span className="text-xs tabular-nums text-zinc-500">{formatCents(monthTotal)}</span>

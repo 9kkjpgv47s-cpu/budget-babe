@@ -361,13 +361,13 @@ export default async function HomePage({
       <section className="grid grid-cols-2 gap-2 md:hidden">
         <Link
           href={`/expenses?ym=${yearMonth}`}
-          className="flex min-h-11 items-center justify-center rounded-lg bg-emerald-600 px-3 text-sm font-semibold text-white"
+          className="flex min-h-11 items-center justify-center rounded-lg bg-emerald-600 px-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-emerald-500 active:scale-[0.98] motion-reduce:transition-none"
         >
           Add expense
         </Link>
         <Link
           href={`/bills?ym=${yearMonth}`}
-          className="flex min-h-11 items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 text-sm font-semibold text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+          className="flex min-h-11 items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 text-sm font-semibold text-zinc-800 transition-all duration-200 hover:bg-zinc-100 active:scale-[0.98] motion-reduce:transition-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
         >
           Review bills
         </Link>
@@ -619,7 +619,7 @@ function StatCard({
   hint?: string;
 }) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="rounded-xl border border-zinc-200 bg-white p-4 transition-shadow duration-200 hover:shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">
         {label}
       </div>
