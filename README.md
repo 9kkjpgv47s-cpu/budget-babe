@@ -7,16 +7,25 @@ See **[ROADMAP.md](./ROADMAP.md)** for shipped vs planned features.
 ## Stack
 
 - Next.js 15 (App Router), React 19, Tailwind CSS 4
-- Prisma 6 + SQLite (`prisma/dev.db` by default)
+- Prisma 6 + **PostgreSQL** (local Docker/Neon/etc.; required for **Vercel** — SQLite file DBs do not work on serverless)
 - Sessions with `iron-session` (cookie encrypted)
+- Optional **[Vercel Blob](https://vercel.com/docs/storage/vercel-blob)** for receipt / pay stub binaries when `BLOB_READ_WRITE_TOKEN` is set (otherwise files use `data/receipts` and `data/paystubs` on local disk only)
 
 ## Setup
 
 ```bash
 npm install
-cp .env.example .env   # optional: set SESSION_PASSWORD for production
+cp .env.example .env
+# Set DATABASE_URL to a Postgres URL (see below)
 npx prisma migrate dev
 npm run dev
+```
+
+**Database:** create an empty Postgres database and point `DATABASE_URL` at it (connection string with `sslmode=require` for hosted providers). Example with Docker:
+
+```bash
+docker run --name budget-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=household_budget -p 5432:5432 -d postgres:16
+# DATABASE_URL="postgresql://postgres:postgres@localhost:5432/household_budget"
 ```
 
 Open [http://localhost:3000](http://localhost:3000), register the first account, then the second (registration is blocked after two users). Use **Household settings → Month notes** on the overview for shared reminders for the selected calendar month.
@@ -53,11 +62,22 @@ On **Shopping**, the trip form pre-fills a **usual basket** from items that repe
 - Overview **bills**: **copy from last month** (due dates +1 month; skips exact duplicates), **edit**, **delete**, and mark paid. Dedicated **`/bills?ym=`** page with month navigation.
 - **`/budgets?ym=`**: month navigation, **apply rolled-in**, **copy lines** (optional checkbox to apply rolled-in after copy), edit/delete lines, quick add.
 
-### Production
+### Production / Vercel
 
-Set a long random `SESSION_PASSWORD` (32+ characters) in the environment. The app validates this at startup in production via `src/instrumentation.ts`.
+Deploy from this repo on [Vercel](https://vercel.com). The included **`vercel.json`** runs **`npm run vercel-build`** (`[scripts/vercel-build.mjs](scripts/vercel-build.mjs)`): it runs **`prisma migrate deploy`** only when **`DATABASE_URL`** is set and not a sqlite `file:` URL, then **`prisma generate`** and **`next build`**.
 
-Receipt files are stored under `data/receipts/` (not in git) and served only to signed-in users via `/api/receipts/[id]`. You can **move a receipt** to another month from the receipt list (month picker).
+**Deploy before database:** you can ship a **successful build** without **`DATABASE_URL`** (migrations are skipped and a note is logged). The deployed app will **not work end-to-end** (login and DB-backed pages need Postgres) until you set **`DATABASE_URL`** for **Preview** and **Production** and **redeploy** so migrations apply. Alternatively, point **`DATABASE_URL`** at a new Postgres instance and run **`npx prisma migrate deploy`** locally once, then deploy.
+
+1. **Database:** Provision **Postgres** (any host: Vercel Postgres, Supabase, Neon, RDS, …). Set **`DATABASE_URL`** on the project for **Preview** and **Production** (Preview-only deploys do not read Production-only secrets). If migrations fail with your provider’s pooled URL, use their non-pooled “direct” URL for migrations per provider docs.
+2. **Sessions:** Set **`SESSION_PASSWORD`** (32+ characters). Production startup validates this (`src/instrumentation.ts`).
+3. **File uploads:** Add **[Vercel Blob](https://vercel.com/docs/storage/vercel-blob)** and set **`BLOB_READ_WRITE_TOKEN`**. On Vercel without Blob, receipt/pay stub files would be written to ephemeral function disk and **will not persist** across deployments.
+4. **Serverless timeouts:** Root layout sets **`maxDuration = 60`** so receipt/pay stub OCR has enough time on Pro-tier-style limits (hobby limits may still cap lower — upgrade or simplify OCR if needed).
+
+Receipt and pay stub rows store either a **public Blob HTTPS URL** or a **local basename** under `data/` (dev only).
+
+### Production (non-Vercel)
+
+Set a long random **`SESSION_PASSWORD`** (32+ characters). Use Postgres and, if the host has no durable disk, configure **`BLOB_READ_WRITE_TOKEN`** (or another object store) the same way as on Vercel.
 
 ### Receipt OCR
 
@@ -83,7 +103,8 @@ The app exposes a [Web App Manifest](https://developer.mozilla.org/en-US/docs/We
 | Command | Description |
 | --- | --- |
 | `npm run dev` | Development server |
-| `npm run build` | Production build (runs `prisma generate`) |
+| `npm run build` | Production build (`prisma generate` + `next build`; run migrations separately or use `vercel-build`) |
+| `npm run vercel-build` | **Vercel:** conditional `migrate deploy` (if hosted `DATABASE_URL`), then generate + build |
 | `npm run start` | Start production server |
 | `npm run lint` | ESLint |
 | `npm run db:migrate` | Create or apply Prisma migrations (development) |

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "prisma generate && next build",
+    "vercel-build": "node scripts/vercel-build.mjs",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
@@ -13,6 +14,7 @@
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "@serwist/next": "^9.5.11",
+    "@vercel/blob": "^2.3.3",
     "bcryptjs": "^3.0.3",
     "canvas": "^3.2.3",
     "date-fns": "^4.1.0",
