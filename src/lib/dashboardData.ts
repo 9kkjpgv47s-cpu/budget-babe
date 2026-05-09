@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export async function getOrCreateMonthlyPeriod(yearMonth: string) {
@@ -11,11 +12,29 @@ export async function getOrCreateMonthlyPeriod(yearMonth: string) {
 }
 
 export async function ensureHouseholdSettings() {
-  await prisma.householdSettings.upsert({
+  const existing = await prisma.householdSettings.findUnique({
     where: { id: 1 },
-    create: { id: 1 },
-    update: {},
+    select: { id: true },
   });
+  if (existing) return;
+
+  try {
+    await prisma.householdSettings.create({
+      data: { id: 1 },
+    });
+  } catch (error) {
+    /**
+     * Another concurrent request may create the singleton row first.
+     * Treat uniqueness conflicts as success.
+     */
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return;
+    }
+    throw error;
+  }
 }
 
 export async function getDashboardData(yearMonth: string) {
