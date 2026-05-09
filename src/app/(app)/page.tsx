@@ -1,12 +1,5 @@
 import Link from "next/link";
-import {
-  addMonths,
-  format,
-  getDate,
-  getDay,
-  getDaysInMonth,
-  startOfMonth,
-} from "date-fns";
+import { addMonths, format, getDate } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { getDashboardData } from "@/lib/dashboardData";
 import { formatCents } from "@/lib/money";
@@ -21,6 +14,7 @@ import { BudgetCopyHeader } from "./BudgetCopyHeader";
 import { BillRow, BillsSectionHeader } from "./BillRow";
 import { BudgetPlanRow } from "./BudgetPlanRow";
 import { DashboardPanel } from "./DashboardPanel";
+import { HomeMobileInsights } from "./HomeMobileInsights";
 import { PaychecksPanel } from "./PaychecksPanel";
 import { QuickForms } from "./QuickForms";
 import { applySuggestedRolloversAction } from "@/app/actions/rollover";
@@ -36,6 +30,7 @@ type ExpensePoint = {
   description: string;
   tagsJson: string | null;
   payee: string | null;
+  budgetPlanId: string | null;
 };
 
 function isLikelyGroceryExpense(exp: ExpensePoint): boolean {
@@ -99,6 +94,21 @@ export default async function HomePage({
     where: { yearMonth: { in: lookupYms } },
     select: {
       yearMonth: true,
+      incomeCents: true,
+      bills: {
+        select: {
+          amountCents: true,
+          dueDate: true,
+          paid: true,
+        },
+      },
+      budgetPlans: {
+        select: {
+          id: true,
+          name: true,
+          category: true,
+        },
+      },
       expenses: {
         select: {
           id: true,
@@ -107,72 +117,138 @@ export default async function HomePage({
           description: true,
           tagsJson: true,
           payee: true,
+          budgetPlanId: true,
         },
       },
     },
   });
 
-  const expenseByMonth = new Map<string, ExpensePoint[]>();
+  const periodByMonth = new Map<
+    string,
+    {
+      incomeCents: number;
+      bills: { amountCents: number; dueDate: Date; paid: boolean }[];
+      budgetPlans: { id: string; name: string; category: string | null }[];
+      expenses: ExpensePoint[];
+    }
+  >();
   for (const period of periodSnapshots) {
-    expenseByMonth.set(period.yearMonth, period.expenses);
+    periodByMonth.set(period.yearMonth, {
+      incomeCents: period.incomeCents,
+      bills: period.bills,
+      budgetPlans: period.budgetPlans,
+      expenses: period.expenses,
+    });
   }
 
   const historyGroceryMonthly = historyYms.map((ymKey) =>
     sumCents(
-      (expenseByMonth.get(ymKey) ?? [])
+      (periodByMonth.get(ymKey)?.expenses ?? [])
         .filter((e) => isLikelyGroceryExpense(e))
         .map((e) => e.amountCents),
     ),
   );
-  const groceryHistoryNonZero = historyGroceryMonthly.filter((v) => v > 0);
   const groceryBudgetPlan = data.budgetPlans.find(
     (p) =>
       p.name.toLowerCase().includes("grocer") ||
       (p.category?.toLowerCase().includes("grocer") ?? false),
   );
-  const expectedGroceriesBiweeklyCents =
+  const groceryHistoryNonZero = historyGroceryMonthly.filter((v) => v > 0);
+  const expectedGroceriesMonthlyCents =
     groceryHistoryNonZero.length > 0
       ? Math.round(
           groceryHistoryNonZero.reduce((s, v) => s + v, 0) /
-            groceryHistoryNonZero.length /
-            2,
+            groceryHistoryNonZero.length,
         )
       : groceryBudgetPlan
-        ? Math.round((groceryBudgetPlan.limitCents + groceryBudgetPlan.rolledInCents) / 2)
+        ? groceryBudgetPlan.limitCents + groceryBudgetPlan.rolledInCents
         : 0;
 
-  const biweekly = [1, 2].map((periodIdx) => {
-    const isFirst = periodIdx === 1;
-    const spent = sumCents(
-      data.expenses
-        .filter((e) => (isFirst ? getDate(e.spentAt) <= 14 : getDate(e.spentAt) > 14))
-        .map((e) => e.amountCents),
+  const trendMonths = [prevYm, yearMonth, nextYm].map((ymKey) => {
+    const period = periodByMonth.get(ymKey);
+    const monthExpenses = period?.expenses ?? [];
+    const monthBills = period?.bills ?? [];
+    const monthIncome = period?.incomeCents ?? 0;
+    const expectedGroceriesBiweeklyCents = Math.round(expectedGroceriesMonthlyCents / 2);
+
+    const slices = [1, 2].map((periodIdx) => {
+      const isFirst = periodIdx === 1;
+      const spent = sumCents(
+        monthExpenses
+          .filter((e) => (isFirst ? getDate(e.spentAt) <= 14 : getDate(e.spentAt) > 14))
+          .map((e) => e.amountCents),
+      );
+      const unpaidBills = sumCents(
+        monthBills
+          .filter((b) => !b.paid)
+          .filter((b) => (isFirst ? getDate(b.dueDate) <= 14 : getDate(b.dueDate) > 14))
+          .map((b) => b.amountCents),
+      );
+      const circulation =
+        Math.round(monthIncome / 2) - spent - unpaidBills - expectedGroceriesBiweeklyCents;
+      return {
+        label: isFirst ? "Days 1-14" : "Days 15-end",
+        spent,
+        unpaidBills,
+        expectedGroceries: expectedGroceriesBiweeklyCents,
+        circulation,
+      };
+    });
+
+    const spentTotal = sumCents(monthExpenses.map((e) => e.amountCents));
+    const unpaidBillsTotal = sumCents(
+      monthBills.filter((b) => !b.paid).map((b) => b.amountCents),
     );
-    const unpaidBills = sumCents(
-      data.bills
-        .filter((b) => !b.paid)
-        .filter((b) => (isFirst ? getDate(b.dueDate) <= 14 : getDate(b.dueDate) > 14))
-        .map((b) => b.amountCents),
-    );
-    const incomeSlice = Math.round(data.incomeCents / 2);
-    const circulation = incomeSlice - spent - unpaidBills - expectedGroceriesBiweeklyCents;
+    const today = new Date();
+    const parsedMonth = parseYearMonth(ymKey);
+    const daysInMonth = new Date(
+      parsedMonth.getFullYear(),
+      parsedMonth.getMonth() + 1,
+      0,
+    ).getDate();
+    const isCurrent = ymKey === yearMonth;
+    const elapsedDays = isCurrent ? Math.max(1, today.getDate()) : daysInMonth;
+    const spentSoFar = isCurrent
+      ? sumCents(
+          monthExpenses
+            .filter((e) => getDate(e.spentAt) <= today.getDate())
+            .map((e) => e.amountCents),
+        )
+      : spentTotal;
+    const projectedSpentCents = Math.round((spentSoFar / elapsedDays) * daysInMonth);
+    const projectedCirculationCents =
+      monthIncome - unpaidBillsTotal - expectedGroceriesMonthlyCents - projectedSpentCents;
+
     return {
-      label: isFirst ? "Days 1-14" : "Days 15-end",
-      spent,
-      unpaidBills,
-      expectedGroceries: expectedGroceriesBiweeklyCents,
-      circulation,
+      yearMonth: ymKey,
+      incomeCents: monthIncome,
+      spentTotal,
+      unpaidBillsTotal,
+      expectedGroceriesMonthCents: expectedGroceriesMonthlyCents,
+      projectedCirculationCents,
+      slices,
     };
   });
 
-  const biweeklyMax = Math.max(
-    1,
-    ...biweekly.flatMap((b) => [
-      b.spent,
-      b.unpaidBills,
-      b.expectedGroceries,
-      Math.max(0, b.circulation),
-    ]),
+  const calendarMonths = [prevYm, yearMonth, nextYm].map((ymKey) => {
+    const monthExpenses = periodByMonth.get(ymKey)?.expenses ?? [];
+    return {
+      yearMonth: ymKey,
+      expenses: monthExpenses.map((e) => ({
+        id: e.id,
+        amountCents: e.amountCents,
+        spentAtIso: e.spentAt.toISOString(),
+        budgetPlanId: e.budgetPlanId,
+      })),
+    };
+  });
+
+  const budgetPlanOptions = Array.from(
+    new Map(
+      lookupYms
+        .flatMap((ymKey) => periodByMonth.get(ymKey)?.budgetPlans ?? [])
+        .map((p) => [p.id, p] as const),
+    ).values(),
   );
 
   return (
@@ -237,76 +313,11 @@ export default async function HomePage({
         />
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-medium">Two-week cashflow (mobile planner)</h2>
-          <span className="text-xs text-zinc-500">Expected groceries from recent months</span>
-        </div>
-        <div className="mt-3 grid gap-4 md:grid-cols-2">
-          {biweekly.map((b) => (
-            <div
-              key={b.label}
-              className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-950"
-            >
-              <div className="text-sm font-medium">{b.label}</div>
-              <div className="mt-2 space-y-2">
-                <MiniBar
-                  label="Spent"
-                  value={b.spent}
-                  max={biweeklyMax}
-                  color="bg-rose-500"
-                />
-                <MiniBar
-                  label="Bills to pay"
-                  value={b.unpaidBills}
-                  max={biweeklyMax}
-                  color="bg-amber-500"
-                />
-                <MiniBar
-                  label="Expected groceries"
-                  value={b.expectedGroceries}
-                  max={biweeklyMax}
-                  color="bg-emerald-500"
-                />
-                <MiniBar
-                  label="Circulation left"
-                  value={Math.max(0, b.circulation)}
-                  max={biweeklyMax}
-                  color="bg-sky-500"
-                />
-              </div>
-              <p className="mt-3 text-xs text-zinc-500">
-                Net after plan:{" "}
-                <span
-                  className={
-                    b.circulation < 0
-                      ? "font-semibold text-red-600"
-                      : "font-semibold text-emerald-600"
-                  }
-                >
-                  {formatCents(b.circulation)}
-                </span>
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="font-medium">Spending calendar (previous/current/next)</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          Track spending habits by day and compare month-to-month patterns.
-        </p>
-        <div className="mt-4 grid gap-4 lg:grid-cols-3">
-          {calendarYms.map((ymKey) => (
-            <MonthSpendCalendar
-              key={ymKey}
-              yearMonth={ymKey}
-              expenses={expenseByMonth.get(ymKey) ?? []}
-            />
-          ))}
-        </div>
-      </section>
+      <HomeMobileInsights
+        trendMonths={trendMonths}
+        calendarMonths={calendarMonths}
+        budgetPlanOptions={budgetPlanOptions}
+      />
 
       <section className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/30">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -554,87 +565,6 @@ function StatCard({
       </div>
       <div className="mt-1 text-xl font-semibold tabular-nums">{value}</div>
       {hint ? <p className="mt-2 text-xs text-zinc-500">{hint}</p> : null}
-    </div>
-  );
-}
-
-function MiniBar({
-  label,
-  value,
-  max,
-  color,
-}: {
-  label: string;
-  value: number;
-  max: number;
-  color: string;
-}) {
-  const width = Math.max(2, Math.round((value / Math.max(1, max)) * 100));
-  return (
-    <div>
-      <div className="mb-1 flex items-center justify-between text-xs">
-        <span className="text-zinc-500">{label}</span>
-        <span className="tabular-nums">{formatCents(value)}</span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-        <div className={`h-full ${color}`} style={{ width: `${width}%` }} />
-      </div>
-    </div>
-  );
-}
-
-function MonthSpendCalendar({
-  yearMonth,
-  expenses,
-}: {
-  yearMonth: string;
-  expenses: ExpensePoint[];
-}) {
-  const monthStart = startOfMonth(parseYearMonth(yearMonth));
-  const daysInMonth = getDaysInMonth(monthStart);
-  const firstWeekday = getDay(monthStart);
-  const dayTotals = new Map<number, number>();
-  for (const exp of expenses) {
-    const day = getDate(exp.spentAt);
-    dayTotals.set(day, (dayTotals.get(day) ?? 0) + exp.amountCents);
-  }
-  const monthTotal = sumCents([...dayTotals.values()]);
-
-  return (
-    <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-semibold">{yearMonth}</h3>
-        <span className="text-xs tabular-nums text-zinc-500">{formatCents(monthTotal)}</span>
-      </div>
-      <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-zinc-500">
-        {["S", "M", "T", "W", "T", "F", "S"].map((d) => (
-          <div key={d}>{d}</div>
-        ))}
-      </div>
-      <div className="mt-1 grid grid-cols-7 gap-1">
-        {Array.from({ length: firstWeekday }).map((_, idx) => (
-          <div key={`blank-${idx}`} />
-        ))}
-        {Array.from({ length: daysInMonth }).map((_, idx) => {
-          const day = idx + 1;
-          const spent = dayTotals.get(day) ?? 0;
-          return (
-            <div
-              key={day}
-              className={`rounded border p-1 text-center text-[10px] ${
-                spent > 0
-                  ? "border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/30"
-                  : "border-zinc-200 dark:border-zinc-800"
-              }`}
-            >
-              <div className="font-medium">{day}</div>
-              <div className="truncate tabular-nums text-[9px] text-zinc-500">
-                {spent > 0 ? formatCents(spent) : "-"}
-              </div>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }

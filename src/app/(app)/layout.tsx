@@ -23,6 +23,14 @@ const links = [
   { href: "/goals", label: "Goals" },
 ];
 
+const mobileNavLinks = [
+  { href: "/", label: "Home" },
+  { href: "/expenses", label: "Expenses" },
+  { href: "/bills", label: "Bills" },
+  { href: "/budgets", label: "Budgets" },
+  { href: "/coach", label: "Coach" },
+];
+
 export default async function AppLayout({
   children,
 }: {
@@ -37,7 +45,7 @@ export default async function AppLayout({
             <Link href="/" className="font-semibold tracking-tight text-emerald-700 dark:text-emerald-400">
               Household Budget
             </Link>
-            <nav className="flex flex-wrap gap-3 text-sm">
+            <nav className="hidden flex-wrap gap-3 text-sm md:flex">
               {links.map((l) => (
                 <Link
                   key={l.href}
@@ -62,7 +70,23 @@ export default async function AppLayout({
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+      <main className="mx-auto max-w-5xl px-4 py-6 pb-24 md:py-8 md:pb-8">
+        {children}
+      </main>
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 px-2 py-2 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95 md:hidden">
+        <ul className="mx-auto grid max-w-5xl grid-cols-5 gap-1">
+          {mobileNavLinks.map((l) => (
+            <li key={l.href}>
+              <Link
+                href={l.href}
+                className="block rounded-lg px-2 py-2 text-center text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+              >
+                {l.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </div>
   );
 }
