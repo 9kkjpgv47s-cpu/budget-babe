@@ -57,6 +57,28 @@ function sumCents(values: number[]): number {
   return values.reduce((s, v) => s + v, 0);
 }
 
+function semanticToneForValue(value: number): {
+  text: string;
+  pill: string;
+} {
+  if (value < 0) {
+    return {
+      text: "text-red-600 dark:text-red-400",
+      pill: "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300",
+    };
+  }
+  if (value === 0) {
+    return {
+      text: "text-amber-600 dark:text-amber-400",
+      pill: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+    };
+  }
+  return {
+    text: "text-emerald-600 dark:text-emerald-400",
+    pill: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+  };
+}
+
 function filterCalendarExpenses(
   expenses: CalendarExpense[],
   budgetPlanById: Map<string, BudgetPlanOption>,
@@ -134,9 +156,14 @@ export function HomeMobileInsights({
 
   return (
     <>
-      <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-semibold">Two-week trend (swipe-friendly)</h2>
+          <h2 className="flex items-center gap-2 font-semibold">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+              $
+            </span>
+            Two-week trend
+          </h2>
           <p className="text-xs text-zinc-600 dark:text-zinc-300">
             Projected end-of-period cash included
           </p>
@@ -162,9 +189,22 @@ export function HomeMobileInsights({
             {selectedTrend.slices.map((slice) => (
               <div
                 key={slice.label}
-                className="min-w-[88%] snap-start rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-950 sm:min-w-[48%]"
+                className="min-w-[88%] snap-start rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-950 sm:min-w-[48%]"
               >
-                <div className="text-sm font-medium">{slice.label}</div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium">{slice.label}</div>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                      semanticToneForValue(slice.circulation).pill
+                    }`}
+                  >
+                    {slice.circulation > 0
+                      ? "Healthy"
+                      : slice.circulation < 0
+                        ? "Overspend risk"
+                        : "Break-even"}
+                  </span>
+                </div>
                 <div className="mt-2 space-y-2">
                   <TrendBar label="Spent" value={slice.spent} max={barMax} color="bg-rose-500" />
                   <TrendBar
@@ -190,7 +230,7 @@ export function HomeMobileInsights({
             ))}
           </div>
         </div>
-        <div className="mt-3 rounded-lg bg-zinc-50 p-3 text-xs dark:bg-zinc-950">
+        <div className="mt-3 rounded-xl bg-zinc-50 p-3 text-xs dark:bg-zinc-950">
           <div className="flex justify-between">
             <span className="text-zinc-600 dark:text-zinc-300">Income</span>
             <span className="tabular-nums">{formatCents(selectedTrend.incomeCents)}</span>
@@ -201,9 +241,7 @@ export function HomeMobileInsights({
             </span>
             <span
               className={`tabular-nums font-semibold ${
-                selectedTrend.projectedCirculationCents < 0
-                  ? "text-red-600"
-                  : "text-emerald-600"
+                semanticToneForValue(selectedTrend.projectedCirculationCents).text
               }`}
             >
               {formatCents(selectedTrend.projectedCirculationCents)}
@@ -212,8 +250,13 @@ export function HomeMobileInsights({
         </div>
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="font-semibold">Spending calendar habits</h2>
+      <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="flex items-center gap-2 font-semibold">
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
+            C
+          </span>
+          Spending calendar habits
+        </h2>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
           Filter by budget line/category and review spending streaks by month.
         </p>
@@ -317,12 +360,25 @@ function MonthCalendarCard({
   const monthTotal = sumCents([...totals.values()]);
 
   return (
-    <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+    <div className="rounded-xl border border-zinc-200 p-3 dark:border-zinc-700">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold">{yearMonth}</h3>
         <span className="text-xs tabular-nums text-zinc-500">{formatCents(monthTotal)}</span>
       </div>
-      <p className="mb-2 text-[11px] text-zinc-500">Longest streak: {longestStreak} day(s)</p>
+      <p className="mb-2 text-[11px] text-zinc-500">
+        Longest streak:{" "}
+        <span
+          className={`font-semibold ${
+            longestStreak >= 4
+              ? "text-red-600 dark:text-red-400"
+              : longestStreak >= 2
+                ? "text-amber-600 dark:text-amber-400"
+                : "text-emerald-600 dark:text-emerald-400"
+          }`}
+        >
+          {longestStreak} day(s)
+        </span>
+      </p>
       <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-zinc-500">
         {["S", "M", "T", "W", "T", "F", "S"].map((d, idx) => (
           <div key={`${d}-${idx}`}>{d}</div>
