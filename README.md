@@ -64,7 +64,7 @@ On **Shopping**, the trip form pre-fills a **usual basket** from items that repe
 
 ### Production / Vercel
 
-Deploy from this repo on [Vercel](https://vercel.com). The included **`vercel.json`** runs **`npm run vercel-build`** (`[scripts/vercel-build.mjs](scripts/vercel-build.mjs)`): it runs **`prisma migrate deploy`** only when **`DATABASE_URL`** is set and not a sqlite `file:` URL, then **`prisma generate`** and **`next build`**.
+Deploy from this repo on [Vercel](https://vercel.com). The included **[`vercel.json`](vercel.json)** build command is **`node scripts/vercel-build.mjs`** (same behavior as **`npm run vercel-build`** locally): it runs **`prisma migrate deploy`** only when **`DATABASE_URL`** is set and not a sqlite `file:` URL, then **`prisma generate`** and **`next build`**.
 
 **Deploy before database:** you can ship a **successful build** without **`DATABASE_URL`** (migrations are skipped and a note is logged). The deployed app will **not work end-to-end** (login and DB-backed pages need Postgres) until you set **`DATABASE_URL`** for **Preview** and **Production** and **redeploy** so migrations apply. Alternatively, point **`DATABASE_URL`** at a new Postgres instance and run **`npx prisma migrate deploy`** locally once, then deploy.
 
