@@ -184,7 +184,7 @@ export function HomeMobileInsights({
             </button>
           ))}
         </div>
-        <div className="mt-3 overflow-x-auto scroll-smooth">
+        <div className="mt-3 overflow-x-auto scroll-smooth" aria-label="Two-week trend cards">
           <div className="flex snap-x snap-mandatory gap-3 pb-1">
             {selectedTrend.slices.map((slice) => (
               <div
@@ -229,14 +229,6 @@ export function HomeMobileInsights({
               </div>
             ))}
           </div>
-        </div>
-        <div className="mt-2 flex items-center justify-center gap-1.5">
-          {selectedTrend.slices.map((slice) => (
-            <span
-              key={`dot-${slice.label}`}
-              className="h-1.5 w-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700"
-            />
-          ))}
         </div>
         <div className="mt-3 rounded-xl bg-zinc-50 p-3 text-xs dark:bg-zinc-950">
           <div className="flex justify-between">
@@ -319,6 +311,18 @@ export function HomeMobileInsights({
             );
           })}
         </div>
+        {calendarMonths.every((m) =>
+          filterCalendarExpenses(
+            m.expenses,
+            budgetPlanById,
+            selectedPlanId,
+            selectedCategory,
+          ).length === 0,
+        ) ? (
+          <p className="mt-3 rounded-lg bg-zinc-50 p-3 text-sm text-zinc-600 dark:bg-zinc-950 dark:text-zinc-300">
+            No spending matches the current filter for these months.
+          </p>
+        ) : null}
       </section>
     </>
   );

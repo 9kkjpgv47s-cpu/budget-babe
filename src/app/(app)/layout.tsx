@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { logoutAction } from "@/app/actions/auth";
 import { requireUser } from "@/lib/auth";
+import { MobileBottomNav } from "./MobileBottomNav";
 
 /** Prisma requires Node.js; keep authenticated routes off Edge by default. */
 export const runtime = "nodejs";
@@ -21,14 +22,6 @@ const links = [
   { href: "/receipts", label: "Receipts" },
   { href: "/shopping", label: "Shopping" },
   { href: "/goals", label: "Goals" },
-];
-
-const mobileNavLinks = [
-  { href: "/", label: "Home" },
-  { href: "/expenses", label: "Expenses" },
-  { href: "/bills", label: "Bills" },
-  { href: "/budgets", label: "Budgets" },
-  { href: "/coach", label: "Coach" },
 ];
 
 export default async function AppLayout({
@@ -73,20 +66,7 @@ export default async function AppLayout({
       <main className="mx-auto max-w-5xl px-3 py-5 pb-28 md:px-4 md:py-8 md:pb-8">
         {children}
       </main>
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95 md:hidden">
-        <ul className="mx-auto grid max-w-5xl grid-cols-5 gap-1">
-          {mobileNavLinks.map((l) => (
-            <li key={l.href}>
-              <Link
-                href={l.href}
-                className="flex min-h-11 items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-semibold text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-              >
-                {l.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <MobileBottomNav />
     </div>
   );
 }
