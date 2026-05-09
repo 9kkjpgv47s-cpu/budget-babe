@@ -3,6 +3,31 @@ import type { NextRequest } from "next/server";
 
 const PUBLIC = ["/login", "/register"];
 
+/**
+ * App Router serves flight payloads at paths like `/register.rsc`, `/*.prefetch.rsc`,
+ * `/*.segment.rsc`. Those must follow the same auth rules as the HTML document path.
+ */
+function stripNextFlightSuffix(pathname: string): string {
+  if (pathname.endsWith(".prefetch.rsc")) {
+    return pathname.slice(0, -".prefetch.rsc".length) || "/";
+  }
+  if (pathname.endsWith(".segment.rsc")) {
+    return pathname.slice(0, -".segment.rsc".length) || "/";
+  }
+  if (pathname.endsWith(".rsc")) {
+    return pathname.slice(0, -".rsc".length) || "/";
+  }
+  return pathname;
+}
+
+function isPublicDocumentPath(pathname: string): boolean {
+  const docPath = stripNextFlightSuffix(pathname);
+  if (docPath === "/~offline" || docPath.startsWith("/~offline/")) return true;
+  /** Needed so anonymous navigation/not-found RSC does not 307 to /login. */
+  if (docPath === "/_not-found") return true;
+  return PUBLIC.some((p) => docPath === p || docPath.startsWith(`${p}/`));
+}
+
 /** Map Pages-router style `/_next/data/:buildId/*.json` back to an app path for `?next=`. */
 function pagePathFromNextDataUrl(pathname: string): string {
   const m = pathname.match(/^\/_next\/data\/[^/]+\/(.+)\.json$/);
@@ -20,9 +45,6 @@ export function middleware(request: NextRequest) {
   if (pathname === "/sw.js" || pathname.startsWith("/swe-worker")) {
     return NextResponse.next();
   }
-  if (pathname === "/~offline" || pathname.startsWith("/~offline/")) {
-    return NextResponse.next();
-  }
   /** Static chunks and image optimizer must bypass auth; `/_next/data/*` is gated like HTML routes. */
   const isNextAsset =
     pathname.startsWith("/_next") && !pathname.startsWith("/_next/data");
@@ -36,7 +58,7 @@ export function middleware(request: NextRequest) {
   if (isPublicNextDataRoute(pathname)) {
     return NextResponse.next();
   }
-  if (PUBLIC.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+  if (isPublicDocumentPath(pathname)) {
     return NextResponse.next();
   }
   const hasSession = request.cookies.has("household_budget");
@@ -46,7 +68,7 @@ export function middleware(request: NextRequest) {
     const nextTarget =
       pathname.startsWith("/_next/data/") && pathname.endsWith(".json")
         ? pagePathFromNextDataUrl(pathname)
-        : pathname;
+        : stripNextFlightSuffix(pathname);
     url.searchParams.set("next", nextTarget);
     return NextResponse.redirect(url);
   }
