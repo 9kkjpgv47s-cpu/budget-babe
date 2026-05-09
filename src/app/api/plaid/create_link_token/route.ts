@@ -20,13 +20,18 @@ export async function POST() {
     );
   }
   try {
-    const { data } = await client.linkTokenCreate({
+    const redirectUri = process.env.PLAID_REDIRECT_URI?.trim();
+    const request: Parameters<typeof client.linkTokenCreate>[0] = {
       user: { client_user_id: session.user.userId },
       client_name: "Household Budget",
       products: [Products.Transactions],
       country_codes: [CountryCode.Us],
       language: "en",
-    });
+    };
+    if (redirectUri) {
+      request.redirect_uri = redirectUri;
+    }
+    const { data } = await client.linkTokenCreate(request);
     return NextResponse.json({ link_token: data.link_token });
   } catch (e) {
     const msg = formatPlaidError(e, "link token create");
