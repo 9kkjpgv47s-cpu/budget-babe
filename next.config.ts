@@ -17,7 +17,15 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["tesseract.js", "pdf-parse", "sharp", "canvas"],
+  serverExternalPackages: [
+    "tesseract.js",
+    "pdf-parse",
+    "sharp",
+    "canvas",
+    "ws",
+    "@neondatabase/serverless",
+    "@prisma/adapter-neon",
+  ],
 };
 
 export default withSerwist(nextConfig);

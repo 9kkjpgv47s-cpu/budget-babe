@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate dev"
   },
   "dependencies": {
+    "@prisma/adapter-neon": "^6.19.3",
     "@prisma/client": "^6.19.3",
     "@serwist/next": "^9.5.11",
     "@vercel/blob": "^2.3.3",
@@ -27,7 +28,8 @@
     "react-dom": "^19.0.0",
     "react-plaid-link": "^4.1.1",
     "sharp": "^0.34.5",
-    "tesseract.js": "^7.0.0"
+    "tesseract.js": "^7.0.0",
+    "ws": "^8.20.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -36,6 +38,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.1",
     "eslint": "^9",
     "eslint-config-next": "^15.5.15",
     "prisma": "^6.19.3",

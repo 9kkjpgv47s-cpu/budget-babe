@@ -11,6 +11,10 @@ export function normalizePostgresUrlForServerless(url: string): string {
     const u = new URL(trimmed);
     const host = u.hostname.toLowerCase();
 
+    if (host.includes("neon.tech") && !u.searchParams.has("connect_timeout")) {
+      u.searchParams.set("connect_timeout", "15");
+    }
+
     const pooledLikeHost =
       host.includes("pooler") || host.includes("pool.supabase");
 
