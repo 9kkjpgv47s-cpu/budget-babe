@@ -70,16 +70,16 @@ export default async function AppLayout({
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-6 pb-24 md:py-8 md:pb-8">
+      <main className="mx-auto max-w-5xl px-3 py-5 pb-28 md:px-4 md:py-8 md:pb-8">
         {children}
       </main>
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 px-2 py-2 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95 md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95 md:hidden">
         <ul className="mx-auto grid max-w-5xl grid-cols-5 gap-1">
           {mobileNavLinks.map((l) => (
             <li key={l.href}>
               <Link
                 href={l.href}
-                className="block rounded-lg px-2 py-2 text-center text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                className="flex min-h-11 items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-semibold text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
               >
                 {l.label}
               </Link>

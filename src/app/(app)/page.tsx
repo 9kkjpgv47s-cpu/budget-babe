@@ -252,17 +252,17 @@ export default async function HomePage({
   );
 
   return (
-    <div className="space-y-10">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="space-y-8 md:space-y-10">
+      <div className="flex flex-wrap items-end justify-between gap-3 md:gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">This month</h1>
-          <p className="mt-1 text-sm text-zinc-500">
+          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">This month</h1>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
             Income, spending, bills before payday, and what is left.
           </p>
         </div>
         <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm dark:border-zinc-800 dark:bg-zinc-900">
           <a
-            className="rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            className="rounded px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             href={`/?ym=${prevYm}`}
           >
             ←
@@ -271,7 +271,7 @@ export default async function HomePage({
             {yearMonth}
           </span>
           <a
-            className="rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            className="rounded px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             href={`/?ym=${nextYm}`}
           >
             →
@@ -279,7 +279,52 @@ export default async function HomePage({
         </div>
       </div>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <section className="md:hidden">
+        <div className="flex snap-x gap-3 overflow-x-auto pb-1">
+          <div className="min-w-[84%] snap-start">
+            <StatCard
+              label="Income"
+              value={formatCents(data.incomeCents)}
+              hint={
+                data.paychecks.length > 0
+                  ? `${data.paychecks.length} paycheck${data.paychecks.length === 1 ? "" : "s"} this month`
+                  : data.period.incomeCents > 0
+                    ? "Legacy planned income until you add paycheck rows"
+                    : "Add paychecks via Household settings or Quick add"
+              }
+            />
+          </div>
+          <div className="min-w-[84%] snap-start">
+            <StatCard label="Spent so far" value={formatCents(data.spentTotal)} />
+          </div>
+          <div className="min-w-[84%] snap-start">
+            <StatCard
+              label="Bills before next paycheck"
+              value={formatCents(data.billsBeforePaySum)}
+              hint={
+                data.nextPaycheckDate
+                  ? `Due on or before ${data.nextPaycheckDate.toLocaleDateString()}`
+                  : "Set your next paycheck date below"
+              }
+            />
+          </div>
+          <div className="min-w-[84%] snap-start">
+            <StatCard
+              label="Left after those bills & spending"
+              value={formatCents(data.leftAfterUpcomingBills)}
+              hint="Income minus spending minus unpaid bills due on or before payday"
+            />
+          </div>
+          <div className="min-w-[84%] snap-start">
+            <StatCard
+              label="Left after all unpaid bills"
+              value={formatCents(data.leftAfterAllBills)}
+              hint="Income minus spending minus every bill still marked unpaid"
+            />
+          </div>
+        </div>
+      </section>
+      <section className="hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard
           label="Income"
           value={formatCents(data.incomeCents)}
@@ -311,6 +356,21 @@ export default async function HomePage({
           value={formatCents(data.leftAfterAllBills)}
           hint="Income minus spending minus every bill still marked unpaid"
         />
+      </section>
+
+      <section className="grid grid-cols-2 gap-2 md:hidden">
+        <Link
+          href={`/expenses?ym=${yearMonth}`}
+          className="flex min-h-11 items-center justify-center rounded-lg bg-emerald-600 px-3 text-sm font-semibold text-white"
+        >
+          Add expense
+        </Link>
+        <Link
+          href={`/bills?ym=${yearMonth}`}
+          className="flex min-h-11 items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 text-sm font-semibold text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+        >
+          Review bills
+        </Link>
       </section>
 
       <HomeMobileInsights
@@ -564,7 +624,7 @@ function StatCard({
         {label}
       </div>
       <div className="mt-1 text-xl font-semibold tabular-nums">{value}</div>
-      {hint ? <p className="mt-2 text-xs text-zinc-500">{hint}</p> : null}
+      {hint ? <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-300">{hint}</p> : null}
     </div>
   );
 }

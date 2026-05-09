@@ -136,8 +136,10 @@ export function HomeMobileInsights({
     <>
       <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-medium">Two-week trend (swipe-friendly)</h2>
-          <p className="text-xs text-zinc-500">Projected end-of-period cash included</p>
+          <h2 className="font-semibold">Two-week trend (swipe-friendly)</h2>
+          <p className="text-xs text-zinc-600 dark:text-zinc-300">
+            Projected end-of-period cash included
+          </p>
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2">
           {trendMonths.map((m, idx) => (
@@ -145,7 +147,7 @@ export function HomeMobileInsights({
               key={m.yearMonth}
               type="button"
               onClick={() => setTrendIdx(idx)}
-              className={`rounded-lg border px-2 py-1 text-xs ${
+              className={`min-h-10 rounded-lg border px-2 py-1 text-xs font-semibold ${
                 idx === trendIdx
                   ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
                   : "border-zinc-300 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
@@ -160,7 +162,7 @@ export function HomeMobileInsights({
             {selectedTrend.slices.map((slice) => (
               <div
                 key={slice.label}
-                className="min-w-[85%] snap-start rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-950 sm:min-w-[48%]"
+                className="min-w-[88%] snap-start rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-950 sm:min-w-[48%]"
               >
                 <div className="text-sm font-medium">{slice.label}</div>
                 <div className="mt-2 space-y-2">
@@ -190,11 +192,13 @@ export function HomeMobileInsights({
         </div>
         <div className="mt-3 rounded-lg bg-zinc-50 p-3 text-xs dark:bg-zinc-950">
           <div className="flex justify-between">
-            <span className="text-zinc-500">Income</span>
+            <span className="text-zinc-600 dark:text-zinc-300">Income</span>
             <span className="tabular-nums">{formatCents(selectedTrend.incomeCents)}</span>
           </div>
           <div className="mt-1 flex justify-between">
-            <span className="text-zinc-500">Projected cash after spending plan</span>
+            <span className="text-zinc-600 dark:text-zinc-300">
+              Projected cash after spending plan
+            </span>
             <span
               className={`tabular-nums font-semibold ${
                 selectedTrend.projectedCirculationCents < 0
@@ -209,17 +213,17 @@ export function HomeMobileInsights({
       </section>
 
       <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="font-medium">Spending calendar habits</h2>
-        <p className="mt-1 text-sm text-zinc-500">
+        <h2 className="font-semibold">Spending calendar habits</h2>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
           Filter by budget line/category and review spending streaks by month.
         </p>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <label className="text-xs text-zinc-500">
+          <label className="text-xs text-zinc-600 dark:text-zinc-300">
             Budget line
             <select
               value={selectedPlanId}
               onChange={(e) => setSelectedPlanId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              className="mt-1 min-h-11 w-full rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
             >
               <option value="all">All budget lines</option>
               {budgetPlanOptions.map((plan) => (
@@ -229,12 +233,12 @@ export function HomeMobileInsights({
               ))}
             </select>
           </label>
-          <label className="text-xs text-zinc-500">
+          <label className="text-xs text-zinc-600 dark:text-zinc-300">
             Category
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              className="mt-1 min-h-11 w-full rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
             >
               <option value="all">All categories</option>
               {categories.map((c) => (
