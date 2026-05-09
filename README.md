@@ -64,7 +64,9 @@ On **Shopping**, the trip form pre-fills a **usual basket** from items that repe
 
 ### Production / Vercel
 
-Deploy from this repo on [Vercel](https://vercel.com). The included **[`vercel.json`](vercel.json)** build command is **`node scripts/vercel-build.mjs`** (same behavior as **`npm run vercel-build`** locally): it runs **`prisma migrate deploy`** only when **`DATABASE_URL`** is set and not a sqlite `file:` URL, then **`prisma generate`** and **`next build`**.
+Deploy from this repo on [Vercel](https://vercel.com). Builds use **[`scripts/vercel-build.mjs`](scripts/vercel-build.mjs)** — wired from **`npm run build`** (the usual Next.js build command) and from **`vercel.json`** **`buildCommand`**. It runs **`prisma migrate deploy`** only when **`DATABASE_URL`** is set and not a sqlite **`file:`** URL; then **`prisma generate`** and **`next build`**.
+
+**Build Command override:** In **Project → Settings → Build & Development**, leave **Build Command** empty so **[`vercel.json`](vercel.json)** is used, or set it explicitly to **`npm run build`**. Turn **off** any stale dashboard override such as **`npm run vercel-build`** left over from an older **`package.json`** — logs stuck showing **`prisma migrate deploy && prisma generate && next build`** almost always mean the dashboard is still forcing **`npm run vercel-build`** against outdated scripts instead of using **`npm run build`**.
 
 **Deploy before database:** you can ship a **successful build** without **`DATABASE_URL`** (migrations are skipped and a note is logged). The deployed app will **not work end-to-end** (login and DB-backed pages need Postgres) until you set **`DATABASE_URL`** for **Preview** and **Production** and **redeploy** so migrations apply. Alternatively, point **`DATABASE_URL`** at a new Postgres instance and run **`npx prisma migrate deploy`** locally once, then deploy.
 
@@ -103,8 +105,9 @@ The app exposes a [Web App Manifest](https://developer.mozilla.org/en-US/docs/We
 | Command | Description |
 | --- | --- |
 | `npm run dev` | Development server |
-| `npm run build` | Production build (`prisma generate` + `next build`; run migrations separately or use `vercel-build`) |
-| `npm run vercel-build` | **Vercel:** conditional `migrate deploy` (if hosted `DATABASE_URL`), then generate + build |
+| `npm run build` | Production build via **`vercel-build.mjs`**: conditional migrate, **`prisma generate`**, **`next build`** |
+| `npm run build:next` | **`prisma generate`** + **`next build`** only (no migrate; handy locally) |
+| `npm run vercel-build` | Same as **`npm run build`** (alias) |
 | `npm run start` | Start production server |
 | `npm run lint` | ESLint |
 | `npm run db:migrate` | Create or apply Prisma migrations (development) |
