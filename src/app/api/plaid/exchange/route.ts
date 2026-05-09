@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { getPlaidApi } from "@/lib/plaidClient";
 import { prisma } from "@/lib/prisma";
+import { formatPlaidError } from "@/lib/plaidError";
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -43,7 +44,8 @@ export async function POST(request: Request) {
     revalidatePath("/");
     return NextResponse.json({ ok: true });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Exchange failed";
+    const msg = formatPlaidError(e, "public token exchange");
+    console.error("[plaid] exchange failed:", msg);
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }

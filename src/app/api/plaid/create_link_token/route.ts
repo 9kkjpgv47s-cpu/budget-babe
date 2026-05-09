@@ -2,6 +2,7 @@ import { CountryCode, Products } from "plaid";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getPlaidApi } from "@/lib/plaidClient";
+import { formatPlaidError } from "@/lib/plaidError";
 
 export async function POST() {
   const session = await getSession();
@@ -28,7 +29,8 @@ export async function POST() {
     });
     return NextResponse.json({ link_token: data.link_token });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Plaid link token failed";
+    const msg = formatPlaidError(e, "link token create");
+    console.error("[plaid] create_link_token failed:", msg);
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }
