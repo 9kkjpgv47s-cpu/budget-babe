@@ -22,7 +22,6 @@ const nextConfig: NextConfig = {
     "pdf-parse",
     "sharp",
     "canvas",
-    "ws",
     "@neondatabase/serverless",
     "@prisma/adapter-neon",
   ],

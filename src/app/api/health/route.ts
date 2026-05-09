@@ -8,9 +8,8 @@ export const dynamic = "force-dynamic";
  * Does not expose secrets. Use GET /api/health on your Vercel URL.
  */
 export async function GET() {
-  const sessionConfigured =
-    typeof process.env.SESSION_PASSWORD === "string" &&
-    process.env.SESSION_PASSWORD.length >= 32;
+  const pw = process.env.SESSION_PASSWORD?.trim();
+  const sessionConfigured = typeof pw === "string" && pw.length >= 32;
 
   try {
     await prisma.$queryRaw`SELECT 1`;

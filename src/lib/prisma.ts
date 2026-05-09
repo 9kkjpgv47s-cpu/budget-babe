@@ -1,14 +1,10 @@
-import { PrismaNeon } from "@prisma/adapter-neon";
-import { neonConfig } from "@neondatabase/serverless";
+import { PrismaNeonHTTP } from "@prisma/adapter-neon";
 import { PrismaClient } from "@prisma/client";
-import ws from "ws";
 import { normalizePostgresUrlForServerless } from "@/lib/neonDatabaseUrl";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
-
-neonConfig.webSocketConstructor = ws as unknown as typeof WebSocket;
 
 function isNeonHost(connectionString: string): boolean {
   try {
@@ -18,6 +14,10 @@ function isNeonHost(connectionString: string): boolean {
   }
 }
 
+/**
+ * Neon on Vercel: prefer HTTP fetch driver — avoids WebSocket + `ws` native issues in serverless bundles.
+ * @see https://www.prisma.io/docs/orm/overview/databases/neon
+ */
 function createPrismaClient(): PrismaClient {
   const raw = process.env.DATABASE_URL?.trim();
   const logs =
@@ -32,7 +32,10 @@ function createPrismaClient(): PrismaClient {
   const connectionString = normalizePostgresUrlForServerless(raw);
 
   if (isNeonHost(connectionString)) {
-    const adapter = new PrismaNeon({ connectionString });
+    const adapter = new PrismaNeonHTTP(connectionString, {
+      arrayMode: false,
+      fullResults: false,
+    });
     return new PrismaClient({ adapter, log: [...logs] });
   }
 

@@ -1,5 +1,5 @@
 function sessionPassword(): string {
-  const p = process.env.SESSION_PASSWORD;
+  const p = process.env.SESSION_PASSWORD?.trim();
   if (p && p.length >= 32) return p;
   if (process.env.NODE_ENV !== "production") {
     return "dev-only-session-secret-min-32-chars!!";
@@ -11,7 +11,7 @@ function sessionPassword(): string {
 
 export function validateProductionEnv(): void {
   if (process.env.NODE_ENV !== "production") return;
-  const p = process.env.SESSION_PASSWORD;
+  const p = process.env.SESSION_PASSWORD?.trim();
   if (!p || p.length < 32) {
     throw new Error(
       "Set SESSION_PASSWORD in the environment (at least 32 characters) for production.",
