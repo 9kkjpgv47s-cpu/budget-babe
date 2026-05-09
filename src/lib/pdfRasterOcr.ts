@@ -1,5 +1,3 @@
-import { PDFParse } from "pdf-parse";
-
 const MAX_PDF_OCR_PAGES = 5;
 const MIN_EMBEDDED_CHARS = 140;
 
@@ -20,6 +18,11 @@ export function pdfHasRichEmbeddedText(text: string): boolean {
 export async function extractPdfTextViaRasterOcr(
   buffer: Buffer,
 ): Promise<{ text: string; confidence: number | null }> {
+  /**
+   * Keep pdfjs/pdf-parse out of module-eval time so routes that merely import
+   * paystub/receipt helpers (e.g. dashboard actions) do not require DOM globals.
+   */
+  const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: buffer });
   try {
     const shot = await parser.getScreenshot({
