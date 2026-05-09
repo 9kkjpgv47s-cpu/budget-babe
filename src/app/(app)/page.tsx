@@ -279,6 +279,36 @@ export default async function HomePage({
         </div>
       </div>
 
+      <section className="rounded-2xl border-2 border-emerald-300 bg-emerald-50/60 p-4 shadow-sm dark:border-emerald-800 dark:bg-emerald-950/30">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-emerald-900 dark:text-emerald-100">
+              Add entries first
+            </h2>
+            <p className="mt-1 text-sm text-emerald-900/80 dark:text-emerald-100/80">
+              Primary input zone for {yearMonth}: spending, bills, envelopes, and paychecks.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Link
+              href="/receipts"
+              className="rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm font-semibold text-emerald-800 transition-all duration-200 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900/60"
+            >
+              Receipt upload
+            </Link>
+            <Link
+              href={`/expenses?ym=${yearMonth}`}
+              className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-all duration-200 hover:bg-emerald-500"
+            >
+              Open entries
+            </Link>
+          </div>
+        </div>
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-3 dark:border-emerald-900/60 dark:bg-zinc-900">
+          <QuickForms yearMonth={yearMonth} />
+        </div>
+      </section>
+
       <section className="md:hidden">
         <div className="flex snap-x gap-3 overflow-x-auto pb-1">
           <div className="min-w-[84%] snap-start">
@@ -453,29 +483,17 @@ export default async function HomePage({
         </section>
       ) : null}
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 className="font-medium">Household settings</h2>
-          <DashboardPanel
-            yearMonth={yearMonth}
-            nextPaycheckDate={data.nextPaycheckDate}
-            monthlyNotes={data.period.notes}
-          />
-          <PaychecksPanel
-            yearMonth={yearMonth}
-            paychecks={data.paychecks}
-          />
-        </div>
-        <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 className="font-medium">Quick add</h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            One form for spending, bills, envelopes, and paychecks for {yearMonth}.{" "}
-            <Link href={`/expenses?ym=${yearMonth}`} className="text-emerald-600 underline">
-              View all expenses
-            </Link>
-          </p>
-          <QuickForms yearMonth={yearMonth} />
-        </div>
+      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="font-medium">Household settings</h2>
+        <DashboardPanel
+          yearMonth={yearMonth}
+          nextPaycheckDate={data.nextPaycheckDate}
+          monthlyNotes={data.period.notes}
+        />
+        <PaychecksPanel
+          yearMonth={yearMonth}
+          paychecks={data.paychecks}
+        />
       </section>
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
