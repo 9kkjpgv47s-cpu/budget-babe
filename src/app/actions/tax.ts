@@ -56,6 +56,34 @@ function redirectTaxValidationError(
   redirect(`/tax?year=${encodeURIComponent(opts.taxYear)}&taxErr=${q}`);
 }
 
+async function writeTaxAuditSafe(params: {
+  expenseId: string;
+  userId: string;
+  action: "classify" | "review" | "clear";
+  before: TaxSnapshot;
+  after: TaxSnapshot;
+}) {
+  try {
+    await prisma.taxExpenseAudit.create({
+      data: {
+        expenseId: params.expenseId,
+        userId: params.userId,
+        action: params.action,
+        detailsJson: JSON.stringify({
+          before: params.before,
+          after: params.after,
+        }),
+      },
+    });
+  } catch (error) {
+    /**
+     * Audit logging is best-effort in Neon HTTP mode where multi-step writes
+     * are not transactional. Keep the primary user action successful.
+     */
+    console.error("[tax-audit] failed to write audit row", error);
+  }
+}
+
 export async function saveExpenseTaxAction(formData: FormData): Promise<void> {
   const user = await requireUser();
   const expenseId = String(formData.get("expenseId") ?? "").trim();
@@ -128,27 +156,24 @@ export async function saveExpenseTaxAction(formData: FormData): Promise<void> {
     before.reviewedAt === after.reviewedAt;
   if (same) return;
 
-  await prisma.$transaction([
-    prisma.expense.update({
-      where: { id: expenseId },
-      data: {
-        taxApplicability,
-        taxCodeRefId,
-        taxCategory,
-        taxNote,
-        taxReviewedAt,
-        taxReviewedByUserId,
-      },
-    }),
-    prisma.taxExpenseAudit.create({
-      data: {
-        expenseId,
-        userId: user.userId,
-        action: "classify",
-        detailsJson: JSON.stringify({ before, after }),
-      },
-    }),
-  ]);
+  await prisma.expense.update({
+    where: { id: expenseId },
+    data: {
+      taxApplicability,
+      taxCodeRefId,
+      taxCategory,
+      taxNote,
+      taxReviewedAt,
+      taxReviewedByUserId,
+    },
+  });
+  await writeTaxAuditSafe({
+    expenseId,
+    userId: user.userId,
+    action: "classify",
+    before,
+    after,
+  });
 
   revalidateTax(redirectYear);
   revalidatePath(`/expenses?ym=${exp.monthlyPeriod.yearMonth}`);
@@ -177,23 +202,20 @@ export async function markExpenseTaxReviewedAction(formData: FormData): Promise<
     taxReviewedAt: now,
   });
 
-  await prisma.$transaction([
-    prisma.expense.update({
-      where: { id: expenseId },
-      data: {
-        taxReviewedAt: now,
-        taxReviewedByUserId: user.userId,
-      },
-    }),
-    prisma.taxExpenseAudit.create({
-      data: {
-        expenseId,
-        userId: user.userId,
-        action: "review",
-        detailsJson: JSON.stringify({ before, after }),
-      },
-    }),
-  ]);
+  await prisma.expense.update({
+    where: { id: expenseId },
+    data: {
+      taxReviewedAt: now,
+      taxReviewedByUserId: user.userId,
+    },
+  });
+  await writeTaxAuditSafe({
+    expenseId,
+    userId: user.userId,
+    action: "review",
+    before,
+    after,
+  });
 
   revalidateTax(redirectYear);
   revalidatePath(`/expenses?ym=${exp.monthlyPeriod.yearMonth}`);
@@ -231,27 +253,24 @@ export async function clearExpenseTaxAction(formData: FormData): Promise<void> {
     return;
   }
 
-  await prisma.$transaction([
-    prisma.expense.update({
-      where: { id: expenseId },
-      data: {
-        taxApplicability: null,
-        taxCodeRefId: null,
-        taxCategory: null,
-        taxNote: null,
-        taxReviewedAt: null,
-        taxReviewedByUserId: null,
-      },
-    }),
-    prisma.taxExpenseAudit.create({
-      data: {
-        expenseId,
-        userId: user.userId,
-        action: "clear",
-        detailsJson: JSON.stringify({ before, after }),
-      },
-    }),
-  ]);
+  await prisma.expense.update({
+    where: { id: expenseId },
+    data: {
+      taxApplicability: null,
+      taxCodeRefId: null,
+      taxCategory: null,
+      taxNote: null,
+      taxReviewedAt: null,
+      taxReviewedByUserId: null,
+    },
+  });
+  await writeTaxAuditSafe({
+    expenseId,
+    userId: user.userId,
+    action: "clear",
+    before,
+    after,
+  });
 
   revalidateTax(redirectYear);
   revalidatePath(`/expenses?ym=${exp.monthlyPeriod.yearMonth}`);
@@ -298,24 +317,21 @@ export async function bulkQualifyTaxExpensesAction(formData: FormData): Promise<
     ) {
       continue;
     }
-    await prisma.$transaction([
-      prisma.expense.update({
-        where: { id: expenseId },
-        data: {
-          taxApplicability,
-          taxCodeRefId,
-          taxCategory: categoryRaw,
-        },
-      }),
-      prisma.taxExpenseAudit.create({
-        data: {
-          expenseId,
-          userId: user.userId,
-          action: "classify",
-          detailsJson: JSON.stringify({ before, after }),
-        },
-      }),
-    ]);
+    await prisma.expense.update({
+      where: { id: expenseId },
+      data: {
+        taxApplicability,
+        taxCodeRefId,
+        taxCategory: categoryRaw,
+      },
+    });
+    await writeTaxAuditSafe({
+      expenseId,
+      userId: user.userId,
+      action: "classify",
+      before,
+      after,
+    });
   }
 
   revalidateTax(year);

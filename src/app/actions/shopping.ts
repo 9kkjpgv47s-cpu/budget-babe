@@ -69,7 +69,10 @@ export async function updateFullTripCore(
   await requireUser();
   const tripId = String(formData.get("tripId") ?? "");
   if (!tripId) return { error: "Missing trip." };
-  const existing = await prisma.shoppingTrip.findUnique({ where: { id: tripId } });
+  const existing = await prisma.shoppingTrip.findUnique({
+    where: { id: tripId },
+    include: { items: true },
+  });
   if (!existing) return { error: "Trip not found." };
   const storeName = String(formData.get("storeName") ?? "").trim() || null;
   const shoppedAtRaw = String(formData.get("shoppedAt") ?? "").trim();
@@ -98,13 +101,13 @@ export async function updateFullTripCore(
     return s + it.priceCents * it.quantity;
   }, 0);
 
-  await prisma.$transaction(async (tx) => {
-    await tx.shoppingTripItem.deleteMany({ where: { tripId } });
-    await tx.shoppingTrip.update({
-      where: { id: tripId },
-      data: { storeName, shoppedAt, totalCents },
-    });
-    await tx.shoppingTripItem.createMany({
+  await prisma.shoppingTrip.update({
+    where: { id: tripId },
+    data: { storeName, shoppedAt, totalCents },
+  });
+  await prisma.shoppingTripItem.deleteMany({ where: { tripId } });
+  try {
+    await prisma.shoppingTripItem.createMany({
       data: items.map((it) => ({
         tripId,
         name: it.name,
@@ -112,7 +115,27 @@ export async function updateFullTripCore(
         priceCents: it.priceCents ?? null,
       })),
     });
-  });
+  } catch (error) {
+    /**
+     * Neon HTTP adapter does not support transactions. If item rewrite fails,
+     * best-effort restore previous rows so the trip remains usable.
+     */
+    try {
+      if (existing.items.length > 0) {
+        await prisma.shoppingTripItem.createMany({
+          data: existing.items.map((it) => ({
+            tripId,
+            name: it.name,
+            quantity: it.quantity,
+            priceCents: it.priceCents,
+          })),
+        });
+      }
+    } catch (restoreError) {
+      console.error("[shopping] failed to restore trip items after update", restoreError);
+    }
+    throw error;
+  }
   revalidatePath("/shopping");
   return { ok: true };
 }

@@ -6,9 +6,26 @@ export async function getOrCreateMonthlyPeriod(yearMonth: string) {
     where: { yearMonth },
   });
   if (existing) return existing;
-  return prisma.monthlyPeriod.create({
-    data: { yearMonth },
-  });
+  try {
+    return await prisma.monthlyPeriod.create({
+      data: { yearMonth },
+    });
+  } catch (error) {
+    /**
+     * First request for a new month can race under load. If another request
+     * wins the create, fall back to reading the row it inserted.
+     */
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const raced = await prisma.monthlyPeriod.findUnique({
+        where: { yearMonth },
+      });
+      if (raced) return raced;
+    }
+    throw error;
+  }
 }
 
 export async function ensureHouseholdSettings() {
