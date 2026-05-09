@@ -17,6 +17,19 @@ export function validateProductionEnv(): void {
       "Set SESSION_PASSWORD in the environment (at least 32 characters) for production.",
     );
   }
+  if (
+    process.env.VERCEL &&
+    process.env.DATABASE_URL?.startsWith("file:")
+  ) {
+    throw new Error(
+      "SQLite file DATABASE_URL does not work on Vercel serverless. Use a hosted Postgres URL (Neon, Supabase, Vercel Postgres, …).",
+    );
+  }
+  if (process.env.VERCEL && !process.env.BLOB_READ_WRITE_TOKEN) {
+    console.warn(
+      "[household-budget] BLOB_READ_WRITE_TOKEN is not set: receipts/pay stubs will try local disk on ephemeral Functions storage and may disappear after deploy. Add Vercel Blob from the dashboard.",
+    );
+  }
 }
 
 export function getSessionPassword(): string {

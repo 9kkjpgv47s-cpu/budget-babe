@@ -22,17 +22,20 @@ export async function GET(
     return new NextResponse("Unauthorized", { status: 401 });
   }
   const { id } = await params;
-  const receipt = await prisma.receipt.findUnique({ where: { id } });
-  if (!receipt) {
+  const paycheck = await prisma.paycheck.findUnique({
+    where: { id },
+    select: { imageFilename: true },
+  });
+  const ref = paycheck?.imageFilename;
+  if (!ref) {
     return new NextResponse("Not found", { status: 404 });
   }
 
-  const ref = receipt.filename;
   if (ref.startsWith("https://") || ref.startsWith("http://")) {
     return NextResponse.redirect(ref);
   }
 
-  const filePath = path.join(process.cwd(), "data", "receipts", path.basename(ref));
+  const filePath = path.join(process.cwd(), "data", "paystubs", path.basename(ref));
   try {
     await stat(filePath);
   } catch {

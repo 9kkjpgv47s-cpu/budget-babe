@@ -199,7 +199,7 @@ export function buildPaycheckCoach(input: PaycheckCoachInput): PaycheckCoachResu
 
   if (afterObligationsCents < 0) {
     recommendations.push(
-      "Bills plus your savings target exceed this paycheck's share of income. Raise income in settings, lower the savings % temporarily, move a bill, or pay some bills from last cycle's surplus.",
+      "Bills plus your savings target exceed this paycheck's share of income. Add or raise paycheck entries for this month, lower the savings % temporarily, move a bill, or pay some bills from last cycle's surplus.",
     );
   } else if (freeSpendingCapCents < Math.round(perPaycheckIncomeCents * 0.05)) {
     recommendations.push(

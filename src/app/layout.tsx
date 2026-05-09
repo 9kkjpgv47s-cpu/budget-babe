@@ -36,6 +36,9 @@ export const viewport: Viewport = {
   themeColor: "#059669",
 };
 
+/** OCR / pay stub parsing can exceed default Vercel function limits. */
+export const maxDuration = 60;
+
 export default function RootLayout({
   children,
 }: Readonly<{

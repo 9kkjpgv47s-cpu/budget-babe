@@ -28,7 +28,8 @@ export async function getDashboardData(yearMonth: string) {
   const savingsRatePercentTarget = settings?.savingsRatePercentTarget ?? 10;
   const payPeriodsPerMonth = settings?.payPeriodsPerMonth ?? 2;
 
-  const [expenses, bills, budgetPlans, receipts, savingsGoals] = await Promise.all([
+  const [expenses, bills, budgetPlans, receipts, savingsGoals, paychecks] =
+    await Promise.all([
     prisma.expense.findMany({
       where: { monthlyPeriodId: period.id },
       orderBy: { spentAt: "desc" },
@@ -57,7 +58,16 @@ export async function getDashboardData(yearMonth: string) {
         savedAmountCents: true,
       },
     }),
+    prisma.paycheck.findMany({
+      where: { monthlyPeriodId: period.id },
+      orderBy: { receivedOn: "desc" },
+    }),
   ]);
+
+  const paycheckSum = paychecks.reduce((s, p) => s + p.amountCents, 0);
+  /** Sum of paycheck rows when present; otherwise legacy planned income on the period. */
+  const incomeCents =
+    paychecks.length > 0 ? paycheckSum : period.incomeCents;
 
   const spentTotal = expenses.reduce((s, e) => s + e.amountCents, 0);
   const billsBeforePay = nextPay
@@ -69,12 +79,13 @@ export async function getDashboardData(yearMonth: string) {
     .filter((b) => !b.paid)
     .reduce((s, b) => s + b.amountCents, 0);
 
-  const income = period.incomeCents;
-  const leftAfterUpcomingBills = income - spentTotal - billsBeforePaySum;
-  const leftAfterAllBills = income - spentTotal - unpaidBillsSum;
+  const leftAfterUpcomingBills = incomeCents - spentTotal - billsBeforePaySum;
+  const leftAfterAllBills = incomeCents - spentTotal - unpaidBillsSum;
 
   return {
     period,
+    incomeCents,
+    paychecks,
     nextPaycheckDate: nextPay,
     expenses,
     bills,

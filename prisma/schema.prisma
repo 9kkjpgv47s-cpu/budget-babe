@@ -1,11 +1,11 @@
-// Household money app — SQLite for simple two-user self-hosting
+// Household money app — PostgreSQL for production (Vercel); use Neon/local Postgres for dev.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -26,12 +26,29 @@ model User {
 model MonthlyPeriod {
   id           String   @id @default(cuid())
   yearMonth    String   @unique
+  /// Legacy: used only when this month has no Paycheck rows yet
   incomeCents  Int      @default(0)
   notes        String?
   expenses     Expense[]
   bills        Bill[]
   budgetPlans  BudgetPlan[]
   receipts     Receipt[]
+  paychecks    Paycheck[]
+}
+
+/// Actual wage deposits for a month (monthly income = sum of paychecks when any exist)
+model Paycheck {
+  id              String        @id @default(cuid())
+  monthlyPeriodId String
+  monthlyPeriod   MonthlyPeriod @relation(fields: [monthlyPeriodId], references: [id], onDelete: Cascade)
+  amountCents     Int
+  receivedOn      DateTime
+  note            String?
+  /// HTTPS Blob URL (Vercel Blob) or local basename under data/paystubs/
+  imageFilename   String?
+  createdAt       DateTime      @default(now())
+
+  @@index([monthlyPeriodId, receivedOn])
 }
 
 model Expense {

@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { parseMoneyToCents } from "@/lib/money";
 import {
+  filenameHintFromStoragePath,
+  readReceiptBinary,
+} from "@/lib/uploads";
+import {
   extractPdfTextViaRasterOcr,
   pdfHasRichEmbeddedText,
 } from "@/lib/pdfRasterOcr";
@@ -120,12 +124,82 @@ async function extractImageText(
   }
 }
 
+export type MoneyDocumentExtractResult =
+  | { ok: true; text: string; confidence: number | null }
+  | { ok: false; ocrStatus: "skipped" | "failed"; message: string };
+
+/**
+ * Extract plain text from receipt/paystub uploads (PDF + raster images).
+ * Shared by receipt OCR pipeline and pay stub amount guessing.
+ */
+export async function extractMoneyDocumentFromBuffer(
+  buffer: Buffer,
+  filenameForExt: string,
+): Promise<MoneyDocumentExtractResult> {
+  const ext = extOf(filenameForExt);
+  try {
+    if (ext === ".pdf") {
+      const embedded = await extractPdfText(buffer);
+      if (pdfHasRichEmbeddedText(embedded)) {
+        return { ok: true, text: embedded, confidence: null };
+      }
+      try {
+        const raster = await extractPdfTextViaRasterOcr(buffer);
+        const rawText = raster.text.trim()
+          ? raster.text
+          : embedded.trim() || raster.text;
+        if (!rawText.trim()) {
+          return {
+            ok: false,
+            ocrStatus: "failed",
+            message:
+              "Could not read text from this PDF. If it is password-protected or unusual, try exporting as images or use a photo.",
+          };
+        }
+        return { ok: true, text: rawText, confidence: raster.confidence };
+      } catch (pdfOcrErr) {
+        const hint =
+          pdfOcrErr instanceof Error ? pdfOcrErr.message : String(pdfOcrErr);
+        const isCanvas =
+          /canvas|Cannot find module 'canvas'/i.test(hint) ||
+          hint.includes("canvas");
+        return {
+          ok: false,
+          ocrStatus: "failed",
+          message: isCanvas
+            ? "PDF page rendering needs the native `canvas` package installed on the server (e.g. `npm install canvas` with build tools). " +
+              hint.slice(0, 400)
+            : hint.slice(0, 2000),
+        };
+      }
+    }
+    if (IMAGE_EXT.has(ext)) {
+      const ocr = await extractImageText(buffer, ext);
+      return { ok: true, text: ocr.text, confidence: ocr.confidence };
+    }
+    return {
+      ok: false,
+      ocrStatus: "skipped",
+      message: `Unsupported file type (${ext || "unknown"}) for OCR.`,
+    };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return { ok: false, ocrStatus: "failed", message: message.slice(0, 2000) };
+  }
+}
+
+/** Read from disk (local dev); prefer {@link extractMoneyDocumentFromBuffer} for serverless. */
+export async function extractMoneyDocumentText(
+  filePath: string,
+  filename: string,
+): Promise<MoneyDocumentExtractResult> {
+  const buf = await readFile(filePath);
+  return extractMoneyDocumentFromBuffer(buf, filename);
+}
+
 export async function processReceiptOcrFile(receiptId: string): Promise<void> {
   const receipt = await prisma.receipt.findUnique({ where: { id: receiptId } });
   if (!receipt) return;
-
-  const ext = extOf(receipt.filename);
-  const filePath = path.join(process.cwd(), "data", "receipts", receipt.filename);
 
   await prisma.receipt.update({
     where: { id: receiptId },
@@ -133,73 +207,24 @@ export async function processReceiptOcrFile(receiptId: string): Promise<void> {
   });
 
   try {
-    let rawText = "";
-    let confidence: number | null = null;
-
-    if (ext === ".pdf") {
-      const buf = await readFile(filePath);
-      const embedded = await extractPdfText(buf);
-      if (pdfHasRichEmbeddedText(embedded)) {
-        rawText = embedded;
-        confidence = null;
-      } else {
-        try {
-          const raster = await extractPdfTextViaRasterOcr(buf);
-          rawText = raster.text.trim()
-            ? raster.text
-            : embedded.trim() || raster.text;
-          confidence = raster.confidence;
-          if (!rawText.trim()) {
-            await prisma.receipt.update({
-              where: { id: receiptId },
-              data: {
-                ocrStatus: "failed",
-                ocrError:
-                  "Could not read text from this PDF. If it is password-protected or unusual, try exporting as images or use a photo.",
-              },
-            });
-            revalidatePath("/");
-            revalidatePath("/receipts");
-            return;
-          }
-        } catch (pdfOcrErr) {
-          const hint =
-            pdfOcrErr instanceof Error ? pdfOcrErr.message : String(pdfOcrErr);
-          const isCanvas =
-            /canvas|Cannot find module 'canvas'/i.test(hint) ||
-            hint.includes("canvas");
-          await prisma.receipt.update({
-            where: { id: receiptId },
-            data: {
-              ocrStatus: "failed",
-              ocrError: isCanvas
-                ? "PDF page rendering needs the native `canvas` package installed on the server (e.g. `npm install canvas` with build tools). " +
-                  hint.slice(0, 400)
-                : hint.slice(0, 2000),
-            },
-          });
-          revalidatePath("/");
-          revalidatePath("/receipts");
-          return;
-        }
-      }
-    } else if (IMAGE_EXT.has(ext)) {
-      const buf = await readFile(filePath);
-      const ocr = await extractImageText(buf, ext);
-      rawText = ocr.text;
-      confidence = ocr.confidence;
-    } else {
+    const buffer = await readReceiptBinary(receipt.filename);
+    const hint = filenameHintFromStoragePath(receipt.filename);
+    const extracted = await extractMoneyDocumentFromBuffer(buffer, hint);
+    if (!extracted.ok) {
       await prisma.receipt.update({
         where: { id: receiptId },
         data: {
-          ocrStatus: "skipped",
-          ocrError: `Unsupported file type (${ext || "unknown"}) for OCR.`,
+          ocrStatus: extracted.ocrStatus,
+          ocrError: extracted.message,
         },
       });
       revalidatePath("/");
       revalidatePath("/receipts");
       return;
     }
+
+    const rawText = extracted.text;
+    const confidence = extracted.confidence;
 
     const parsed = parseReceiptLines(rawText);
     const likelyTotal = parseLikelyTotalCents(rawText);

@@ -14,6 +14,7 @@ import { BudgetCopyHeader } from "./BudgetCopyHeader";
 import { BillRow, BillsSectionHeader } from "./BillRow";
 import { BudgetPlanRow } from "./BudgetPlanRow";
 import { DashboardPanel } from "./DashboardPanel";
+import { PaychecksPanel } from "./PaychecksPanel";
 import { QuickForms } from "./QuickForms";
 import { applySuggestedRolloversAction } from "@/app/actions/rollover";
 
@@ -86,7 +87,17 @@ export default async function HomePage({
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        <StatCard label="Income (planned)" value={formatCents(data.period.incomeCents)} />
+        <StatCard
+          label="Income"
+          value={formatCents(data.incomeCents)}
+          hint={
+            data.paychecks.length > 0
+              ? `${data.paychecks.length} paycheck${data.paychecks.length === 1 ? "" : "s"} this month`
+              : data.period.incomeCents > 0
+                ? "Legacy planned income until you add paycheck rows"
+                : "Add paychecks via Household settings or Quick add"
+          }
+        />
         <StatCard label="Spent so far" value={formatCents(data.spentTotal)} />
         <StatCard
           label="Bills before next paycheck"
@@ -188,23 +199,23 @@ export default async function HomePage({
           <h2 className="font-medium">Household settings</h2>
           <DashboardPanel
             yearMonth={yearMonth}
-            incomeCents={data.period.incomeCents}
             nextPaycheckDate={data.nextPaycheckDate}
             monthlyNotes={data.period.notes}
+          />
+          <PaychecksPanel
+            yearMonth={yearMonth}
+            paychecks={data.paychecks}
           />
         </div>
         <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="font-medium">Quick add</h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Log spending, bills, and budget buckets for {yearMonth}.{" "}
+            One form for spending, bills, envelopes, and paychecks for {yearMonth}.{" "}
             <Link href={`/expenses?ym=${yearMonth}`} className="text-emerald-600 underline">
               View all expenses
             </Link>
           </p>
-          <QuickForms
-            yearMonth={yearMonth}
-            budgetPlans={data.budgetPlans.map((p) => ({ id: p.id, name: p.name }))}
-          />
+          <QuickForms yearMonth={yearMonth} />
         </div>
       </section>
 

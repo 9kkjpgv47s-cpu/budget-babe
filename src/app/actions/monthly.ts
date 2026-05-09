@@ -1,5 +1,6 @@
 "use server";
 
+import path from "path";
 import { revalidatePath } from "next/cache";
 import { addMonths, endOfDay, format, startOfDay } from "date-fns";
 import { prisma } from "@/lib/prisma";
@@ -13,35 +14,124 @@ import { parseYearMonth } from "@/lib/yearMonth";
 import type { FormActionState } from "@/lib/formActionState";
 import { mergeTagLists } from "@/lib/budgetRollup";
 import { applyMerchantRulesToTags } from "@/lib/merchantRules";
+import { guessPaystubAmountFromBuffer } from "@/lib/paystubOcr";
+import { deletePaystubStored, savePaystubUpload } from "@/lib/uploads";
 
 async function periodFromYearMonth(yearMonth: string) {
   return getOrCreateMonthlyPeriod(yearMonth);
 }
 
-export async function updateIncomeCore(
+export async function addPaycheckCore(
   formData: FormData,
 ): Promise<FormActionState> {
   await requireUser();
   const yearMonth = String(formData.get("yearMonth") ?? "").trim();
-  const income = parseMoneyToCents(String(formData.get("income") ?? ""));
-  if (!yearMonth || income == null) {
-    return { error: "Invalid month or income." };
+  const receivedRaw = String(formData.get("receivedOn") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim() || null;
+  const amountTyped = parseMoneyToCents(String(formData.get("amount") ?? ""));
+  const file = formData.get("paystubFile");
+
+  if (!yearMonth) {
+    return { error: "Missing month." };
   }
-  const period = await periodFromYearMonth(yearMonth);
-  await prisma.monthlyPeriod.update({
-    where: { id: period.id },
-    data: { incomeCents: income },
-  });
-  revalidatePath("/");
-  revalidatePath("/coach");
-  return { ok: true };
+
+  const receivedOn = receivedRaw ? new Date(receivedRaw) : new Date();
+  if (Number.isNaN(receivedOn.getTime())) {
+    return { error: "Invalid paycheck date." };
+  }
+
+  let amountCents = amountTyped;
+  let imageFilename: string | null = null;
+
+  try {
+    let stubBytes: Buffer | null = null;
+    let stubHintName = "paystub.jpg";
+
+    if (file instanceof File && file.size > 0) {
+      if (file.size > 8 * 1024 * 1024) {
+        return { error: "Pay stub file must be 8MB or smaller." };
+      }
+      stubBytes = Buffer.from(await file.arrayBuffer());
+      const ext = path.extname(file.name) || ".bin";
+      const safeBase = path
+        .basename(file.name, ext)
+        .replace(/[^a-zA-Z0-9-_]/g, "")
+        .slice(0, 40);
+      stubHintName = `${safeBase || "paystub"}${ext}`;
+
+      if (amountCents == null) {
+        amountCents = await guessPaystubAmountFromBuffer(
+          stubBytes,
+          stubHintName,
+        );
+      }
+    }
+
+    if (amountCents == null) {
+      return {
+        error:
+          "Enter the take-home amount, or upload a clear photo/PDF of your pay stub so we can read it.",
+      };
+    }
+
+    if (stubBytes) {
+      imageFilename = await savePaystubUpload({
+        buffer: stubBytes,
+        basename: file instanceof File ? file.name : stubHintName,
+      });
+    }
+
+    const period = await periodFromYearMonth(yearMonth);
+    await prisma.paycheck.create({
+      data: {
+        monthlyPeriodId: period.id,
+        amountCents,
+        receivedOn,
+        note,
+        imageFilename,
+      },
+    });
+    revalidatePath("/");
+    revalidatePath("/coach");
+    revalidatePath("/flow");
+    revalidatePath("/insights");
+    return { ok: true };
+  } catch (e) {
+    if (imageFilename) {
+      await deletePaystubStored(imageFilename);
+    }
+    const message = e instanceof Error ? e.message : String(e);
+    return { error: message.slice(0, 500) };
+  }
 }
 
-export async function updateIncomeAction(
+export async function addPaycheckAction(
   _prev: FormActionState | undefined,
   formData: FormData,
 ): Promise<FormActionState> {
-  return updateIncomeCore(formData);
+  return addPaycheckCore(formData);
+}
+
+export async function deletePaycheckAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const paycheckId = String(formData.get("paycheckId") ?? "");
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  if (!paycheckId || !yearMonth) return;
+  const period = await periodFromYearMonth(yearMonth);
+  const row = await prisma.paycheck.findFirst({
+    where: { id: paycheckId, monthlyPeriodId: period.id },
+  });
+  if (!row) return;
+  await prisma.paycheck.deleteMany({
+    where: { id: paycheckId, monthlyPeriodId: period.id },
+  });
+  if (row.imageFilename) {
+    await deletePaystubStored(row.imageFilename);
+  }
+  revalidatePath("/");
+  revalidatePath("/coach");
+  revalidatePath("/flow");
+  revalidatePath("/insights");
 }
 
 export async function updateNextPaycheckCore(
@@ -314,4 +404,34 @@ export async function addBudgetPlanAction(
   formData: FormData,
 ): Promise<FormActionState> {
   return addBudgetPlanCore(formData);
+}
+
+const ENTRY_KINDS = new Set([
+  "expense",
+  "bill",
+  "budget_line",
+  "paycheck",
+]);
+
+/** Single quick-add entry point: branch by `entryKind` in form data. */
+export async function unifiedQuickEntryAction(
+  _prev: FormActionState | undefined,
+  formData: FormData,
+): Promise<FormActionState> {
+  const kind = String(formData.get("entryKind") ?? "").trim();
+  if (!ENTRY_KINDS.has(kind)) {
+    return { error: "Pick an entry type." };
+  }
+  switch (kind) {
+    case "expense":
+      return addExpenseCore(formData);
+    case "bill":
+      return addBillCore(formData);
+    case "budget_line":
+      return addBudgetPlanCore(formData);
+    case "paycheck":
+      return addPaycheckCore(formData);
+    default:
+      return { error: "Pick an entry type." };
+  }
 }

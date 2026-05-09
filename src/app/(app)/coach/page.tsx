@@ -17,7 +17,7 @@ export default async function CoachPage({
   const data = await getDashboardData(ym);
 
   const coach = buildPaycheckCoach({
-    monthlyIncomeCents: data.period.incomeCents,
+    monthlyIncomeCents: data.incomeCents,
     payPeriodsPerMonth: data.payPeriodsPerMonth,
     savingsRatePercent: data.savingsRatePercentTarget,
     nextPaycheck: data.nextPaycheckDate,
@@ -39,24 +39,27 @@ export default async function CoachPage({
 
   return (
     <div className="space-y-10">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Paycheck coach</h1>
-        <p className="mt-1 max-w-2xl text-sm text-zinc-500">
-          Recommendations from your income, next paycheck, bills, and savings
-          target — geared toward ending each pay period with cushion.
-        </p>
-        <p className="mt-2 text-sm">
-          <Link href={`/?ym=${ym}`} className="text-emerald-600 underline">
-            ← Overview ({ym})
-          </Link>
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Paycheck coach</h1>
+          <p className="mt-1 max-w-2xl text-sm text-zinc-500">
+            Recommendations from your income, next paycheck, bills, and savings
+            target — geared toward ending each pay period with cushion.
+          </p>
+        </div>
+        <Link
+          href={`/?ym=${ym}`}
+          className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+        >
+          Home
+        </Link>
       </div>
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">Coach settings</h2>
         <p className="mt-1 text-xs text-zinc-500">
-          Set paycheck date and monthly income on the overview. Here you choose
-          how aggressively to save each check.
+          Set your next paycheck date on the overview and log paycheck deposits
+          there (or Quick add). Here you choose how aggressively to save each check.
         </p>
         <div className="mt-4">
           <CoachSettingsForm
@@ -68,7 +71,7 @@ export default async function CoachPage({
 
       {!coach ? (
         <p className="text-sm text-zinc-500">
-          Add planned monthly income on the overview (and paychecks per month ≥
+          Add at least one paycheck on the overview (and paychecks per month ≥
           1) to see recommendations.
         </p>
       ) : (

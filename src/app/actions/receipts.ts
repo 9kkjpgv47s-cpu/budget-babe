@@ -1,8 +1,6 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -12,6 +10,7 @@ import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
 import { applyMerchantRulesToTags } from "@/lib/merchantRules";
 import type { ParsedReceiptLine } from "@/lib/receiptOcr";
+import { deleteReceiptStored, saveReceiptUpload } from "@/lib/uploads";
 
 function revalidateMoneyFromReceipt(yearMonth: string) {
   revalidatePath("/");
@@ -41,21 +40,16 @@ export async function uploadReceiptCore(
     return { error: "File must be 8MB or smaller." };
   }
   const period = await getOrCreateMonthlyPeriod(yearMonth);
-  const ext = path.extname(file.name) || ".bin";
-  const safeBase = path
-    .basename(file.name, ext)
-    .replace(/[^a-zA-Z0-9-_]/g, "")
-    .slice(0, 40);
-  const filename = `${Date.now()}-${safeBase || "receipt"}${ext}`;
-  const uploadDir = path.join(process.cwd(), "data", "receipts");
-  await mkdir(uploadDir, { recursive: true });
   const bytes = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(uploadDir, filename), bytes);
+  const storagePath = await saveReceiptUpload({
+    buffer: bytes,
+    basename: file.name,
+  });
   const rec = await prisma.receipt.create({
     data: {
       monthlyPeriodId: period.id,
       userId: user.userId,
-      filename,
+      filename: storagePath,
       note,
       totalCents: total,
       ocrStatus: "pending",
@@ -230,8 +224,11 @@ export async function deleteReceiptAction(formData: FormData): Promise<void> {
     where: { id },
     include: { monthlyPeriod: { select: { yearMonth: true } } },
   });
+  if (!existing) return;
+  const storagePath = existing.filename;
   await prisma.receipt.delete({ where: { id } });
-  const ym = existing?.monthlyPeriod?.yearMonth;
+  await deleteReceiptStored(storagePath);
+  const ym = existing.monthlyPeriod?.yearMonth;
   if (ym) revalidateMoneyFromReceipt(ym);
   else {
     revalidatePath("/");
