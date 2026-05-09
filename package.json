@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "node scripts/vercel-build.mjs",
-    "build:next": "prisma generate && next build",
+    "build:next": "node scripts/check-neon-http-safety.mjs && prisma generate && next build",
+    "check:neon-http": "node scripts/check-neon-http-safety.mjs",
     "vercel-build": "node scripts/vercel-build.mjs",
     "start": "next start",
     "lint": "next lint",

@@ -12,6 +12,9 @@ function run(cmd) {
 
 const db = process.env.DATABASE_URL ?? "";
 
+console.log("[vercel-build] Neon HTTP safety guard…");
+run("node scripts/check-neon-http-safety.mjs");
+
 if (db.trim() && !db.startsWith("file:")) {
   console.log("[vercel-build] Running prisma migrate deploy…");
   run("npx prisma migrate deploy");
