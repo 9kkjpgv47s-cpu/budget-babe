@@ -115,3 +115,30 @@ export function rowToExpenseParts(
   if (Number.isNaN(date.getTime())) date = new Date();
   return { date, amountCents, description: desc.slice(0, 500), payee };
 }
+
+/** Merge auto-detected header map with manual JSON `{"date":0,"amount":1,...}` */
+export function mergeColumnMaps(auto: ColumnMap, manualJson: string | null): ColumnMap {
+  if (!manualJson?.trim()) return auto;
+  try {
+    const o = JSON.parse(manualJson) as Record<string, unknown>;
+    const out: ColumnMap = { ...auto };
+    const keys: (keyof ColumnMap)[] = [
+      "date",
+      "amount",
+      "debit",
+      "credit",
+      "description",
+      "payee",
+    ];
+    for (const k of keys) {
+      const v = o[k];
+      if (typeof v === "number" && v >= 0 && Number.isInteger(v)) {
+        out[k] = v;
+      }
+    }
+    return out;
+  } catch {
+    return auto;
+  }
+}
+

@@ -9,11 +9,18 @@ import {
   buildTypicalStaplePrefill,
   estimateTripCostCents,
 } from "@/lib/shoppingSuggest";
-import { deleteTripAction } from "@/app/actions/shopping";
+import { deleteTripAction, duplicateTripAction } from "@/app/actions/shopping";
 import { TripForm } from "./TripForm";
+import { TripEditForm } from "./TripEditForm";
 
-export default async function ShoppingPage() {
+export default async function ShoppingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}) {
   await requireUser();
+  const sp = await searchParams;
+  const startFromLast = sp.from === "last";
   const ym = currentYearMonth();
   const period = await prisma.monthlyPeriod.findUnique({
     where: { yearMonth: ym },
@@ -128,7 +135,17 @@ export default async function ShoppingPage() {
       </section>
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="font-medium">Log a trip</h2>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="font-medium">Log a trip</h2>
+          {lastTripPrefill.length > 0 ? (
+            <Link
+              href="/shopping?from=last"
+              className="shrink-0 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100"
+            >
+              Start from last trip
+            </Link>
+          ) : null}
+        </div>
         <p className="mt-1 text-xs text-zinc-500">
           With history, the form starts as your <strong>usual basket</strong>. Use the
           buttons to swap templates or add suggestions without retyping everything.
@@ -138,6 +155,7 @@ export default async function ShoppingPage() {
             staplesPrefill={staplesPrefill}
             lastTripPrefill={lastTripPrefill}
             suggestedItems={suggested}
+            startFromLast={startFromLast}
           />
         </div>
       </section>
@@ -162,7 +180,17 @@ export default async function ShoppingPage() {
                     Total tracked: {formatCents(t.totalCents)}
                   </div>
                 </div>
-                <form action={deleteTripAction}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <form action={duplicateTripAction}>
+                    <input type="hidden" name="tripId" value={t.id} />
+                    <button
+                      type="submit"
+                      className="text-xs text-emerald-700 underline hover:no-underline dark:text-emerald-400"
+                    >
+                      Duplicate as new trip
+                    </button>
+                  </form>
+                  <form action={deleteTripAction}>
                   <input type="hidden" name="tripId" value={t.id} />
                   <button
                     type="submit"
@@ -172,19 +200,21 @@ export default async function ShoppingPage() {
                   </button>
                 </form>
               </div>
+              </div>
               <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
-                {t.items.map((i) => (
-                  <li key={i.id} className="text-zinc-700 dark:text-zinc-300">
-                    {i.name}{" "}
-                    <span className="text-zinc-400">
-                      ×{i.quantity}
-                      {i.priceCents != null
-                        ? ` @ ${formatCents(i.priceCents)}`
-                        : ""}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+                  {t.items.map((i) => (
+                    <li key={i.id} className="text-zinc-700 dark:text-zinc-300">
+                      {i.name}{" "}
+                      <span className="text-zinc-400">
+                        ×{i.quantity}
+                        {i.priceCents != null
+                          ? ` @ ${formatCents(i.priceCents)}`
+                          : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <TripEditForm trip={t} />
             </li>
           ))}
         </ul>

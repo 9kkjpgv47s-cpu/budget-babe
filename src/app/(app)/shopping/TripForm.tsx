@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { createFullTripAction } from "@/app/actions/shopping";
 import { initialFormState } from "@/lib/formActionState";
 import type { PrefillLine, SuggestedItem } from "@/lib/shoppingSuggest";
@@ -62,22 +62,46 @@ type Props = {
   staplesPrefill: PrefillLine[];
   lastTripPrefill: PrefillLine[];
   suggestedItems: SuggestedItem[];
+  /** When true (e.g. `/shopping?from=last`), form opens with last trip lines */
+  startFromLast?: boolean;
 };
+
+function initialRows(
+  startFromLast: boolean | undefined,
+  staplesPrefill: PrefillLine[],
+  lastTripPrefill: PrefillLine[],
+): TripRow[] {
+  if (startFromLast && lastTripPrefill.length > 0) {
+    return fromPrefill(lastTripPrefill);
+  }
+  if (staplesPrefill.length > 0) {
+    return fromPrefill(staplesPrefill);
+  }
+  return [emptyRow(), emptyRow(), emptyRow()];
+}
 
 export function TripForm({
   staplesPrefill,
   lastTripPrefill,
   suggestedItems,
+  startFromLast,
 }: Props) {
   const [state, formAction, pending] = useActionState(
     createFullTripAction,
     initialFormState,
   );
   const [rows, setRows] = useState<TripRow[]>(() =>
-    staplesPrefill.length > 0
-      ? fromPrefill(staplesPrefill)
-      : [emptyRow(), emptyRow(), emptyRow()],
+    initialRows(startFromLast, staplesPrefill, lastTripPrefill),
   );
+
+  useEffect(() => {
+    if (!startFromLast || typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("from") !== "last") return;
+    url.searchParams.delete("from");
+    const next = url.pathname + (url.searchParams.toString() ? `?${url.searchParams}` : "");
+    window.history.replaceState({}, "", next || url.pathname);
+  }, [startFromLast]);
 
   const hasHistory = useMemo(
     () =>

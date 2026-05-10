@@ -5,6 +5,12 @@ const PUBLIC = ["/login", "/register"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (pathname === "/sw.js" || pathname.startsWith("/swe-worker")) {
+    return NextResponse.next();
+  }
+  if (pathname === "/~offline" || pathname.startsWith("/~offline/")) {
+    return NextResponse.next();
+  }
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/manifest.webmanifest") ||

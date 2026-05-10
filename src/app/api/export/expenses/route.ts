@@ -33,6 +33,7 @@ export async function GET(request: Request) {
     "payee",
     "tags_json",
     "budget_plan_id",
+    "receipt_id",
     "source",
     "user",
   ];
@@ -47,6 +48,7 @@ export async function GET(request: Request) {
         csvEscape(r.payee ?? ""),
         csvEscape(r.tagsJson ?? ""),
         r.budgetPlanId ?? "",
+        r.receiptId ?? "",
         r.source,
         csvEscape(r.user?.name ?? ""),
       ].join(","),

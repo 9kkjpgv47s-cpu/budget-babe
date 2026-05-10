@@ -2,8 +2,11 @@ import { formatCents } from "@/lib/money";
 import type { ParsedReceiptLine } from "@/lib/receiptOcr";
 import {
   deleteReceiptAction,
+  moveReceiptToMonthAction,
   reprocessReceiptOcrAction,
 } from "@/app/actions/receipts";
+import { ReceiptPostExpenseForm } from "./ReceiptPostExpenseForm";
+import { ReceiptBatchExpensesForm } from "./ReceiptBatchExpensesForm";
 
 type ReceiptRow = {
   id: string;
@@ -37,7 +40,15 @@ function statusBadge(status: string) {
   }
 }
 
-export function ReceiptOcrSection({ receipt }: { receipt: ReceiptRow }) {
+export function ReceiptOcrSection({
+  receipt,
+  yearMonth,
+  budgetPlans,
+}: {
+  receipt: ReceiptRow;
+  yearMonth: string;
+  budgetPlans: { id: string; name: string }[];
+}) {
   let parsed: ParsedReceiptLine[] = [];
   if (receipt.ocrParsedLines) {
     try {
@@ -47,6 +58,10 @@ export function ReceiptOcrSection({ receipt }: { receipt: ReceiptRow }) {
       parsed = [];
     }
   }
+
+  const linesWithAmount = parsed.filter(
+    (l) => typeof l.amountCents === "number" && l.amountCents > 0,
+  );
 
   return (
     <div className="mt-3 w-full space-y-2 border-t border-zinc-100 pt-3 text-xs dark:border-zinc-800">
@@ -106,11 +121,35 @@ export function ReceiptOcrSection({ receipt }: { receipt: ReceiptRow }) {
           </pre>
         </details>
       ) : null}
+      {linesWithAmount.length > 0 ? (
+        <ReceiptBatchExpensesForm
+          receiptId={receipt.id}
+          yearMonth={yearMonth}
+          lineCount={linesWithAmount.length}
+        />
+      ) : null}
+      <ReceiptPostExpenseForm
+        receiptId={receipt.id}
+        yearMonth={yearMonth}
+        filename={receipt.filename}
+        totalCents={receipt.totalCents}
+        budgetPlans={budgetPlans}
+      />
     </div>
   );
 }
 
-export function ReceiptListItem({ receipt }: { receipt: ReceiptRow }) {
+export function ReceiptListItem({
+  receipt,
+  yearMonth,
+  budgetPlans,
+  monthOptions,
+}: {
+  receipt: ReceiptRow;
+  yearMonth: string;
+  budgetPlans: { id: string; name: string }[];
+  monthOptions: string[];
+}) {
   return (
     <li className="flex flex-wrap items-start justify-between gap-3 py-4 text-sm">
       <div className="min-w-0 flex-1">
@@ -132,7 +171,33 @@ export function ReceiptListItem({ receipt }: { receipt: ReceiptRow }) {
           </div>
         ) : null}
         {receipt.note ? <div className="text-zinc-600">{receipt.note}</div> : null}
-        <ReceiptOcrSection receipt={receipt} />
+        <ReceiptOcrSection receipt={receipt} yearMonth={yearMonth} budgetPlans={budgetPlans} />
+        <form
+          action={moveReceiptToMonthAction}
+          className="mt-3 flex flex-wrap items-end gap-2 border-t border-zinc-100 pt-2 text-xs dark:border-zinc-800"
+        >
+          <input type="hidden" name="receiptId" value={receipt.id} />
+          <label className="flex items-center gap-1 text-zinc-500">
+            <span>Month</span>
+            <select
+              name="targetYearMonth"
+              defaultValue={yearMonth}
+              className="rounded border border-zinc-200 px-1 py-0.5 dark:border-zinc-700 dark:bg-zinc-950"
+            >
+              {monthOptions.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="submit"
+            className="rounded bg-zinc-200 px-2 py-0.5 text-xs font-medium dark:bg-zinc-800"
+          >
+            Move receipt
+          </button>
+        </form>
       </div>
       <form action={deleteReceiptAction}>
         <input type="hidden" name="id" value={receipt.id} />

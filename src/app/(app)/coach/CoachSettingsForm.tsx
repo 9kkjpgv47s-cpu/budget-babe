@@ -15,8 +15,9 @@ export function CoachSettingsForm({
           Save this percent of each paycheck (before variable spending)
         </label>
         <p className="mt-0.5 text-xs text-zinc-500">
-          Applied to your monthly income divided by paychecks per month. Goal:
-          end each check with extra — pay yourself first.
+          Applied to your monthly take-home (sum of paychecks this month) divided
+          by paychecks per month. Goal: end each check with extra — pay yourself
+          first.
         </p>
         <select
           id="savingsRate"
@@ -36,7 +37,7 @@ export function CoachSettingsForm({
           Paychecks per month
         </label>
         <p className="mt-0.5 text-xs text-zinc-500">
-          Used to split your planned monthly income into one paycheck amount
+          Used to split your total monthly take-home into one paycheck amount
           (e.g. 2 for biweekly, 1 for monthly).
         </p>
         <select

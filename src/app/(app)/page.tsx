@@ -1,16 +1,22 @@
 import Link from "next/link";
 import { addMonths, format } from "date-fns";
-import { toggleBillPaidAction } from "@/app/actions/monthly";
+import { prisma } from "@/lib/prisma";
 import { getDashboardData } from "@/lib/dashboardData";
 import { formatCents } from "@/lib/money";
 import { currentYearMonth, parseYearMonth } from "@/lib/yearMonth";
 import {
   spentForBudgetPlan,
+  envelopeRemaining,
   type BudgetPlanForRollup,
   type ExpenseForRollup,
 } from "@/lib/budgetRollup";
+import { BudgetCopyHeader } from "./BudgetCopyHeader";
+import { BillRow, BillsSectionHeader } from "./BillRow";
+import { BudgetPlanRow } from "./BudgetPlanRow";
 import { DashboardPanel } from "./DashboardPanel";
+import { PaychecksPanel } from "./PaychecksPanel";
 import { QuickForms } from "./QuickForms";
+import { applySuggestedRolloversAction } from "@/app/actions/rollover";
 
 function shiftYearMonth(ym: string, delta: number) {
   return format(addMonths(parseYearMonth(ym), delta), "yyyy-MM");
@@ -27,6 +33,9 @@ export default async function HomePage({
   const data = await getDashboardData(yearMonth);
   const prevYm = shiftYearMonth(yearMonth, -1);
   const nextYm = shiftYearMonth(yearMonth, 1);
+  const prevPeriodExists =
+    (await prisma.monthlyPeriod.findUnique({ where: { yearMonth: prevYm } })) !=
+    null;
 
   const expForRollup: ExpenseForRollup[] = data.expenses.map((e) => ({
     id: e.id,
@@ -41,9 +50,11 @@ export default async function HomePage({
       id: p.id,
       name: p.name,
       category: p.category,
+      limitCents: p.limitCents,
+      rolledInCents: p.rolledInCents,
     };
     const spent = spentForBudgetPlan(planR, expForRollup);
-    const remaining = p.limitCents - spent;
+    const remaining = envelopeRemaining(planR, spent);
     return { plan: p, spent, remaining };
   });
 
@@ -76,7 +87,17 @@ export default async function HomePage({
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        <StatCard label="Income (planned)" value={formatCents(data.period.incomeCents)} />
+        <StatCard
+          label="Income"
+          value={formatCents(data.incomeCents)}
+          hint={
+            data.paychecks.length > 0
+              ? `${data.paychecks.length} paycheck${data.paychecks.length === 1 ? "" : "s"} this month`
+              : data.period.incomeCents > 0
+                ? "Legacy planned income until you add paycheck rows"
+                : "Add paychecks via Household settings or Quick add"
+          }
+        />
         <StatCard label="Spent so far" value={formatCents(data.spentTotal)} />
         <StatCard
           label="Bills before next paycheck"
@@ -119,56 +140,127 @@ export default async function HomePage({
         </div>
       </section>
 
+      <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-medium text-zinc-900 dark:text-zinc-100">Tax records</h2>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              Qualifying expense folder, audit notes, review trail, and CSV export by calendar year.
+            </p>
+          </div>
+          <Link
+            href={`/tax?year=${yearMonth.slice(0, 4)}`}
+            className="shrink-0 rounded-lg border border-zinc-300 bg-zinc-50 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Open tax ({yearMonth.slice(0, 4)})
+          </Link>
+        </div>
+      </section>
+
+      {data.savingsGoals.length > 0 ? (
+        <section className="rounded-xl border border-violet-200 bg-violet-50/50 p-4 dark:border-violet-900/40 dark:bg-violet-950/20">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-medium text-violet-900 dark:text-violet-100">
+                Savings goals
+              </h2>
+              <ul className="mt-2 space-y-1 text-sm text-violet-950/90 dark:text-violet-100/90">
+                {data.savingsGoals.map((g) => {
+                  const pct =
+                    g.targetAmountCents > 0
+                      ? Math.min(
+                          100,
+                          Math.round(
+                            (g.savedAmountCents / g.targetAmountCents) * 100,
+                          ),
+                        )
+                      : 0;
+                  return (
+                    <li key={g.id} className="flex justify-between gap-2 tabular-nums">
+                      <span>{g.title}</span>
+                      <span>{pct}% saved</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+            <Link
+              href="/goals"
+              className="shrink-0 rounded-lg bg-violet-700 px-4 py-2 text-sm font-medium text-white hover:bg-violet-600 dark:bg-violet-500 dark:hover:bg-violet-400"
+            >
+              View goals
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="font-medium">Household settings</h2>
           <DashboardPanel
             yearMonth={yearMonth}
-            incomeCents={data.period.incomeCents}
             nextPaycheckDate={data.nextPaycheckDate}
+            monthlyNotes={data.period.notes}
+          />
+          <PaychecksPanel
+            yearMonth={yearMonth}
+            paychecks={data.paychecks}
           />
         </div>
         <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="font-medium">Quick add</h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Log spending, bills, and budget buckets for {yearMonth}.
+            One form for spending, bills, envelopes, and paychecks for {yearMonth}.{" "}
+            <Link href={`/expenses?ym=${yearMonth}`} className="text-emerald-600 underline">
+              View all expenses
+            </Link>
           </p>
-          <QuickForms
-            yearMonth={yearMonth}
-            budgetPlans={data.budgetPlans.map((p) => ({ id: p.id, name: p.name }))}
-          />
+          <QuickForms yearMonth={yearMonth} />
         </div>
       </section>
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">Budget plans</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          Spending is matched to a plan when the expense description contains the
-          plan name or optional category text (case insensitive).
+        <p className="mt-1 text-sm">
+          <Link href={`/budgets?ym=${yearMonth}`} className="text-emerald-600 underline">
+            Full budgets page
+          </Link>
         </p>
+        <p className="mt-1 text-sm text-zinc-500">
+          Spending matches by description, tags, or linked budget on each
+          expense. Each line has a monthly limit plus optional{" "}
+          <strong>rolled-in</strong> balance from last month.
+        </p>
+        <form action={applySuggestedRolloversAction} className="mt-3">
+          <input type="hidden" name="yearMonth" value={yearMonth} />
+          <button
+            type="submit"
+            className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100"
+          >
+            Apply suggested rollovers from {prevYm}
+          </button>
+          <p className="mt-1 text-xs text-zinc-500">
+            Sets rolled-in to unused balance from the prior month for lines with
+            the same name.
+          </p>
+        </form>
+        <BudgetCopyHeader
+          yearMonth={yearMonth}
+          prevYm={prevYm}
+          hasPrevPeriod={prevPeriodExists}
+        />
         {budgetRows.length === 0 ? (
           <p className="mt-4 text-sm text-zinc-500">No budget lines yet.</p>
         ) : (
           <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
             {budgetRows.map(({ plan, spent, remaining }) => (
-              <li
+              <BudgetPlanRow
                 key={plan.id}
-                className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"
-              >
-                <span className="font-medium">{plan.name}</span>
-                <span className="tabular-nums text-zinc-600 dark:text-zinc-400">
-                  {formatCents(spent)} / {formatCents(plan.limitCents)}
-                  <span
-                    className={
-                      remaining < 0 ? " text-red-600" : " text-emerald-600"
-                    }
-                  >
-                    {" "}
-                    ({remaining >= 0 ? "left " : "over "}
-                    {formatCents(Math.abs(remaining))})
-                  </span>
-                </span>
-              </li>
+                yearMonth={yearMonth}
+                plan={plan}
+                spent={spent}
+                remaining={remaining}
+              />
             ))}
           </ul>
         )}
@@ -177,34 +269,19 @@ export default async function HomePage({
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="font-medium">Bills</h2>
+          <p className="mt-1 text-sm">
+            <Link href={`/bills?ym=${yearMonth}`} className="text-emerald-600 underline">
+              Full bills page
+            </Link>
+          </p>
+          <BillsSectionHeader
+            yearMonth={yearMonth}
+            prevYm={prevYm}
+            hasPrevPeriod={prevPeriodExists}
+          />
           <ul className="mt-3 space-y-2 text-sm">
             {data.bills.map((b) => (
-              <li
-                key={b.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-100 px-3 py-2 dark:border-zinc-800"
-              >
-                <div>
-                  <div className="font-medium">{b.title}</div>
-                  <div className="text-xs text-zinc-500">
-                    Due {b.dueDate.toLocaleDateString()} ·{" "}
-                    {formatCents(b.amountCents)}
-                  </div>
-                </div>
-                <form action={toggleBillPaidAction}>
-                  <input type="hidden" name="billId" value={b.id} />
-                  <input type="hidden" name="paid" value={(!b.paid).toString()} />
-                  <button
-                    type="submit"
-                    className={`rounded-md px-2 py-1 text-xs font-medium ${
-                      b.paid
-                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
-                        : "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
-                    }`}
-                  >
-                    {b.paid ? "Paid" : "Mark paid"}
-                  </button>
-                </form>
-              </li>
+              <BillRow key={b.id} yearMonth={yearMonth} bill={b} />
             ))}
             {data.bills.length === 0 ? (
               <li className="text-zinc-500">No bills for this month.</li>

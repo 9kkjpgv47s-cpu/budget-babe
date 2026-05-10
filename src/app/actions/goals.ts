@@ -27,6 +27,7 @@ export async function addSavingsGoalCore(
     },
   });
   revalidatePath("/goals");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -49,6 +50,7 @@ export async function updateGoalSavedCore(
     data: { savedAmountCents: saved },
   });
   revalidatePath("/goals");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -77,6 +79,7 @@ export async function addSpendingAdjustmentCore(
     },
   });
   revalidatePath("/goals");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -87,10 +90,48 @@ export async function addSpendingAdjustmentAction(
   return addSpendingAdjustmentCore(formData);
 }
 
+export async function updateSavingsGoalAction(
+  _prev: FormActionState | undefined,
+  formData: FormData,
+): Promise<FormActionState> {
+  await requireUser();
+  const id = String(formData.get("goalId") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const target = parseMoneyToCents(String(formData.get("target") ?? ""));
+  const deadlineRaw = String(formData.get("deadline") ?? "").trim();
+  const deadline = deadlineRaw ? new Date(deadlineRaw) : null;
+  if (!id || !title || target == null) {
+    return { error: "Title and target are required." };
+  }
+  await prisma.savingsGoal.update({
+    where: { id },
+    data: {
+      title,
+      targetAmountCents: target,
+      deadline: deadline && !Number.isNaN(deadline.getTime()) ? deadline : null,
+    },
+  });
+  revalidatePath("/goals");
+  revalidatePath("/");
+  return { ok: true };
+}
+
+export async function deleteSpendingAdjustmentAction(
+  formData: FormData,
+): Promise<void> {
+  await requireUser();
+  const id = String(formData.get("adjustmentId") ?? "");
+  if (!id) return;
+  await prisma.spendingAdjustment.deleteMany({ where: { id } });
+  revalidatePath("/goals");
+  revalidatePath("/");
+}
+
 export async function deleteGoalAction(formData: FormData): Promise<void> {
   await requireUser();
   const id = String(formData.get("goalId") ?? "");
   if (!id) return;
   await prisma.savingsGoal.delete({ where: { id } });
   revalidatePath("/goals");
+  revalidatePath("/");
 }

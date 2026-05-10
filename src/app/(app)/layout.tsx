@@ -2,13 +2,22 @@ import Link from "next/link";
 import { logoutAction } from "@/app/actions/auth";
 import { requireUser } from "@/lib/auth";
 
+/** Prisma requires Node.js; keep authenticated routes off Edge by default. */
+export const runtime = "nodejs";
+
 const links = [
   { href: "/", label: "Overview" },
   { href: "/coach", label: "Coach" },
+  { href: "/expenses", label: "Expenses" },
+  { href: "/bills", label: "Bills" },
+  { href: "/budgets", label: "Budgets" },
   { href: "/import", label: "Import" },
+  { href: "/plaid", label: "Plaid" },
+  { href: "/tax", label: "Tax" },
   { href: "/flow", label: "Flow" },
   { href: "/insights", label: "Insights" },
   { href: "/debt", label: "Debt" },
+  { href: "/net-worth", label: "Net worth" },
   { href: "/receipts", label: "Receipts" },
   { href: "/shopping", label: "Shopping" },
   { href: "/goals", label: "Goals" },
@@ -22,7 +31,7 @@ export default async function AppLayout({
   const user = await requireUser();
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
-      <header className="border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/80">
+      <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/90">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div className="flex items-center gap-6">
             <Link href="/" className="font-semibold tracking-tight text-emerald-700 dark:text-emerald-400">

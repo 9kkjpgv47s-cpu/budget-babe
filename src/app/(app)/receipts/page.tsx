@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { addMonths, format } from "date-fns";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth";
-import { currentYearMonth } from "@/lib/yearMonth";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
+import { requireUser } from "@/lib/auth";
+import { currentYearMonth, parseYearMonth } from "@/lib/yearMonth";
 import { ReceiptUploadForm } from "./ReceiptUploadForm";
 import { ReceiptListItem } from "./ReceiptOcrSection";
 import { OcrStatusPoller } from "./OcrStatusPoller";
@@ -19,11 +20,22 @@ export default async function ReceiptsPage({
 
   const period = await getOrCreateMonthlyPeriod(yearMonth);
 
-  const receipts = await prisma.receipt.findMany({
-    where: { monthlyPeriodId: period.id },
-    orderBy: { uploadedAt: "desc" },
-    include: { user: { select: { name: true } } },
-  });
+  const monthOptions = Array.from({ length: 13 }, (_, i) =>
+    format(addMonths(parseYearMonth(yearMonth), i - 6), "yyyy-MM"),
+  );
+
+  const [receipts, budgetPlans] = await Promise.all([
+    prisma.receipt.findMany({
+      where: { monthlyPeriodId: period.id },
+      orderBy: { uploadedAt: "desc" },
+      include: { user: { select: { name: true } } },
+    }),
+    prisma.budgetPlan.findMany({
+      where: { monthlyPeriodId: period.id },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   const ocrPending = receipts.some(
     (r) => r.ocrStatus === "pending" || r.ocrStatus === "processing",
@@ -66,7 +78,13 @@ export default async function ReceiptsPage({
         <h2 className="font-medium">This month</h2>
         <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
           {receipts.map((r) => (
-            <ReceiptListItem key={r.id} receipt={r} />
+            <ReceiptListItem
+              key={r.id}
+              receipt={r}
+              yearMonth={yearMonth}
+              budgetPlans={budgetPlans}
+              monthOptions={monthOptions}
+            />
           ))}
         </ul>
         {receipts.length === 0 ? (

@@ -33,3 +33,26 @@ export async function deleteDebtAccountAction(formData: FormData): Promise<void>
   await prisma.debtAccount.delete({ where: { id } });
   revalidatePath("/debt");
 }
+
+export async function updateDebtAccountAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const id = String(formData.get("id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  const bal = parseMoneyToCents(String(formData.get("balance") ?? ""));
+  const minPay = parseMoneyToCents(String(formData.get("minimumPayment") ?? ""));
+  const aprRaw = String(formData.get("apr") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim() || null;
+  if (!id || !name || bal == null) return;
+  const apr = aprRaw ? Number.parseFloat(aprRaw) : null;
+  await prisma.debtAccount.update({
+    where: { id },
+    data: {
+      name,
+      balanceCents: bal,
+      minimumPaymentCents: minPay ?? null,
+      aprPercent: apr != null && !Number.isNaN(apr) ? apr : null,
+      note,
+    },
+  });
+  revalidatePath("/debt");
+}

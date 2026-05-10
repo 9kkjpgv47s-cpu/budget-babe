@@ -1,8 +1,17 @@
-import { readFile, stat } from "fs/promises";
 import path from "path";
+import { readFile, stat } from "fs/promises";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { filenameHintFromStoragePath } from "@/lib/uploads";
+
+function contentTypeFromName(name: string): string {
+  const ext = path.extname(name).toLowerCase();
+  if (ext === ".pdf") return "application/pdf";
+  if (ext === ".png") return "image/png";
+  if (ext === ".webp") return "image/webp";
+  return "image/jpeg";
+}
 
 export async function GET(
   _request: Request,
@@ -17,26 +26,25 @@ export async function GET(
   if (!receipt) {
     return new NextResponse("Not found", { status: 404 });
   }
-  const filePath = path.join(process.cwd(), "data", "receipts", receipt.filename);
+
+  const ref = receipt.filename;
+  if (ref.startsWith("https://") || ref.startsWith("http://")) {
+    return NextResponse.redirect(ref);
+  }
+
+  const filePath = path.join(process.cwd(), "data", "receipts", path.basename(ref));
   try {
     await stat(filePath);
   } catch {
     return new NextResponse("File missing", { status: 404 });
   }
   const buf = await readFile(filePath);
-  const ext = path.extname(receipt.filename).toLowerCase();
-  const type =
-    ext === ".pdf"
-      ? "application/pdf"
-      : ext === ".png"
-        ? "image/png"
-        : ext === ".webp"
-          ? "image/webp"
-          : "image/jpeg";
+  const hint = filenameHintFromStoragePath(ref);
+  const type = contentTypeFromName(hint);
   return new NextResponse(buf, {
     headers: {
       "Content-Type": type,
-      "Content-Disposition": `inline; filename="${receipt.filename}"`,
+      "Content-Disposition": `inline; filename="${hint}"`,
     },
   });
 }

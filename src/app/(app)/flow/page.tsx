@@ -34,13 +34,24 @@ export default async function FlowPage({
 
   const rows: FlowRow[] = [];
 
-  rows.push({
-    sort: monthStart.getTime(),
-    date: monthStart,
-    label: "Planned monthly income",
-    amountCents: data.period.incomeCents,
-    kind: "income",
-  });
+  for (const p of data.paychecks) {
+    rows.push({
+      sort: p.receivedOn.getTime(),
+      date: p.receivedOn,
+      label: p.note?.trim() ? `Paycheck: ${p.note.trim()}` : "Paycheck",
+      amountCents: p.amountCents,
+      kind: "paycheck",
+    });
+  }
+  if (data.paychecks.length === 0 && data.period.incomeCents > 0) {
+    rows.push({
+      sort: monthStart.getTime(),
+      date: monthStart,
+      label: "Planned income (legacy — add paychecks on overview)",
+      amountCents: data.period.incomeCents,
+      kind: "income",
+    });
+  }
 
   if (settings?.nextPaycheckDate) {
     rows.push({
@@ -80,7 +91,7 @@ export default async function FlowPage({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Cash flow</h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Income anchor, paycheck date, bills, and recent expenses for {ym}{" "}
+          Income rows are individual paychecks (plus legacy planned income if you have not added paychecks yet).{" "}
           (chronological).
         </p>
         <p className="mt-2 text-sm">
@@ -106,7 +117,7 @@ export default async function FlowPage({
             </div>
             {r.amountCents != null ? (
               <span className="tabular-nums text-zinc-800 dark:text-zinc-200">
-                {r.kind === "income" ? "+" : ""}
+                {r.kind === "income" || r.kind === "paycheck" ? "+" : ""}
                 {formatCents(r.amountCents)}
               </span>
             ) : (

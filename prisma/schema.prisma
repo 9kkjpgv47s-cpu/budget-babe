@@ -1,11 +1,11 @@
-// Household money app — SQLite for simple two-user self-hosting
+// Household money app — PostgreSQL for production (Vercel); use Neon/local Postgres for dev.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -15,20 +15,40 @@ model User {
   name         String
   passwordHash String
   createdAt    DateTime  @default(now())
-  expenses     Expense[]
+  expenses     Expense[] @relation("ExpenseRecordedBy")
+  taxReviewed  Expense[] @relation("ExpenseTaxReviewedBy")
+  taxAudits    TaxExpenseAudit[]
   receipts     Receipt[]
+  plaidItems   PlaidItem[]
 }
 
 /// One row per calendar month (YYYY-MM) for income and rollups
 model MonthlyPeriod {
   id           String   @id @default(cuid())
   yearMonth    String   @unique
+  /// Legacy: used only when this month has no Paycheck rows yet
   incomeCents  Int      @default(0)
   notes        String?
   expenses     Expense[]
   bills        Bill[]
   budgetPlans  BudgetPlan[]
   receipts     Receipt[]
+  paychecks    Paycheck[]
+}
+
+/// Actual wage deposits for a month (monthly income = sum of paychecks when any exist)
+model Paycheck {
+  id              String        @id @default(cuid())
+  monthlyPeriodId String
+  monthlyPeriod   MonthlyPeriod @relation(fields: [monthlyPeriodId], references: [id], onDelete: Cascade)
+  amountCents     Int
+  receivedOn      DateTime
+  note            String?
+  /// HTTPS Blob URL (Vercel Blob) or local basename under data/paystubs/
+  imageFilename   String?
+  createdAt       DateTime      @default(now())
+
+  @@index([monthlyPeriodId, receivedOn])
 }
 
 model Expense {
@@ -36,7 +56,7 @@ model Expense {
   monthlyPeriodId String
   monthlyPeriod   MonthlyPeriod @relation(fields: [monthlyPeriodId], references: [id], onDelete: Cascade)
   userId          String?
-  user            User?         @relation(fields: [userId], references: [id])
+  user            User?         @relation("ExpenseRecordedBy", fields: [userId], references: [id])
   amountCents     Int
   description     String
   spentAt         DateTime      @default(now())
@@ -50,8 +70,41 @@ model Expense {
   splitGroupId    String?
   budgetPlanId    String?
   budgetPlan      BudgetPlan?   @relation(fields: [budgetPlanId], references: [id], onDelete: SetNull)
+  /// Optional link when this row was posted from a receipt (may share receipt with split lines)
+  receiptId       String?
+  receipt         Receipt?      @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+  /// not_applicable | applicable | applicable_with_documentation — see src/lib/taxCodeGuidance.ts
+  taxApplicability String?
+  /// Key into built-in guidance (IRC-oriented summaries); viewer link in UI
+  taxCodeRefId     String?
+  /// Folder key for preparer buckets — see src/lib/taxCategories.ts
+  taxCategory         String?
+  taxNote             String?
+  taxReviewedAt       DateTime?
+  taxReviewedByUserId String?
+  taxReviewedBy       User?     @relation("ExpenseTaxReviewedBy", fields: [taxReviewedByUserId], references: [id], onDelete: SetNull)
+  taxAudits           TaxExpenseAudit[]
 
   @@index([monthlyPeriodId, importHash])
+  @@index([receiptId])
+  @@index([taxApplicability, spentAt])
+}
+
+/// Append-only log when tax fields on an expense change (household audit trail)
+model TaxExpenseAudit {
+  id          String   @id @default(cuid())
+  expenseId   String
+  expense     Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// classify | review | clear | note_update
+  action      String
+  /// JSON: { applicability?, codeRef?, category?, note?, reviewed? } before/after snapshots
+  detailsJson String?
+  createdAt   DateTime @default(now())
+
+  @@index([expenseId, createdAt])
+  @@index([createdAt])
 }
 
 model Bill {
@@ -72,6 +125,8 @@ model BudgetPlan {
   category        String?
   limitCents      Int
   note            String?
+  /// Money carried into this month for this envelope (from prior month or manual)
+  rolledInCents   Int           @default(0)
   expenses        Expense[]
 }
 
@@ -84,6 +139,20 @@ model MerchantRule {
   createdAt DateTime @default(now())
 }
 
+/// Linked bank institution via Plaid Link (access token stored — encrypt in production)
+model PlaidItem {
+  id                  String    @id @default(cuid())
+  itemId              String    @unique
+  accessToken         String
+  institutionId       String?
+  institutionName     String?
+  userId              String?
+  user                User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  transactionsCursor  String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
 /// Simple manual debt tracking (no bank sync)
 model DebtAccount {
   id                  String   @id @default(cuid())
@@ -93,6 +162,29 @@ model DebtAccount {
   aprPercent          Float?
   note                String?
   createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+/// Manual asset/liability for net worth (no bank sync)
+model NetWorthAccount {
+  id           String   @id @default(cuid())
+  kind         String
+  name         String
+  balanceCents Int
+  sortOrder    Int      @default(0)
+  note         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+/// Point-in-time net worth (totals + optional JSON breakdown)
+model NetWorthSnapshot {
+  id               String   @id @default(cuid())
+  recordedAt       DateTime @default(now())
+  assetsCents      Int
+  liabilitiesCents Int
+  netCents         Int
+  note             String?
 }
 
 model Receipt {
@@ -113,6 +205,7 @@ model Receipt {
   ocrParsedLines  String?
   /// 0–100 from Tesseract when available
   ocrConfidence   Int?
+  expenses        Expense[]
 }
 
 model ShoppingTrip {

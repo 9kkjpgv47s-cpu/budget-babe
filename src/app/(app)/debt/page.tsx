@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { formatCents } from "@/lib/money";
-import { addDebtAccountAction, deleteDebtAccountAction } from "@/app/actions/debt";
+import { addDebtAccountAction, deleteDebtAccountAction, updateDebtAccountAction } from "@/app/actions/debt";
 
 export default async function DebtPage() {
   await requireUser();
@@ -18,8 +18,7 @@ export default async function DebtPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Debt (manual)</h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Track balances and minimums yourself — no bank link. Update by
-          deleting and re-adding when you pay down, or we can add edit later.
+          Track balances and minimums — edit in place or remove.
         </p>
         <p className="mt-2 text-sm">
           <Link href="/" className="text-emerald-600 underline">
@@ -105,7 +104,51 @@ export default async function DebtPage() {
                   <div className="text-xs text-zinc-500">{a.note}</div>
                 ) : null}
               </div>
-              <form action={deleteDebtAccountAction}>
+              <form action={updateDebtAccountAction} className="mt-3 grid gap-2 sm:grid-cols-2">
+                <input type="hidden" name="id" value={a.id} />
+                <input
+                  name="name"
+                  defaultValue={a.name}
+                  className="sm:col-span-2 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+                />
+                <input
+                  name="balance"
+                  defaultValue={(a.balanceCents / 100).toFixed(2)}
+                  inputMode="decimal"
+                  className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+                />
+                <input
+                  name="minimumPayment"
+                  defaultValue={
+                    a.minimumPaymentCents != null
+                      ? (a.minimumPaymentCents / 100).toFixed(2)
+                      : ""
+                  }
+                  placeholder="Min pay"
+                  inputMode="decimal"
+                  className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+                />
+                <input
+                  name="apr"
+                  defaultValue={a.aprPercent != null ? String(a.aprPercent) : ""}
+                  placeholder="APR %"
+                  inputMode="decimal"
+                  className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
+                />
+                <input
+                  name="note"
+                  defaultValue={a.note ?? ""}
+                  placeholder="Note"
+                  className="sm:col-span-2 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+                />
+                <button
+                  type="submit"
+                  className="rounded bg-emerald-600 py-1 text-xs text-white sm:col-span-2"
+                >
+                  Save
+                </button>
+              </form>
+              <form action={deleteDebtAccountAction} className="mt-2">
                 <input type="hidden" name="id" value={a.id} />
                 <button
                   type="submit"

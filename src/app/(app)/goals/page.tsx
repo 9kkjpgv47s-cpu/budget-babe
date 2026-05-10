@@ -2,8 +2,9 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { formatCents } from "@/lib/money";
-import { deleteGoalAction } from "@/app/actions/goals";
+import { deleteGoalAction, deleteSpendingAdjustmentAction } from "@/app/actions/goals";
 import { GoalForms, UpdateSavedForm } from "./GoalForms";
+import { UpdateGoalForm } from "./UpdateGoalForm";
 
 export default async function GoalsPage() {
   await requireUser();
@@ -100,14 +101,31 @@ export default async function GoalsPage() {
                 </span>
               </div>
               <UpdateSavedForm goalId={g.id} savedCents={g.savedAmountCents} />
+              <UpdateGoalForm
+                goalId={g.id}
+                title={g.title}
+                targetCents={g.targetAmountCents}
+                deadline={g.deadline}
+              />
               {g.adjustments.length > 0 ? (
                 <ul className="mt-4 space-y-1 border-t border-zinc-100 pt-3 text-sm dark:border-zinc-800">
                   {g.adjustments.map((a) => (
-                    <li key={a.id} className="flex justify-between gap-2">
-                      <span>{a.label}</span>
-                      <span className="tabular-nums text-emerald-700 dark:text-emerald-400">
-                        {formatCents(a.amountCents)}
+                    <li key={a.id} className="flex items-center justify-between gap-2">
+                      <span>
+                        {a.label}{" "}
+                        <span className="tabular-nums text-emerald-700 dark:text-emerald-400">
+                          {formatCents(a.amountCents)}
+                        </span>
                       </span>
+                      <form action={deleteSpendingAdjustmentAction}>
+                        <input type="hidden" name="adjustmentId" value={a.id} />
+                        <button
+                          type="submit"
+                          className="text-xs text-red-600 underline hover:no-underline"
+                        >
+                          Remove
+                        </button>
+                      </form>
                     </li>
                   ))}
                 </ul>

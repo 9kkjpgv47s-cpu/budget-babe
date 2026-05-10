@@ -4,24 +4,32 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "prisma generate && next build",
+    "build": "node scripts/vercel-build.mjs",
+    "build:next": "prisma generate && next build",
+    "vercel-build": "node scripts/vercel-build.mjs",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev"
   },
   "dependencies": {
+    "@prisma/adapter-neon": "^6.19.3",
     "@prisma/client": "^6.19.3",
+    "@serwist/next": "^9.5.11",
+    "@vercel/blob": "^2.3.3",
     "bcryptjs": "^3.0.3",
     "canvas": "^3.2.3",
     "date-fns": "^4.1.0",
     "iron-session": "^8.0.4",
     "next": "^15.5.15",
     "pdf-parse": "^2.4.5",
+    "plaid": "^42.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-plaid-link": "^4.1.1",
     "sharp": "^0.34.5",
-    "tesseract.js": "^7.0.0"
+    "tesseract.js": "^7.0.0",
+    "ws": "^8.20.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -30,9 +38,11 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.1",
     "eslint": "^9",
     "eslint-config-next": "^15.5.15",
     "prisma": "^6.19.3",
+    "serwist": "^9.5.11",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

@@ -38,7 +38,16 @@ export type BudgetPlanForRollup = {
   id: string;
   name: string;
   category: string | null;
+  limitCents: number;
+  rolledInCents: number;
 };
+
+export function envelopeRemaining(
+  plan: BudgetPlanForRollup,
+  spent: number,
+): number {
+  return plan.rolledInCents + plan.limitCents - spent;
+}
 
 export function expenseMatchesBudgetPlan(
   e: ExpenseForRollup,
