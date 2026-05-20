@@ -12,6 +12,7 @@ export function ReceiptPostExpenseForm({
   budgetPlans,
   defaultBudgetPlanId,
   defaultPayee,
+  postingYearMonth,
 }: {
   receiptId: string;
   yearMonth: string;
@@ -20,6 +21,8 @@ export function ReceiptPostExpenseForm({
   budgetPlans: { id: string; name: string }[];
   defaultBudgetPlanId?: string | null;
   defaultPayee?: string | null;
+  /** Resolved ledger month (receipt month wins over page ?ym=). */
+  postingYearMonth: string;
 }) {
   const [state, action, pending] = useActionState(
     createExpenseFromReceiptAction,
@@ -33,6 +36,11 @@ export function ReceiptPostExpenseForm({
     <div className="mt-3 rounded border border-emerald-200 bg-emerald-50/40 p-2 dark:border-emerald-900/50 dark:bg-emerald-950/20">
       <p className="mb-2 text-[11px] font-medium text-emerald-900 dark:text-emerald-100">
         Post as expense
+        {postingYearMonth !== yearMonth ? (
+          <span className="ml-1 font-normal text-amber-800 dark:text-amber-200">
+            (ledger month {postingYearMonth})
+          </span>
+        ) : null}
       </p>
       <form action={action} className="grid gap-1.5 text-[11px] sm:grid-cols-2">
         <input type="hidden" name="receiptId" value={receiptId} />

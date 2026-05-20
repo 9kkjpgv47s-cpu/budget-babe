@@ -5,7 +5,11 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
-import { applyMerchantRulesToTags } from "@/lib/merchantRules";
+import {
+  finalizeExpenseDraftForPeriod,
+  getBudgetPlansForYearMonth,
+  getLastExpenseDefaultsForYearMonth,
+} from "@/lib/entryDefaults";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
 
@@ -32,13 +36,12 @@ export async function createSplitExpensesAction(
     return { error: "Add at least two split lines." };
   }
   const period = await getOrCreateMonthlyPeriod(yearMonth);
-  let budgetPlanId: string | null = budgetPlanIdRaw || null;
-  if (budgetPlanId) {
-    const plan = await prisma.budgetPlan.findFirst({
-      where: { id: budgetPlanId, monthlyPeriodId: period.id },
-    });
-    if (!plan) budgetPlanId = null;
-  }
+  const [plans, lastDefaults] = await Promise.all([
+    getBudgetPlansForYearMonth(yearMonth),
+    getLastExpenseDefaultsForYearMonth(yearMonth),
+  ]);
+  let sharedBudgetId: string | null =
+    budgetPlanIdRaw || lastDefaults.budgetPlanId;
   const splitGroupId = randomUUID();
   let sum = 0;
   const parsed: { amountCents: number; description: string }[] = [];
@@ -55,7 +58,17 @@ export async function createSplitExpensesAction(
     return { error: "Total must be positive." };
   }
   for (const p of parsed) {
-    const tagsJson = await applyMerchantRulesToTags(p.description, null);
+    const draft = await finalizeExpenseDraftForPeriod(
+      {
+        description: p.description,
+        tagsJson: lastDefaults.tagsJson,
+        budgetPlanId: sharedBudgetId,
+        payee: lastDefaults.payee,
+      },
+      period.id,
+      plans,
+    );
+    sharedBudgetId = draft.budgetPlanId;
     await prisma.expense.create({
       data: {
         monthlyPeriodId: period.id,
@@ -64,8 +77,9 @@ export async function createSplitExpensesAction(
         description: p.description,
         spentAt: new Date(),
         splitGroupId,
-        budgetPlanId,
-        tagsJson,
+        budgetPlanId: draft.budgetPlanId,
+        tagsJson: draft.tagsJson,
+        payee: draft.payee,
         source: "manual",
       },
     });

@@ -45,6 +45,7 @@ export default async function ExpensesPage({
     budgetPlanId: e.budgetPlanId,
     tagsJson: e.tagsJson,
     splitGroupId: e.splitGroupId,
+    payee: e.payee,
     userName: e.user?.name ?? null,
     receiptId: e.receiptId,
     taxApplicability: e.taxApplicability,

@@ -18,6 +18,7 @@ export type ExpenseRowDTO = {
   spentAt: string;
   budgetPlanId: string | null;
   tagsJson: string | null;
+  payee: string | null;
   splitGroupId: string | null;
   userName: string | null;
   receiptId: string | null;
@@ -218,6 +219,12 @@ export function ExpensesInteractiveList({
                 name="spentAt"
                 type="datetime-local"
                 defaultValue={toLocalInput(e.spentAt)}
+                className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+              />
+              <input
+                name="payee"
+                defaultValue={e.payee ?? ""}
+                placeholder="Payee / store"
                 className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
               />
               <select

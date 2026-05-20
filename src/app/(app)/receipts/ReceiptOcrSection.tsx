@@ -46,12 +46,14 @@ export function ReceiptOcrSection({
   budgetPlans,
   defaultBudgetPlanId,
   defaultPayee,
+  postingYearMonth,
 }: {
   receipt: ReceiptRow;
   yearMonth: string;
   budgetPlans: { id: string; name: string }[];
   defaultBudgetPlanId?: string | null;
   defaultPayee?: string | null;
+  postingYearMonth: string;
 }) {
   let parsed: ParsedReceiptLine[] = [];
   if (receipt.ocrParsedLines) {
@@ -142,6 +144,7 @@ export function ReceiptOcrSection({
         budgetPlans={budgetPlans}
         defaultBudgetPlanId={defaultBudgetPlanId}
         defaultPayee={defaultPayee}
+        postingYearMonth={postingYearMonth}
       />
     </div>
   );
@@ -154,6 +157,7 @@ export function ReceiptListItem({
   monthOptions,
   defaultBudgetPlanId,
   defaultPayee,
+  postingYearMonth,
 }: {
   receipt: ReceiptRow;
   yearMonth: string;
@@ -161,6 +165,7 @@ export function ReceiptListItem({
   monthOptions: string[];
   defaultBudgetPlanId?: string | null;
   defaultPayee?: string | null;
+  postingYearMonth: string;
 }) {
   return (
     <li className="flex flex-wrap items-start justify-between gap-3 py-4 text-sm">
@@ -189,6 +194,7 @@ export function ReceiptListItem({
           budgetPlans={budgetPlans}
           defaultBudgetPlanId={defaultBudgetPlanId}
           defaultPayee={defaultPayee}
+          postingYearMonth={postingYearMonth}
         />
         <form
           action={moveReceiptToMonthAction}

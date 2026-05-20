@@ -9,7 +9,7 @@ import { parseMoneyToCents } from "@/lib/money";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
 import {
-  applyMerchantRulesToDraft,
+  finalizeExpenseDraftForPeriod,
   getLastExpenseDefaultsForYearMonth,
   resolveReceiptPostingContext,
 } from "@/lib/entryDefaults";
@@ -112,23 +112,16 @@ export async function createExpenseFromReceiptAction(
   );
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   const lastDefaults = await getLastExpenseDefaultsForYearMonth(yearMonth);
-  let budgetPlanId: string | null = budgetPlanIdRaw || lastDefaults.budgetPlanId;
-  const draft = await applyMerchantRulesToDraft(
+  const draft = await finalizeExpenseDraftForPeriod(
     {
       description,
       tagsJson: lastDefaults.tagsJson,
-      budgetPlanId,
+      budgetPlanId: budgetPlanIdRaw || lastDefaults.budgetPlanId,
       payee: payee ?? lastDefaults.payee,
     },
+    period.id,
     plans,
   );
-  budgetPlanId = draft.budgetPlanId;
-  if (budgetPlanId) {
-    const plan = await prisma.budgetPlan.findFirst({
-      where: { id: budgetPlanId, monthlyPeriodId: period.id },
-    });
-    if (!plan) budgetPlanId = null;
-  }
   await prisma.expense.create({
     data: {
       monthlyPeriodId: period.id,
@@ -138,7 +131,7 @@ export async function createExpenseFromReceiptAction(
       spentAt: new Date(),
       source: "ocr",
       receiptId,
-      budgetPlanId,
+      budgetPlanId: draft.budgetPlanId,
       tagsJson: draft.tagsJson,
       payee: draft.payee,
     },
@@ -184,12 +177,6 @@ export async function createExpensesFromReceiptLinesAction(
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   const lastDefaults = await getLastExpenseDefaultsForYearMonth(yearMonth);
   let sharedBudgetId: string | null = budgetPlanIdRaw || lastDefaults.budgetPlanId;
-  if (sharedBudgetId) {
-    const plan = await prisma.budgetPlan.findFirst({
-      where: { id: sharedBudgetId, monthlyPeriodId: period.id },
-    });
-    if (!plan) sharedBudgetId = null;
-  }
   const splitGroupId = randomUUID();
   let created = 0;
   for (const line of parsed) {
@@ -201,22 +188,17 @@ export async function createExpensesFromReceiptLinesAction(
     const desc =
       String(line.description ?? "Receipt item").trim().slice(0, 500) ||
       "Receipt item";
-    const draft = await applyMerchantRulesToDraft(
+    const draft = await finalizeExpenseDraftForPeriod(
       {
         description: desc,
         tagsJson: lastDefaults.tagsJson,
         budgetPlanId: sharedBudgetId,
         payee: lastDefaults.payee,
       },
+      period.id,
       plans,
     );
-    let lineBudgetId = draft.budgetPlanId;
-    if (lineBudgetId) {
-      const plan = await prisma.budgetPlan.findFirst({
-        where: { id: lineBudgetId, monthlyPeriodId: period.id },
-      });
-      if (!plan) lineBudgetId = null;
-    }
+    sharedBudgetId = draft.budgetPlanId;
     await prisma.expense.create({
       data: {
         monthlyPeriodId: period.id,
@@ -227,7 +209,7 @@ export async function createExpensesFromReceiptLinesAction(
         source: "ocr",
         receiptId,
         splitGroupId,
-        budgetPlanId: lineBudgetId,
+        budgetPlanId: draft.budgetPlanId,
         tagsJson: draft.tagsJson,
         payee: draft.payee,
       },

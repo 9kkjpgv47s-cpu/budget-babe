@@ -4,7 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { requireUser } from "@/lib/auth";
 import { currentYearMonth, parseYearMonth } from "@/lib/yearMonth";
-import { getLastExpenseDefaultsForYearMonth } from "@/lib/entryDefaults";
+import {
+  getLastExpenseDefaultsForYearMonth,
+  resolvePostingYearMonth,
+} from "@/lib/entryDefaults";
 import { ReceiptUploadForm } from "./ReceiptUploadForm";
 import { ReceiptListItem } from "./ReceiptOcrSection";
 import { OcrStatusPoller } from "./OcrStatusPoller";
@@ -79,7 +82,17 @@ export default async function ReceiptsPage({
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">This month</h2>
         <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
-          {receipts.map((r) => (
+          {(
+            await Promise.all(
+              receipts.map(async (r) => ({
+                receipt: r,
+                postingYearMonth: await resolvePostingYearMonth({
+                  receiptId: r.id,
+                  pageYearMonth: yearMonth,
+                }),
+              })),
+            )
+          ).map(({ receipt: r, postingYearMonth }) => (
             <ReceiptListItem
               key={r.id}
               receipt={r}
@@ -88,6 +101,7 @@ export default async function ReceiptsPage({
               monthOptions={monthOptions}
               defaultBudgetPlanId={expenseDefaults.budgetPlanId}
               defaultPayee={expenseDefaults.payee}
+              postingYearMonth={postingYearMonth}
             />
           ))}
         </ul>

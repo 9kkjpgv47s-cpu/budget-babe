@@ -5,6 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
 import { mergeTagLists, parseTagsJson } from "@/lib/budgetRollup";
+import {
+  commaListToTagsJson,
+  finalizeExpenseDraftForPeriod,
+  getBudgetPlansForYearMonth,
+} from "@/lib/entryDefaults";
 import { applyMerchantRulesToTags } from "@/lib/merchantRules";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 
@@ -89,6 +94,7 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
   const description = String(formData.get("description") ?? "").trim();
   const spentRaw = String(formData.get("spentAt") ?? "").trim();
   const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
+  const payee = String(formData.get("payee") ?? "").trim() || null;
   if (!id || !yearMonth || amount == null || !description) return;
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   const exp = await prisma.expense.findFirst({
@@ -96,19 +102,17 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
   });
   if (!exp) return;
 
-  let budgetPlanId: string | null = budgetPlanIdRaw || null;
-  if (budgetPlanId) {
-    const plan = await prisma.budgetPlan.findFirst({
-      where: { id: budgetPlanId, monthlyPeriodId: period.id },
-    });
-    if (!plan) budgetPlanId = null;
-  }
-  const tagsRaw = String(formData.get("tags") ?? "")
-    .split(",")
-    .map((t) => t.trim().toLowerCase())
-    .filter(Boolean);
-  const manual = tagsRaw.length ? mergeTagLists(tagsRaw) : null;
-  const tagsJson = await applyMerchantRulesToTags(description, manual);
+  const plans = await getBudgetPlansForYearMonth(yearMonth);
+  const draft = await finalizeExpenseDraftForPeriod(
+    {
+      description,
+      tagsJson: commaListToTagsJson(String(formData.get("tags") ?? "")),
+      budgetPlanId: budgetPlanIdRaw || null,
+      payee,
+    },
+    period.id,
+    plans,
+  );
   const spentAt = spentRaw ? new Date(spentRaw) : exp.spentAt;
   if (Number.isNaN(spentAt.getTime())) return;
 
@@ -118,8 +122,9 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
       amountCents: amount,
       description,
       spentAt,
-      budgetPlanId,
-      tagsJson,
+      budgetPlanId: draft.budgetPlanId,
+      tagsJson: draft.tagsJson,
+      payee: draft.payee,
     },
   });
   revalidateAll(yearMonth);

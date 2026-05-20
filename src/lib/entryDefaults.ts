@@ -139,3 +139,33 @@ export async function resolveReceiptPostingContext(
   const plans = await getBudgetPlansForYearMonth(yearMonth);
   return { yearMonth, plans };
 }
+
+/** Ensure budget plan belongs to the target month period. */
+export async function coerceBudgetPlanInPeriod(
+  budgetPlanId: string | null,
+  monthlyPeriodId: string,
+): Promise<string | null> {
+  if (!budgetPlanId) return null;
+  const plan = await prisma.budgetPlan.findFirst({
+    where: { id: budgetPlanId, monthlyPeriodId },
+    select: { id: true },
+  });
+  return plan?.id ?? null;
+}
+
+/**
+ * Apply merchant rules + budget suggestion, then validate budget in period.
+ * Use from all manual expense create/update paths.
+ */
+export async function finalizeExpenseDraftForPeriod(
+  draft: MerchantRuleDraft,
+  monthlyPeriodId: string,
+  plans?: BudgetPlanOption[],
+): Promise<MerchantRuleDraft> {
+  const withRules = await applyMerchantRulesToDraft(draft, plans);
+  const budgetPlanId = await coerceBudgetPlanInPeriod(
+    withRules.budgetPlanId,
+    monthlyPeriodId,
+  );
+  return { ...withRules, budgetPlanId };
+}

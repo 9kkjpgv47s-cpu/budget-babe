@@ -2,6 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { mergeTagLists, parseTagsJson } from "@/lib/budgetRollup";
 
 /**
+ * Tag-only merchant rules. For budget + payee propagation use
+ * `applyMerchantRulesToDraft` from `@/lib/entryDefaults`.
+ */
+
+/**
  * Apply global merchant rules: if description contains pattern, add tag (lowercase stored).
  */
 export async function applyMerchantRulesToTags(

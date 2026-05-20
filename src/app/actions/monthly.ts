@@ -13,8 +13,8 @@ import {
 import { parseYearMonth } from "@/lib/yearMonth";
 import type { FormActionState } from "@/lib/formActionState";
 import {
-  applyMerchantRulesToDraft,
   commaListToTagsJson,
+  finalizeExpenseDraftForPeriod,
   getBudgetPlansForYearMonth,
 } from "@/lib/entryDefaults";
 import { guessPaystubAmountFromBuffer } from "@/lib/paystubOcr";
@@ -195,22 +195,16 @@ export async function addExpenseCore(
   const payee = String(formData.get("payee") ?? "").trim() || null;
   const manualTagsJson = commaListToTagsJson(String(formData.get("tags") ?? ""));
   const plans = await getBudgetPlansForYearMonth(yearMonth);
-  const draft = await applyMerchantRulesToDraft(
+  const draft = await finalizeExpenseDraftForPeriod(
     {
       description,
       tagsJson: manualTagsJson,
       budgetPlanId: budgetPlanIdRaw || null,
       payee,
     },
+    period.id,
     plans,
   );
-  let budgetPlanId = draft.budgetPlanId;
-  if (budgetPlanId) {
-    const plan = await prisma.budgetPlan.findFirst({
-      where: { id: budgetPlanId, monthlyPeriodId: period.id },
-    });
-    if (!plan) budgetPlanId = null;
-  }
   const splitGroupId =
     String(formData.get("splitGroupId") ?? "").trim() || null;
 
@@ -220,7 +214,7 @@ export async function addExpenseCore(
       userId: user.userId,
       amountCents: amount,
       description,
-      budgetPlanId,
+      budgetPlanId: draft.budgetPlanId,
       tagsJson: draft.tagsJson,
       payee: draft.payee,
       splitGroupId,
