@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { disconnectPlaidItemAction, syncPlaidItemAction } from "@/app/actions/plaid";
+import { currentYearMonth } from "@/lib/yearMonth";
 
 type Row = {
   id: string;
@@ -12,17 +14,31 @@ type Row = {
   transactionsCursor: string | null;
 };
 
-export function PlaidItemRow({ item }: { item: Row }) {
+export function PlaidItemRow({
+  item,
+  yearMonth = currentYearMonth(),
+}: {
+  item: Row;
+  yearMonth?: string;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
+  const [lastImported, setLastImported] = useState<number | null>(null);
 
   function sync() {
     setMsg(null);
+    setLastImported(null);
     start(async () => {
       const r = await syncPlaidItemAction(item.id);
       if (r.ok) {
-        setMsg(`Imported ${r.imported} new (${r.skipped} skipped), ${r.pages} page(s).`);
+        setLastImported(r.imported);
+        const base = `Imported ${r.imported} new (${r.skipped} skipped), ${r.pages} page(s).`;
+        setMsg(
+          r.imported > 0
+            ? `${base} Assign budgets on Expenses when you’re ready.`
+            : base,
+        );
         router.refresh();
       } else {
         setMsg(r.error);
@@ -70,7 +86,22 @@ export function PlaidItemRow({ item }: { item: Row }) {
           Disconnect
         </button>
       </div>
-      {msg ? <p className="basis-full text-sm text-zinc-700 dark:text-zinc-300">{msg}</p> : null}
+      {msg ? (
+        <p className="basis-full text-sm text-zinc-700 dark:text-zinc-300">
+          {msg}
+          {lastImported != null && lastImported > 0 ? (
+            <>
+              {" "}
+              <Link
+                href={`/expenses?ym=${yearMonth}`}
+                className="font-medium text-emerald-700 underline dark:text-emerald-400"
+              >
+                Open expenses for {yearMonth} →
+              </Link>
+            </>
+          ) : null}
+        </p>
+      ) : null}
     </li>
   );
 }

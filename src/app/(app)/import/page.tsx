@@ -5,6 +5,7 @@ import { currentYearMonth } from "@/lib/yearMonth";
 import { deleteMerchantRuleAction, addMerchantRuleAction } from "@/app/actions/rules";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { ImportBulkSection } from "./ImportBulkSection";
+import { ApplyMerchantRulesButton } from "./ApplyMerchantRulesButton";
 
 export default async function ImportPage({
   searchParams,
@@ -115,7 +116,9 @@ export default async function ImportPage({
         </ul>
         {rules.length === 0 ? (
           <p className="mt-2 text-sm text-zinc-500">No rules yet.</p>
-        ) : null}
+        ) : (
+          <ApplyMerchantRulesButton yearMonth={yearMonth} />
+        )}
       </section>
     </div>
   );

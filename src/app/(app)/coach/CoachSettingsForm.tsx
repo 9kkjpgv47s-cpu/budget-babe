@@ -1,15 +1,43 @@
+import Link from "next/link";
 import { updateCoachSettingsAction } from "@/app/actions/coach";
+import { formatCents } from "@/lib/money";
 import { SAVINGS_RATE_OPTIONS } from "@/lib/paycheckCoach";
 
 export function CoachSettingsForm({
+  yearMonth,
   savingsRatePercentTarget,
   payPeriodsPerMonth,
+  nextPaycheckDate,
+  incomeCents,
 }: {
+  yearMonth: string;
   savingsRatePercentTarget: number;
   payPeriodsPerMonth: number;
+  nextPaycheckDate: Date | null;
+  incomeCents: number;
 }) {
   return (
     <form action={updateCoachSettingsAction} className="space-y-4">
+      <div className="rounded-lg bg-zinc-50 p-3 text-sm dark:bg-zinc-900/80">
+        <p>
+          <span className="text-zinc-500">Synced from overview:</span>{" "}
+          income <strong>{formatCents(incomeCents)}</strong>
+          {nextPaycheckDate ? (
+            <>
+              {" "}
+              · next pay{" "}
+              <strong>{nextPaycheckDate.toLocaleDateString()}</strong>
+            </>
+          ) : (
+            <> · next pay <strong>not set</strong></>
+          )}
+        </p>
+        <p className="mt-1 text-xs text-zinc-500">
+          <Link href={`/?ym=${yearMonth}`} className="text-emerald-600 underline">
+            Update paycheck date or log deposits on overview
+          </Link>
+        </p>
+      </div>
       <div>
         <label className="text-sm font-medium" htmlFor="savingsRate">
           Save this percent of each paycheck (before variable spending)

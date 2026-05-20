@@ -20,6 +20,13 @@ Living checklist for the household budget PWA. Update this file when major capab
 - [x] **Plaid** (`/plaid`): Link token + public token exchange, store item, **sync** posted transactions → expenses (`/transactions/sync`), per-user disconnect
 - [x] **PWA offline shell**: Serwist service worker (production `next build`), precache + runtime cache, document fallback to **`/~offline`**
 - [x] **Tax** (`/tax`): **Not applicable** / **Applicable** / **Applicable with proper documentation** (with IRC-oriented **guidance** viewer + `taxCodeRefId`), audit notes, review trail, bulk applicable + **`/api/export/tax?year=`**; shared form on **`/expenses`**
+- [x] **Merchant rules retroactive**: apply all rules to existing expenses for selected month (`/import`)
+- [x] **Coach ↔ overview cohesion**: coach shows same income + next payday as overview; cross-links both ways
+- [x] **Quick Add budget link**: optional envelope on spending entry
+- [x] **Plaid sync UX**: post-import link to Expenses for budget assignment
+- [x] **Header nav groups** + preserve `?ym=` on desktop links when month is in URL
+
+## Planned / backlog
 
 - [ ] File-based bank sync polish (beyond CSV/OFX/QIF) if desired
 - [ ] Web **push** bill reminders (optional; needs VAPID + user consent)

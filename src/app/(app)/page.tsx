@@ -305,7 +305,13 @@ export default async function HomePage({
           </div>
         </div>
         <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-3 dark:border-emerald-900/60 dark:bg-zinc-900">
-          <QuickForms yearMonth={yearMonth} />
+          <QuickForms
+            yearMonth={yearMonth}
+            budgetPlans={data.budgetPlans.map((p) => ({
+              id: p.id,
+              name: p.name,
+            }))}
+          />
         </div>
       </section>
 

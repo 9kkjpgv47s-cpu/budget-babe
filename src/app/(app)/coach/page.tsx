@@ -56,15 +56,57 @@ export default async function CoachPage({
       </div>
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="font-medium">Household snapshot ({ym})</h2>
+        <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+              Monthly income (this app)
+            </dt>
+            <dd className="mt-0.5 text-lg font-semibold tabular-nums">
+              {formatCents(data.incomeCents)}
+            </dd>
+            <dd className="text-xs text-zinc-500">
+              {data.paychecks.length > 0
+                ? `${data.paychecks.length} paycheck row${data.paychecks.length === 1 ? "" : "s"} on overview`
+                : "Add paychecks on overview — same number coach uses"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+              Next paycheck (overview)
+            </dt>
+            <dd className="mt-0.5 text-lg font-semibold">
+              {data.nextPaycheckDate
+                ? data.nextPaycheckDate.toLocaleDateString(undefined, {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "Not set"}
+            </dd>
+            <dd className="text-xs text-zinc-500">
+              <Link href={`/?ym=${ym}`} className="text-emerald-600 underline">
+                Edit on overview →
+              </Link>
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">Coach settings</h2>
         <p className="mt-1 text-xs text-zinc-500">
-          Set your next paycheck date on the overview and log paycheck deposits
-          there (or Quick add). Here you choose how aggressively to save each check.
+          Savings rate and paychecks-per-month live here. Next payday and deposit
+          logging stay on the overview so every screen shares the same dates.
         </p>
         <div className="mt-4">
           <CoachSettingsForm
+            yearMonth={ym}
             savingsRatePercentTarget={data.savingsRatePercentTarget}
             payPeriodsPerMonth={data.payPeriodsPerMonth}
+            nextPaycheckDate={data.nextPaycheckDate}
+            incomeCents={data.incomeCents}
           />
         </div>
       </section>

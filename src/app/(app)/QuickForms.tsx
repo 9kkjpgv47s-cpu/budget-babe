@@ -13,7 +13,15 @@ const ENTRY_OPTIONS: { value: EntryKind; label: string }[] = [
   { value: "paycheck", label: "Paycheck (money in)" },
 ];
 
-export function QuickForms({ yearMonth }: { yearMonth: string }) {
+type BudgetOption = { id: string; name: string };
+
+export function QuickForms({
+  yearMonth,
+  budgetPlans = [],
+}: {
+  yearMonth: string;
+  budgetPlans?: BudgetOption[];
+}) {
   const [kind, setKind] = useState<EntryKind>("expense");
   const [state, action, pending] = useActionState(
     unifiedQuickEntryAction,
@@ -72,8 +80,29 @@ export function QuickForms({ yearMonth }: { yearMonth: string }) {
             name="amount"
             placeholder="Amount"
             inputMode="decimal"
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
           />
+          <div className="sm:col-span-2">
+            <label htmlFor="quickBudgetPlanId" className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Budget envelope (optional)
+            </label>
+            <select
+              id="quickBudgetPlanId"
+              name="budgetPlanId"
+              defaultValue=""
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            >
+              <option value="">Auto-match by name/tags</option>
+              {budgetPlans.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-zinc-500">
+              Links this row on Expenses and budget “spent” totals. Merchant rules still add tags.
+            </p>
+          </div>
         </div>
       ) : null}
 

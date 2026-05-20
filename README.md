@@ -32,7 +32,20 @@ Open [http://localhost:3000](http://localhost:3000), register the first account,
 
 On **Shopping**, the trip form pre-fills a **usual basket** from items that repeat across recent trips. Use **Same as last trip** or **Add suggested picks** to avoid retyping; edit rows before saving. **Duplicate as new trip** clones a saved trip in the list; **Start from last trip** (button or `/shopping?from=last`) opens the log form with your most recent trip’s lines as a new draft.
 
-**Paycheck coach** (`/coach`): set saving **5%–40%** of each paycheck and **paychecks per month**; get grocery and free-spending caps, a **two-week bill plan** after your next pay date, and short recommendations toward ending each check with extra.
+**Paycheck coach** (`/coach`): set saving **5%–40%** of each paycheck and **paychecks per month**; get grocery and free-spending caps, a **two-week bill plan** after your next pay date, and short recommendations toward ending each check with extra. **Next payday** and **paycheck deposits** are edited on the overview so coach and home always share the same dates and income total.
+
+**Import & rules** (`/import`): merchant rules tag new/edited expenses automatically; use **Apply rules to this month’s expenses** to retro-tag rows you imported earlier.
+
+### What does not sync into monthly cash flow
+
+By design, these areas are **separate ledgers** until you enter amounts on the overview or Expenses:
+
+- **Shopping** — trip memory and suggestions only (no automatic expenses).
+- **Debt** — balance tracking, not monthly income/spending.
+- **Net worth** — manual account snapshots, not paycheck or budget math.
+- **Goals** — saved progress is manual, not tied to bank balances.
+
+See **[docs/STATE_OF_THE_ART_GAPS.md](./docs/STATE_OF_THE_ART_GAPS.md)** for a fuller comparison to Mint/YNAB/Monarch-style apps.
 
 **Savings goals** (`/goals`): edit title, target, and deadline; remove spending adjustments; track progress toward each target.
 
