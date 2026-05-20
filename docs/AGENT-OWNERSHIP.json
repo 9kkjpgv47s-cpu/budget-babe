@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "branchPrefix": "cursor/",
+  "branchSuffix": "-3044",
+  "mergeOrder": ["alpha", "beta", "gamma", "delta"],
+  "agents": {
+    "alpha": {
+      "name": "Data propagation & domain contracts",
+      "branch": "cursor/agent-alpha-propagation-3044",
+      "owns": [
+        "src/lib/entry/**",
+        "src/lib/merchantInference.ts",
+        "prisma/schema.prisma",
+        "prisma/migrations/**"
+      ],
+      "mayTouchActions": [
+        "src/app/actions/expenses.ts",
+        "src/app/actions/monthly.ts"
+      ],
+      "forbidden": [
+        "src/app/(app)/receipts/**",
+        "src/app/(app)/QuickForms.tsx",
+        "src/app/(app)/MobileBottomNav.tsx",
+        "src/lib/receiptOcr.ts",
+        "src/lib/pdfRasterOcr.ts",
+        "docs/AUDIT-SOTA.md"
+      ]
+    },
+    "beta": {
+      "name": "Receipt capture, OCR pipeline & discoverability",
+      "branch": "cursor/agent-beta-receipts-3044",
+      "owns": [
+        "src/app/(app)/receipts/**",
+        "src/lib/receiptOcr.ts",
+        "src/lib/pdfRasterOcr.ts",
+        "src/lib/uploads.ts",
+        "src/app/actions/receipts.ts",
+        "src/app/api/receipts/**"
+      ],
+      "mayTouchForNavOnly": [
+        "src/app/(app)/MobileBottomNav.tsx",
+        "src/app/(app)/layout.tsx",
+        "src/app/(app)/page.tsx"
+      ],
+      "forbidden": [
+        "src/lib/entry/**",
+        "src/components/entry/**",
+        "src/app/(app)/QuickForms.tsx",
+        "src/app/(app)/BillAddForm.tsx",
+        "src/app/(app)/BudgetAddForm.tsx",
+        "prisma/schema.prisma"
+      ],
+      "dependsOn": ["alpha"]
+    },
+    "gamma": {
+      "name": "Unified entry forms & field parity",
+      "branch": "cursor/agent-gamma-forms-3044",
+      "owns": [
+        "src/components/entry/**",
+        "src/app/(app)/QuickForms.tsx",
+        "src/app/(app)/BillAddForm.tsx",
+        "src/app/(app)/BudgetAddForm.tsx",
+        "src/app/(app)/BillRow.tsx",
+        "src/app/(app)/BudgetPlanRow.tsx",
+        "src/app/(app)/expenses/ExpensesInteractiveList.tsx"
+      ],
+      "mayTouchActions": [
+        "src/app/actions/monthly.ts"
+      ],
+      "forbidden": [
+        "src/lib/receiptOcr.ts",
+        "src/lib/entry/**",
+        "src/app/(app)/receipts/**",
+        "src/app/actions/receipts.ts",
+        "src/app/(app)/MobileBottomNav.tsx",
+        "prisma/schema.prisma"
+      ],
+      "dependsOn": ["alpha"]
+    },
+    "delta": {
+      "name": "SOTA audit, security hardening & platform gaps",
+      "branch": "cursor/agent-delta-audit-3044",
+      "owns": [
+        "docs/AUDIT-SOTA.md",
+        "docs/COMPLIANCE-CHECKLIST.md",
+        "ROADMAP.md"
+      ],
+      "mayTouch": [
+        "src/lib/plaidSync.ts",
+        "src/lib/env.ts",
+        "src/instrumentation.ts",
+        "src/app/api/plaid/**",
+        "src/sw.ts",
+        "src/app/~offline/**"
+      ],
+      "forbidden": [
+        "src/lib/entry/**",
+        "src/components/entry/**",
+        "src/app/(app)/receipts/**",
+        "src/app/(app)/QuickForms.tsx",
+        "src/lib/receiptOcr.ts"
+      ],
+      "dependsOn": ["alpha", "beta", "gamma"]
+    }
+  },
+  "sharedReadOnly": [
+    "src/lib/dashboardData.ts",
+    "src/lib/formActionState.ts",
+    "src/lib/money.ts",
+    "prisma/schema.prisma"
+  ],
+  "conflictResolution": {
+    "monthly.ts": "Alpha adds propagation helpers; Gamma wires QuickForms; Beta must not edit monthly.ts",
+    "page.tsx": "Beta may add receipt CTA sections only; Gamma must not edit page.tsx overview hero",
+    "layout.tsx": "Beta owns nav link ordering for Receipts; Gamma must not edit layout.tsx"
+  }
+}

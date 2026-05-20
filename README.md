@@ -4,6 +4,8 @@ Private money app for **two people in one household**: monthly income and spendi
 
 See **[ROADMAP.md](./ROADMAP.md)** for shipped vs planned features.
 
+**Multi-agent sprint:** Parallel work boundaries and SOTA gap analysis live in **[docs/AGENTS-ATTACK-PLAN.md](./docs/AGENTS-ATTACK-PLAN.md)** and **[docs/AUDIT-SOTA.md](./docs/AUDIT-SOTA.md)**.
+
 ## Stack
 
 - Next.js 15 (App Router), React 19, Tailwind CSS 4

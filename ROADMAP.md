@@ -21,6 +21,11 @@ Living checklist for the household budget PWA. Update this file when major capab
 - [x] **PWA offline shell**: Serwist service worker (production `next build`), precache + runtime cache, document fallback to **`/~offline`**
 - [x] **Tax** (`/tax`): **Not applicable** / **Applicable** / **Applicable with proper documentation** (with IRC-oriented **guidance** viewer + `taxCodeRefId`), audit notes, review trail, bulk applicable + **`/api/export/tax?year=`**; shared form on **`/expenses`**
 
+- [ ] **P0 UX sprint** (four parallel agents — see [`docs/AGENTS-ATTACK-PLAN.md`](docs/AGENTS-ATTACK-PLAN.md)):
+  - [ ] Entry propagation: OCR date → expense `spentAt`, merchant rules → tags, budget suggestion from description
+  - [ ] Receipt discoverability on mobile nav + scan CTA on Home/`/expenses`
+  - [ ] Unified expense/bill/budget form fields (quick add = full editor)
+  - [ ] SOTA audit + Plaid token encryption plan ([`docs/AUDIT-SOTA.md`](docs/AUDIT-SOTA.md))
 - [ ] File-based bank sync polish (beyond CSV/OFX/QIF) if desired
 - [ ] Web **push** bill reminders (optional; needs VAPID + user consent)
 
