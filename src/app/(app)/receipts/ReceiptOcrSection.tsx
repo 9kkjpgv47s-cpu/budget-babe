@@ -44,10 +44,14 @@ export function ReceiptOcrSection({
   receipt,
   yearMonth,
   budgetPlans,
+  defaultBudgetPlanId,
+  defaultPayee,
 }: {
   receipt: ReceiptRow;
   yearMonth: string;
   budgetPlans: { id: string; name: string }[];
+  defaultBudgetPlanId?: string | null;
+  defaultPayee?: string | null;
 }) {
   let parsed: ParsedReceiptLine[] = [];
   if (receipt.ocrParsedLines) {
@@ -126,6 +130,8 @@ export function ReceiptOcrSection({
           receiptId={receipt.id}
           yearMonth={yearMonth}
           lineCount={linesWithAmount.length}
+          budgetPlans={budgetPlans}
+          defaultBudgetPlanId={defaultBudgetPlanId}
         />
       ) : null}
       <ReceiptPostExpenseForm
@@ -134,6 +140,8 @@ export function ReceiptOcrSection({
         filename={receipt.filename}
         totalCents={receipt.totalCents}
         budgetPlans={budgetPlans}
+        defaultBudgetPlanId={defaultBudgetPlanId}
+        defaultPayee={defaultPayee}
       />
     </div>
   );
@@ -144,11 +152,15 @@ export function ReceiptListItem({
   yearMonth,
   budgetPlans,
   monthOptions,
+  defaultBudgetPlanId,
+  defaultPayee,
 }: {
   receipt: ReceiptRow;
   yearMonth: string;
   budgetPlans: { id: string; name: string }[];
   monthOptions: string[];
+  defaultBudgetPlanId?: string | null;
+  defaultPayee?: string | null;
 }) {
   return (
     <li className="flex flex-wrap items-start justify-between gap-3 py-4 text-sm">
@@ -171,7 +183,13 @@ export function ReceiptListItem({
           </div>
         ) : null}
         {receipt.note ? <div className="text-zinc-600">{receipt.note}</div> : null}
-        <ReceiptOcrSection receipt={receipt} yearMonth={yearMonth} budgetPlans={budgetPlans} />
+        <ReceiptOcrSection
+          receipt={receipt}
+          yearMonth={yearMonth}
+          budgetPlans={budgetPlans}
+          defaultBudgetPlanId={defaultBudgetPlanId}
+          defaultPayee={defaultPayee}
+        />
         <form
           action={moveReceiptToMonthAction}
           className="mt-3 flex flex-wrap items-end gap-2 border-t border-zinc-100 pt-2 text-xs dark:border-zinc-800"
@@ -190,6 +208,16 @@ export function ReceiptListItem({
                 </option>
               ))}
             </select>
+          </label>
+          <label className="flex items-center gap-1 text-zinc-600 dark:text-zinc-400">
+            <input
+              type="checkbox"
+              name="moveLinkedExpenses"
+              value="on"
+              defaultChecked
+              className="rounded"
+            />
+            Move linked expenses
           </label>
           <button
             type="submit"

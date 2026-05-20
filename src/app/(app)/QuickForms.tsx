@@ -3,6 +3,13 @@
 import { useActionState, useState } from "react";
 import { unifiedQuickEntryAction } from "@/app/actions/monthly";
 import { initialFormState } from "@/lib/formActionState";
+import { tagsJsonToCommaList } from "@/lib/budgetRollup";
+
+type ExpenseDefaults = {
+  budgetPlanId: string | null;
+  tagsJson: string | null;
+  payee: string | null;
+};
 
 type EntryKind = "expense" | "bill" | "budget_line" | "paycheck";
 
@@ -13,12 +20,22 @@ const ENTRY_OPTIONS: { value: EntryKind; label: string }[] = [
   { value: "paycheck", label: "Paycheck (money in)" },
 ];
 
-export function QuickForms({ yearMonth }: { yearMonth: string }) {
+export function QuickForms({
+  yearMonth,
+  budgetPlans,
+  expenseDefaults,
+}: {
+  yearMonth: string;
+  budgetPlans: { id: string; name: string }[];
+  expenseDefaults: ExpenseDefaults;
+}) {
   const [kind, setKind] = useState<EntryKind>("expense");
   const [state, action, pending] = useActionState(
     unifiedQuickEntryAction,
     initialFormState,
   );
+
+  const defaultTags = tagsJsonToCommaList(expenseDefaults.tagsJson);
 
   const submitLabel =
     kind === "expense"
@@ -52,7 +69,7 @@ export function QuickForms({ yearMonth }: { yearMonth: string }) {
         </select>
         <p className="text-xs text-zinc-500">
           {kind === "expense"
-            ? "Logs a purchase or withdrawal for this month."
+            ? "Logs a purchase for this month. Budget, tags, and payee carry from your last entry in this month."
             : kind === "bill"
               ? "Adds a bill with a due date for this month."
               : kind === "budget_line"
@@ -72,6 +89,30 @@ export function QuickForms({ yearMonth }: { yearMonth: string }) {
             name="amount"
             placeholder="Amount"
             inputMode="decimal"
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+          />
+          <input
+            name="payee"
+            placeholder="Payee / store (optional)"
+            defaultValue={expenseDefaults.payee ?? ""}
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+          />
+          <select
+            name="budgetPlanId"
+            defaultValue={expenseDefaults.budgetPlanId ?? ""}
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
+          >
+            <option value="">Budget envelope (optional)</option>
+            {budgetPlans.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <input
+            name="tags"
+            placeholder="Tags (comma-separated, optional)"
+            defaultValue={defaultTags}
             className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
           />
         </div>

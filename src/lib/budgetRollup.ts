@@ -18,6 +18,10 @@ export function stringifyTagsJson(tags: string[]): string | null {
   return JSON.stringify(uniq);
 }
 
+export function tagsJsonToCommaList(tagsJson: string | null | undefined): string {
+  return parseTagsJson(tagsJson).join(", ");
+}
+
 export function mergeTagLists(...lists: string[][]): string | null {
   if (lists.length === 0) return null;
   const merged = [

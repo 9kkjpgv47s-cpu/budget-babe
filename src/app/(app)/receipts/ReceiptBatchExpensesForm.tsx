@@ -8,10 +8,14 @@ export function ReceiptBatchExpensesForm({
   receiptId,
   yearMonth,
   lineCount,
+  budgetPlans,
+  defaultBudgetPlanId,
 }: {
   receiptId: string;
   yearMonth: string;
   lineCount: number;
+  budgetPlans: { id: string; name: string }[];
+  defaultBudgetPlanId?: string | null;
 }) {
   const [state, action, pending] = useActionState(
     createExpensesFromReceiptLinesAction,
@@ -22,6 +26,20 @@ export function ReceiptBatchExpensesForm({
     <form action={action} className="mt-2 space-y-1">
       <input type="hidden" name="receiptId" value={receiptId} />
       <input type="hidden" name="yearMonth" value={yearMonth} />
+      {budgetPlans.length > 0 ? (
+        <select
+          name="budgetPlanId"
+          defaultValue={defaultBudgetPlanId ?? ""}
+          className="w-full rounded border border-zinc-200 px-2 py-1 text-[11px] dark:border-zinc-700 dark:bg-zinc-950"
+        >
+          <option value="">Budget for all lines (optional)</option>
+          {budgetPlans.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      ) : null}
       <button
         type="submit"
         disabled={pending}

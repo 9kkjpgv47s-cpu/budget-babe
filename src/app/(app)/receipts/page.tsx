@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { requireUser } from "@/lib/auth";
 import { currentYearMonth, parseYearMonth } from "@/lib/yearMonth";
+import { getLastExpenseDefaultsForYearMonth } from "@/lib/entryDefaults";
 import { ReceiptUploadForm } from "./ReceiptUploadForm";
 import { ReceiptListItem } from "./ReceiptOcrSection";
 import { OcrStatusPoller } from "./OcrStatusPoller";
@@ -24,7 +25,7 @@ export default async function ReceiptsPage({
     format(addMonths(parseYearMonth(yearMonth), i - 6), "yyyy-MM"),
   );
 
-  const [receipts, budgetPlans] = await Promise.all([
+  const [receipts, budgetPlans, expenseDefaults] = await Promise.all([
     prisma.receipt.findMany({
       where: { monthlyPeriodId: period.id },
       orderBy: { uploadedAt: "desc" },
@@ -35,6 +36,7 @@ export default async function ReceiptsPage({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    getLastExpenseDefaultsForYearMonth(yearMonth),
   ]);
 
   const ocrPending = receipts.some(
@@ -84,6 +86,8 @@ export default async function ReceiptsPage({
               yearMonth={yearMonth}
               budgetPlans={budgetPlans}
               monthOptions={monthOptions}
+              defaultBudgetPlanId={expenseDefaults.budgetPlanId}
+              defaultPayee={expenseDefaults.payee}
             />
           ))}
         </ul>

@@ -16,6 +16,7 @@ import { BudgetPlanRow } from "./BudgetPlanRow";
 import { DashboardPanel } from "./DashboardPanel";
 import { HomeMobileInsights } from "./HomeMobileInsights";
 import { PaychecksPanel } from "./PaychecksPanel";
+import { getLastExpenseDefaultsForYearMonth } from "@/lib/entryDefaults";
 import { QuickForms } from "./QuickForms";
 import { applySuggestedRolloversAction } from "@/app/actions/rollover";
 
@@ -55,6 +56,13 @@ export default async function HomePage({
   const ym = sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : undefined;
   const yearMonth = ym ?? currentYearMonth();
   const data = await getDashboardData(yearMonth);
+  const [expenseDefaults] = await Promise.all([
+    getLastExpenseDefaultsForYearMonth(yearMonth),
+  ]);
+  const quickAddBudgetPlans = data.budgetPlans.map((p) => ({
+    id: p.id,
+    name: p.name,
+  }));
   const prevYm = shiftYearMonth(yearMonth, -1);
   const nextYm = shiftYearMonth(yearMonth, 1);
   const prevPeriodExists =
@@ -305,7 +313,11 @@ export default async function HomePage({
           </div>
         </div>
         <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-3 dark:border-emerald-900/60 dark:bg-zinc-900">
-          <QuickForms yearMonth={yearMonth} />
+          <QuickForms
+            yearMonth={yearMonth}
+            budgetPlans={quickAddBudgetPlans}
+            expenseDefaults={expenseDefaults}
+          />
         </div>
       </section>
 

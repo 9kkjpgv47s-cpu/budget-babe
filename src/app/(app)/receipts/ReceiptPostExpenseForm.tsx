@@ -10,12 +10,16 @@ export function ReceiptPostExpenseForm({
   filename,
   totalCents,
   budgetPlans,
+  defaultBudgetPlanId,
+  defaultPayee,
 }: {
   receiptId: string;
   yearMonth: string;
   filename: string;
   totalCents: number | null;
   budgetPlans: { id: string; name: string }[];
+  defaultBudgetPlanId?: string | null;
+  defaultPayee?: string | null;
 }) {
   const [state, action, pending] = useActionState(
     createExpenseFromReceiptAction,
@@ -46,10 +50,16 @@ export function ReceiptPostExpenseForm({
           defaultValue={defaultDesc}
           className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
         />
+        <input
+          name="payee"
+          placeholder="Payee / store (optional)"
+          defaultValue={defaultPayee ?? ""}
+          className="sm:col-span-2 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+        />
         <select
           name="budgetPlanId"
           className="sm:col-span-2 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
-          defaultValue=""
+          defaultValue={defaultBudgetPlanId ?? ""}
         >
           <option value="">Budget (optional)</option>
           {budgetPlans.map((p) => (

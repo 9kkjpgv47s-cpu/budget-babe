@@ -1,0 +1,141 @@
+/**
+ * Shared entry contract — Agent 1 owns this module.
+ * Agents 2–3 import exports; do not rename signatures without coordinating.
+ */
+import { prisma } from "@/lib/prisma";
+import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
+import { applyMerchantRulesToTags } from "@/lib/merchantRules";
+import { mergeTagLists } from "@/lib/budgetRollup";
+
+export type ExpenseEntryDefaults = {
+  budgetPlanId: string | null;
+  tagsJson: string | null;
+  payee: string | null;
+};
+
+export type MerchantRuleDraft = {
+  description: string;
+  tagsJson: string | null;
+  budgetPlanId: string | null;
+  payee: string | null;
+};
+
+export type BudgetPlanOption = {
+  id: string;
+  name: string;
+  category: string | null;
+};
+
+/** Last expense household-wide (any month). */
+export async function getLastExpenseDefaults(): Promise<ExpenseEntryDefaults> {
+  const last = await prisma.expense.findFirst({
+    orderBy: { spentAt: "desc" },
+    select: { budgetPlanId: true, tagsJson: true, payee: true },
+  });
+  return {
+    budgetPlanId: last?.budgetPlanId ?? null,
+    tagsJson: last?.tagsJson ?? null,
+    payee: last?.payee ?? null,
+  };
+}
+
+/** Last expense in a calendar month (for overview quick add pre-fill). */
+export async function getLastExpenseDefaultsForYearMonth(
+  yearMonth: string,
+): Promise<ExpenseEntryDefaults> {
+  const period = await prisma.monthlyPeriod.findUnique({
+    where: { yearMonth },
+    select: { id: true },
+  });
+  if (!period) return getLastExpenseDefaults();
+  const last = await prisma.expense.findFirst({
+    where: { monthlyPeriodId: period.id },
+    orderBy: { spentAt: "desc" },
+    select: { budgetPlanId: true, tagsJson: true, payee: true },
+  });
+  return {
+    budgetPlanId: last?.budgetPlanId ?? null,
+    tagsJson: last?.tagsJson ?? null,
+    payee: last?.payee ?? null,
+  };
+}
+
+export function commaListToTagsJson(raw: string): string | null {
+  const tags = raw
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+  return tags.length ? mergeTagLists(tags) : null;
+}
+
+/** Match budget envelope by category substring or name in description. */
+export function suggestBudgetPlanId(
+  description: string,
+  plans: BudgetPlanOption[],
+): string | null {
+  const desc = description.toLowerCase();
+  for (const p of plans) {
+    const cat = p.category?.trim().toLowerCase();
+    if (cat && cat.length >= 2 && desc.includes(cat)) return p.id;
+    const name = p.name.trim().toLowerCase();
+    if (name.length >= 3 && desc.includes(name)) return p.id;
+  }
+  return null;
+}
+
+/** Apply merchant tag rules; optionally suggest budget from envelope match text. */
+export async function applyMerchantRulesToDraft(
+  draft: MerchantRuleDraft,
+  plans?: BudgetPlanOption[],
+): Promise<MerchantRuleDraft> {
+  const tagsJson = await applyMerchantRulesToTags(
+    draft.description,
+    draft.tagsJson,
+  );
+  let budgetPlanId = draft.budgetPlanId;
+  if (!budgetPlanId && plans?.length) {
+    budgetPlanId = suggestBudgetPlanId(draft.description, plans);
+  }
+  return { ...draft, tagsJson, budgetPlanId };
+}
+
+export type ResolvePostingYearMonthInput = {
+  receiptId?: string | null;
+  pageYearMonth: string;
+};
+
+/** Receipt month wins when posting from a receipt. */
+export async function resolvePostingYearMonth(
+  input: ResolvePostingYearMonthInput,
+): Promise<string> {
+  if (!input.receiptId) return input.pageYearMonth;
+  const receipt = await prisma.receipt.findUnique({
+    where: { id: input.receiptId },
+    select: { monthlyPeriod: { select: { yearMonth: true } } },
+  });
+  return receipt?.monthlyPeriod.yearMonth ?? input.pageYearMonth;
+}
+
+/** Load budget plans for a resolved posting month. */
+export async function getBudgetPlansForYearMonth(
+  yearMonth: string,
+): Promise<BudgetPlanOption[]> {
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  return prisma.budgetPlan.findMany({
+    where: { monthlyPeriodId: period.id },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, category: true },
+  });
+}
+
+export async function resolveReceiptPostingContext(
+  receiptId: string,
+  pageYearMonth: string,
+): Promise<{ yearMonth: string; plans: BudgetPlanOption[] }> {
+  const yearMonth = await resolvePostingYearMonth({
+    receiptId,
+    pageYearMonth,
+  });
+  const plans = await getBudgetPlansForYearMonth(yearMonth);
+  return { yearMonth, plans };
+}

@@ -12,8 +12,11 @@ import {
 } from "@/lib/dashboardData";
 import { parseYearMonth } from "@/lib/yearMonth";
 import type { FormActionState } from "@/lib/formActionState";
-import { mergeTagLists } from "@/lib/budgetRollup";
-import { applyMerchantRulesToTags } from "@/lib/merchantRules";
+import {
+  applyMerchantRulesToDraft,
+  commaListToTagsJson,
+  getBudgetPlansForYearMonth,
+} from "@/lib/entryDefaults";
 import { guessPaystubAmountFromBuffer } from "@/lib/paystubOcr";
 import { deletePaystubStored, savePaystubUpload } from "@/lib/uploads";
 
@@ -189,22 +192,25 @@ export async function addExpenseCore(
   }
   const period = await periodFromYearMonth(yearMonth);
   const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
-  let budgetPlanId: string | null = budgetPlanIdRaw || null;
+  const payee = String(formData.get("payee") ?? "").trim() || null;
+  const manualTagsJson = commaListToTagsJson(String(formData.get("tags") ?? ""));
+  const plans = await getBudgetPlansForYearMonth(yearMonth);
+  const draft = await applyMerchantRulesToDraft(
+    {
+      description,
+      tagsJson: manualTagsJson,
+      budgetPlanId: budgetPlanIdRaw || null,
+      payee,
+    },
+    plans,
+  );
+  let budgetPlanId = draft.budgetPlanId;
   if (budgetPlanId) {
     const plan = await prisma.budgetPlan.findFirst({
       where: { id: budgetPlanId, monthlyPeriodId: period.id },
     });
     if (!plan) budgetPlanId = null;
   }
-  const tagsRaw = String(formData.get("tags") ?? "")
-    .split(",")
-    .map((t) => t.trim().toLowerCase())
-    .filter(Boolean);
-  const manualTagsJson = tagsRaw.length ? mergeTagLists(tagsRaw) : null;
-  const tagsJson = await applyMerchantRulesToTags(
-    description,
-    manualTagsJson,
-  );
   const splitGroupId =
     String(formData.get("splitGroupId") ?? "").trim() || null;
 
@@ -215,7 +221,8 @@ export async function addExpenseCore(
       amountCents: amount,
       description,
       budgetPlanId,
-      tagsJson,
+      tagsJson: draft.tagsJson,
+      payee: draft.payee,
       splitGroupId,
       source: "manual",
     },
