@@ -1,20 +1,48 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { uploadReceiptAction } from "@/app/actions/receipts";
 import { initialFormState } from "@/lib/formActionState";
 
-export function ReceiptUploadForm({ yearMonth }: { yearMonth: string }) {
+export function ReceiptUploadForm({
+  yearMonth,
+  formIdSuffix = "",
+  redirectAfterUpload = false,
+}: {
+  yearMonth: string;
+  /** Unique suffix when multiple upload forms exist on one page */
+  formIdSuffix?: string;
+  redirectAfterUpload?: boolean;
+}) {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(
     uploadReceiptAction,
     initialFormState,
   );
+  const fileId = `receipt-file${formIdSuffix}`;
+
+  useEffect(() => {
+    if (!redirectAfterUpload || !state?.ok || !state.receiptId) return;
+    router.push(`/receipts?ym=${yearMonth}&focus=${state.receiptId}`);
+    router.refresh();
+  }, [redirectAfterUpload, state, yearMonth, router]);
 
   return (
     <form action={formAction} className="mt-4 space-y-3">
       <input type="hidden" name="yearMonth" value={yearMonth} />
       {state?.error ? (
         <p className="text-sm text-red-600">{state.error}</p>
+      ) : null}
+      {state?.ok && !redirectAfterUpload ? (
+        <p className="text-sm text-emerald-800 dark:text-emerald-200">
+          Uploaded — OCR is running. Refresh this page in a few seconds.
+        </p>
+      ) : null}
+      {state?.ok && redirectAfterUpload ? (
+        <p className="text-sm text-emerald-800 dark:text-emerald-200">
+          Uploaded — opening your receipt…
+        </p>
       ) : null}
       <p className="text-xs text-zinc-500">
         <strong className="text-zinc-700 dark:text-zinc-300">Tip:</strong> a clear
@@ -23,11 +51,11 @@ export function ReceiptUploadForm({ yearMonth }: { yearMonth: string }) {
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label className="text-sm font-medium" htmlFor="file">
+          <label className="text-sm font-medium" htmlFor={fileId}>
             Receipt photo (recommended)
           </label>
           <input
-            id="file"
+            id={fileId}
             name="file"
             type="file"
             accept="image/*,application/pdf"
@@ -37,11 +65,14 @@ export function ReceiptUploadForm({ yearMonth }: { yearMonth: string }) {
           />
         </div>
         <div>
-          <label className="text-sm font-medium" htmlFor="total">
+          <label
+            className="text-sm font-medium"
+            htmlFor={`receipt-total${formIdSuffix}`}
+          >
             Total (optional)
           </label>
           <input
-            id="total"
+            id={`receipt-total${formIdSuffix}`}
             name="total"
             inputMode="decimal"
             placeholder="0.00"
@@ -50,11 +81,14 @@ export function ReceiptUploadForm({ yearMonth }: { yearMonth: string }) {
         </div>
       </div>
       <div>
-        <label className="text-sm font-medium" htmlFor="note">
+        <label
+          className="text-sm font-medium"
+          htmlFor={`receipt-note${formIdSuffix}`}
+        >
           Note (optional)
         </label>
         <input
-          id="note"
+          id={`receipt-note${formIdSuffix}`}
           name="note"
           className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
         />

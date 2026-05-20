@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MobileReceiptOcrBadge } from "./receipts/MobileReceiptOcrBadge";
 
 type MobileNavItem = {
   href: string;
@@ -36,13 +37,14 @@ export function MobileBottomNav() {
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-h-11 items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-semibold transition-all duration-200 active:scale-[0.98] motion-reduce:transition-none ${
+                className={`relative flex min-h-11 items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-semibold transition-all duration-200 active:scale-[0.98] motion-reduce:transition-none ${
                   active
                     ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
                     : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                 }`}
               >
                 {item.label}
+                {item.href === "/receipts" ? <MobileReceiptOcrBadge /> : null}
               </Link>
             </li>
           );

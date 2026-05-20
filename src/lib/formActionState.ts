@@ -4,6 +4,8 @@ export type FormActionState = {
   ok?: boolean;
   /** Non-error feedback (e.g. import counts) */
   message?: string;
+  /** Set after receipt upload for redirect / scroll targeting */
+  receiptId?: string;
 };
 
 export const initialFormState: FormActionState = {};

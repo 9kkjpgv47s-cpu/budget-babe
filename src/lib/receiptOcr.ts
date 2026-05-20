@@ -45,6 +45,9 @@ export function parseReceiptLines(raw: string): ParsedReceiptLine[] {
     /\s+(-?[\$€£]?\s*\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|-?\d+\.\d{1,2})\s*$/;
   const out: ParsedReceiptLine[] = [];
 
+  const skipDesc =
+    /^(?:sub\s*total|subtotal|total|tax|sales\s*tax|vat|tip|gratuity|change|cash|card|balance\s*due|amount\s*due)$/i;
+
   for (const line of lines) {
     const m = line.match(amountTail);
     if (!m) continue;
@@ -53,6 +56,7 @@ export function parseReceiptLines(raw: string): ParsedReceiptLine[] {
     const amountCents = parseMoneyToCents(amtStr);
     if (!desc || desc.length < 2) continue;
     if (desc.length > 200) continue;
+    if (skipDesc.test(desc)) continue;
     out.push({ description: desc, amountCents });
   }
 
@@ -108,6 +112,42 @@ export function inferSpentAtFromOcrText(
     return candidate;
   }
   return fallback;
+}
+
+const MERCHANT_SKIP =
+  /^(?:welcome|thank\s*you|store|receipt|invoice|customer\s*copy|merchant\s*copy|tel|phone|www\.|http)/i;
+
+/**
+ * Best-effort merchant / store name from the top of OCR text (for expense description).
+ */
+export function parseMerchantFromOcrText(rawText: string): string | null {
+  const lines = rawText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length >= 3 && l.length <= 80);
+  for (const line of lines.slice(0, 12)) {
+    if (MERCHANT_SKIP.test(line)) continue;
+    if (/^\d{1,2}[\/\-.]\d{1,2}/.test(line)) continue;
+    if (/^[\d\s\-+().#]+$/.test(line)) continue;
+    if (!/[a-zA-Z]/.test(line)) continue;
+    const cleaned = line.replace(/\s{2,}/g, " ").slice(0, 120);
+    if (cleaned.length >= 3) return cleaned;
+  }
+  return null;
+}
+
+export function defaultExpenseDescriptionFromReceipt(
+  rawText: string,
+  parsedLines: ParsedReceiptLine[],
+  filenameLabel: string,
+): string {
+  const merchant = parseMerchantFromOcrText(rawText);
+  if (merchant) return merchant;
+  const first = parsedLines.find(
+    (l) => l.description?.trim() && (l.amountCents ?? 0) > 0,
+  );
+  if (first?.description?.trim()) return first.description.trim().slice(0, 500);
+  return `Receipt: ${filenameLabel}`;
 }
 
 export function parseLikelyTotalCents(raw: string): number | null {

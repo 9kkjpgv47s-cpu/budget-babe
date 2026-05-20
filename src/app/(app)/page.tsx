@@ -18,6 +18,7 @@ import { HomeMobileInsights } from "./HomeMobileInsights";
 import { PaychecksPanel } from "./PaychecksPanel";
 import { QuickForms } from "./QuickForms";
 import { ReceiptQuickCapture } from "./receipts/ReceiptQuickCapture";
+import { ReceiptsOverviewStrip } from "./receipts/ReceiptsOverviewStrip";
 import { applySuggestedRolloversAction } from "@/app/actions/rollover";
 
 function shiftYearMonth(ym: string, delta: number) {
@@ -596,35 +597,15 @@ export default async function HomePage({
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-medium">Receipts</h2>
-          <a href="/receipts" className="text-sm text-emerald-600 underline">
+          <h2 className="font-medium">Receipts this month</h2>
+          <Link
+            href={`/receipts?ym=${yearMonth}`}
+            className="text-sm text-emerald-600 underline"
+          >
             Manage receipts
-          </a>
+          </Link>
         </div>
-        <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-          {data.receipts.map((r) => (
-            <li
-              key={r.id}
-              className="rounded-lg border border-zinc-100 p-3 text-sm dark:border-zinc-800"
-            >
-              <a
-                className="font-medium text-emerald-700 underline dark:text-emerald-400"
-                href={`/api/receipts/${r.id}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {r.filename}
-              </a>
-              {r.totalCents != null ? (
-                <div className="text-zinc-600">{formatCents(r.totalCents)}</div>
-              ) : null}
-              {r.note ? <div className="text-xs text-zinc-500">{r.note}</div> : null}
-            </li>
-          ))}
-        </ul>
-        {data.receipts.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500">No receipts this month.</p>
-        ) : null}
+        <ReceiptsOverviewStrip receipts={data.receipts} yearMonth={yearMonth} />
       </section>
     </div>
   );

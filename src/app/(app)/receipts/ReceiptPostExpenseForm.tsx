@@ -7,7 +7,7 @@ import { initialFormState } from "@/lib/formActionState";
 export function ReceiptPostExpenseForm({
   receiptId,
   yearMonth,
-  filename,
+  defaultDescription,
   totalCents,
   budgetPlans,
   suggestedBudgetPlanId,
@@ -15,7 +15,7 @@ export function ReceiptPostExpenseForm({
 }: {
   receiptId: string;
   yearMonth: string;
-  filename: string;
+  defaultDescription: string;
   totalCents: number | null;
   budgetPlans: { id: string; name: string }[];
   suggestedBudgetPlanId?: string | null;
@@ -27,7 +27,7 @@ export function ReceiptPostExpenseForm({
   );
   const defaultAmt =
     totalCents != null && totalCents > 0 ? (totalCents / 100).toFixed(2) : "";
-  const defaultDesc = `Receipt: ${filename}`;
+  const defaultDesc = defaultDescription;
 
   return (
     <div className="mt-3 rounded border border-emerald-200 bg-emerald-50/40 p-2 dark:border-emerald-900/50 dark:bg-emerald-950/20">

@@ -83,6 +83,7 @@ export async function getDashboardData(yearMonth: string) {
       where: { monthlyPeriodId: period.id },
       orderBy: { uploadedAt: "desc" },
       take: 20,
+      include: { _count: { select: { expenses: true } } },
     }),
     prisma.savingsGoal.findMany({
       orderBy: { title: "asc" },

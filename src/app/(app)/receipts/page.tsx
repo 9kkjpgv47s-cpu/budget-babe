@@ -8,16 +8,19 @@ import { ReceiptUploadForm } from "./ReceiptUploadForm";
 import { ReceiptListItem } from "./ReceiptOcrSection";
 import { OcrStatusPoller } from "./OcrStatusPoller";
 import { ReceiptBlobWarning } from "./ReceiptBlobWarning";
+import { ReceiptMonthHeader } from "./ReceiptMonthHeader";
+import { ReceiptFocusScroll } from "./ReceiptFocusScroll";
 
 export default async function ReceiptsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ym?: string }>;
+  searchParams: Promise<{ ym?: string; focus?: string }>;
 }) {
   await requireUser();
   const sp = await searchParams;
   const yearMonth =
     sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
+  const focusId = sp.focus?.trim() || null;
 
   const period = await getOrCreateMonthlyPeriod(yearMonth);
 
@@ -29,7 +32,10 @@ export default async function ReceiptsPage({
     prisma.receipt.findMany({
       where: { monthlyPeriodId: period.id },
       orderBy: { uploadedAt: "desc" },
-      include: { user: { select: { name: true } } },
+      include: {
+        user: { select: { name: true } },
+        _count: { select: { expenses: true } },
+      },
     }),
     prisma.budgetPlan.findMany({
       where: { monthlyPeriodId: period.id },
@@ -45,9 +51,13 @@ export default async function ReceiptsPage({
   return (
     <div className="space-y-8">
       <ReceiptBlobWarning />
+      <ReceiptFocusScroll focusId={focusId} />
       <OcrStatusPoller active={ocrPending} />
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Receipts</h1>
+        <div className="mt-3">
+          <ReceiptMonthHeader yearMonth={yearMonth} />
+        </div>
         <p className="mt-1 text-sm text-zinc-500">
           <strong className="text-zinc-800 dark:text-zinc-200">
             Use your camera or photo library
@@ -73,7 +83,11 @@ export default async function ReceiptsPage({
           <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">?ym=YYYY-MM</code>.
           After OCR, amounts and dates flow into Expenses automatically when you post.
         </p>
-        <ReceiptUploadForm yearMonth={yearMonth} />
+        <ReceiptUploadForm
+          yearMonth={yearMonth}
+          formIdSuffix="-page"
+          redirectAfterUpload
+        />
       </section>
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
@@ -82,7 +96,10 @@ export default async function ReceiptsPage({
           {receipts.map((r) => (
             <ReceiptListItem
               key={r.id}
-              receipt={r}
+              receipt={{
+                ...r,
+                expenseCount: r._count.expenses,
+              }}
               yearMonth={yearMonth}
               budgetPlans={budgetPlans}
               monthOptions={monthOptions}

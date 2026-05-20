@@ -1,5 +1,6 @@
 import { formatCents } from "@/lib/money";
 import {
+  defaultExpenseDescriptionFromReceipt,
   inferSpentAtFromOcrText,
   type ParsedReceiptLine,
 } from "@/lib/receiptOcr";
@@ -10,7 +11,9 @@ import {
 } from "@/app/actions/receipts";
 import { ReceiptPostExpenseForm } from "./ReceiptPostExpenseForm";
 import { ReceiptBatchExpensesForm } from "./ReceiptBatchExpensesForm";
+import { ReceiptQuickPostButton } from "./ReceiptQuickPostButton";
 import { suggestBudgetPlanId, type BudgetPlanPick } from "./receiptBudgetSuggest";
+import { displayFilename, ocrStatusBadgeClass } from "./receiptDisplay";
 
 type ReceiptRow = {
   id: string;
@@ -24,35 +27,8 @@ type ReceiptRow = {
   ocrRawText: string | null;
   ocrParsedLines: string | null;
   ocrConfidence: number | null;
+  expenseCount: number;
 };
-
-function displayFilename(storagePath: string): string {
-  try {
-    const u = new URL(storagePath);
-    const last = u.pathname.split("/").pop();
-    return last || storagePath;
-  } catch {
-    return storagePath.split("/").pop() || storagePath;
-  }
-}
-
-function statusBadge(status: string) {
-  const base =
-    "inline-flex rounded-full px-2 py-0.5 text-xs font-medium tabular-nums";
-  switch (status) {
-    case "completed":
-      return `${base} bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200`;
-    case "processing":
-    case "pending":
-      return `${base} bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100`;
-    case "failed":
-      return `${base} bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200`;
-    case "skipped":
-      return `${base} bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200`;
-    default:
-      return `${base} bg-zinc-100 text-zinc-600`;
-  }
-}
 
 export function ReceiptOcrSection({
   receipt,
@@ -88,15 +64,30 @@ export function ReceiptOcrSection({
         day: "numeric",
       })
     : null;
-  const suggestDesc =
-    linesWithAmount[0]?.description?.trim() || `Receipt: ${label}`;
-  const suggestedBudgetId = suggestBudgetPlanId(suggestDesc, budgetPlans);
+  const defaultDescription = defaultExpenseDescriptionFromReceipt(
+    receipt.ocrRawText ?? "",
+    parsed,
+    label,
+  );
+  const suggestedBudgetId = suggestBudgetPlanId(defaultDescription, budgetPlans);
   const readyForReview = receipt.ocrStatus === "completed";
+  const canQuickPost =
+    readyForReview &&
+    receipt.expenseCount === 0 &&
+    receipt.totalCents != null &&
+    receipt.totalCents > 0;
 
   return (
     <div className="mt-3 w-full space-y-2 border-t border-zinc-100 pt-3 text-xs dark:border-zinc-800">
       <div className="flex flex-wrap items-center gap-2">
-        <span className={statusBadge(receipt.ocrStatus)}>OCR: {receipt.ocrStatus}</span>
+        <span className={ocrStatusBadgeClass(receipt.ocrStatus)}>
+          OCR: {receipt.ocrStatus}
+        </span>
+        {receipt.expenseCount > 0 ? (
+          <span className="text-zinc-500">
+            {receipt.expenseCount} expense{receipt.expenseCount === 1 ? "" : "s"} linked
+          </span>
+        ) : null}
         {receipt.ocrConfidence != null ? (
           <span className="text-zinc-500">Confidence ~{receipt.ocrConfidence}%</span>
         ) : null}
@@ -143,6 +134,14 @@ export function ReceiptOcrSection({
               </>
             ) : null}
           </p>
+          {canQuickPost ? (
+            <ReceiptQuickPostButton
+              receiptId={receipt.id}
+              yearMonth={yearMonth}
+              totalCents={receipt.totalCents!}
+              descriptionHint={defaultDescription}
+            />
+          ) : null}
         </div>
       ) : null}
 
@@ -180,7 +179,7 @@ export function ReceiptOcrSection({
           </pre>
         </details>
       ) : null}
-      {linesWithAmount.length > 0 ? (
+      {linesWithAmount.length > 0 && receipt.expenseCount === 0 ? (
         <ReceiptBatchExpensesForm
           receiptId={receipt.id}
           yearMonth={yearMonth}
@@ -189,15 +188,24 @@ export function ReceiptOcrSection({
           suggestedBudgetPlanId={suggestedBudgetId}
         />
       ) : null}
-      <ReceiptPostExpenseForm
-        receiptId={receipt.id}
-        yearMonth={yearMonth}
-        filename={label}
-        totalCents={receipt.totalCents}
-        budgetPlans={budgetPlans}
-        suggestedBudgetPlanId={suggestedBudgetId}
-        spentAtHint={spentAtHint}
-      />
+      {receipt.expenseCount === 0 ? (
+        <ReceiptPostExpenseForm
+          receiptId={receipt.id}
+          yearMonth={yearMonth}
+          defaultDescription={defaultDescription}
+          totalCents={receipt.totalCents}
+          budgetPlans={budgetPlans}
+          suggestedBudgetPlanId={suggestedBudgetId}
+          spentAtHint={spentAtHint}
+        />
+      ) : (
+        <p className="text-[11px] text-zinc-500">
+          Expenses already linked —{" "}
+          <a href={`/expenses?ym=${yearMonth}`} className="text-emerald-700 underline">
+            view spending
+          </a>
+        </p>
+      )}
     </div>
   );
 }
@@ -216,7 +224,10 @@ export function ReceiptListItem({
   const label = displayFilename(receipt.filename);
 
   return (
-    <li className="flex flex-wrap items-start justify-between gap-3 py-4 text-sm">
+    <li
+      id={`receipt-${receipt.id}`}
+      className="scroll-mt-24 flex flex-wrap items-start justify-between gap-3 py-4 text-sm"
+    >
       <div className="min-w-0 flex-1">
         <a
           href={`/api/receipts/${receipt.id}`}

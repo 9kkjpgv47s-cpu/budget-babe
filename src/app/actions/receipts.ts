@@ -10,9 +10,11 @@ import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
 import { applyMerchantRulesToTags } from "@/lib/merchantRules";
 import {
+  defaultExpenseDescriptionFromReceipt,
   inferSpentAtFromOcrText,
   type ParsedReceiptLine,
 } from "@/lib/receiptOcr";
+import { suggestBudgetPlanId } from "@/app/(app)/receipts/receiptBudgetSuggest";
 import { deleteReceiptStored, saveReceiptUpload } from "@/lib/uploads";
 
 function revalidateMoneyFromReceipt(yearMonth: string) {
@@ -62,7 +64,7 @@ export async function uploadReceiptCore(
     void import("@/lib/receiptOcr").then((m) => m.processReceiptOcrFile(rec.id));
   });
   revalidateMoneyFromReceipt(yearMonth);
-  return { ok: true };
+  return { ok: true, receiptId: rec.id };
 }
 
 export async function uploadReceiptAction(
@@ -129,6 +131,79 @@ export async function createExpenseFromReceiptAction(
   });
   revalidateMoneyFromReceipt(yearMonth);
   return { ok: true };
+}
+
+/** One-tap post using OCR total, merchant description, inferred date, and budget hint. */
+export async function quickPostReceiptTotalAction(
+  _prev: FormActionState | undefined,
+  formData: FormData,
+): Promise<FormActionState> {
+  const user = await requireUser();
+  const receiptId = String(formData.get("receiptId") ?? "");
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  if (!receiptId || !yearMonth.match(/^\d{4}-\d{2}$/)) {
+    return { error: "Missing receipt or month." };
+  }
+  const receipt = await prisma.receipt.findUnique({ where: { id: receiptId } });
+  if (!receipt) return { error: "Receipt not found." };
+  if (receipt.ocrStatus !== "completed") {
+    return { error: "Wait until OCR finishes before quick post." };
+  }
+  const dup = await prisma.expense.findFirst({ where: { receiptId } });
+  if (dup) {
+    return {
+      error:
+        "This receipt already has linked expenses. Remove them in Expenses first.",
+    };
+  }
+  const amountCents =
+    receipt.totalCents != null && receipt.totalCents > 0
+      ? receipt.totalCents
+      : null;
+  if (amountCents == null) {
+    return {
+      error: "No total on this receipt. Enter an amount in the form below.",
+    };
+  }
+  let parsed: ParsedReceiptLine[] = [];
+  if (receipt.ocrParsedLines) {
+    try {
+      parsed = JSON.parse(receipt.ocrParsedLines) as ParsedReceiptLine[];
+      if (!Array.isArray(parsed)) parsed = [];
+    } catch {
+      parsed = [];
+    }
+  }
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const plans = await prisma.budgetPlan.findMany({
+    where: { monthlyPeriodId: period.id },
+    select: { id: true, name: true, category: true },
+  });
+  const label = receipt.filename.split("/").pop() || receipt.filename;
+  const description = defaultExpenseDescriptionFromReceipt(
+    receipt.ocrRawText ?? "",
+    parsed,
+    label,
+  );
+  const budgetPlanId = suggestBudgetPlanId(description, plans);
+  const tagsJson = await applyMerchantRulesToTags(description, null);
+  const spentAt = inferSpentAtFromOcrText(receipt.ocrRawText ?? "", new Date());
+
+  await prisma.expense.create({
+    data: {
+      monthlyPeriodId: period.id,
+      userId: user.userId,
+      amountCents,
+      description,
+      spentAt,
+      source: "ocr",
+      receiptId,
+      budgetPlanId,
+      tagsJson,
+    },
+  });
+  revalidateMoneyFromReceipt(yearMonth);
+  return { ok: true, message: "Expense posted from receipt total." };
 }
 
 export async function createExpensesFromReceiptLinesAction(
