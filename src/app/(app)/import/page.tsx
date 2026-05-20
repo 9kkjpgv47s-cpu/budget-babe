@@ -71,7 +71,11 @@ export default async function ImportPage({
         </p>
       </div>
 
-      <ImportBulkSection yearMonth={yearMonth} budgetPlans={budgetPlans} />
+      <ImportBulkSection
+        yearMonth={yearMonth}
+        budgetPlans={budgetPlans}
+        categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+      />
 
       <CategorySection
         categories={categories.map((c) => ({

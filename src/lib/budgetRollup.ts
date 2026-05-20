@@ -32,6 +32,8 @@ export type ExpenseForRollup = {
   amountCents: number;
   budgetPlanId: string | null;
   categoryId?: string | null;
+  /** From Category.budgetEnvelopeName — matches BudgetPlan.name in the month */
+  categoryEnvelopeName?: string | null;
   tagsJson: string | null;
 };
 
@@ -55,6 +57,8 @@ export function expenseMatchesBudgetPlan(
   plan: BudgetPlanForRollup,
 ): boolean {
   if (e.budgetPlanId && e.budgetPlanId === plan.id) return true;
+  const envelope = e.categoryEnvelopeName?.trim();
+  if (envelope && envelope.toLowerCase() === plan.name.toLowerCase()) return true;
   const needle = (plan.category || plan.name).toLowerCase();
   if (needle && e.description.toLowerCase().includes(needle)) return true;
   const tags = parseTagsJson(e.tagsJson);

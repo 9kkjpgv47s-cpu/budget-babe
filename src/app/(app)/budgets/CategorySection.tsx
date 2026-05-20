@@ -1,5 +1,9 @@
 import { TAX_CATEGORY_OPTIONS } from "@/lib/taxCategories";
-import { addCategoryAction, deleteCategoryAction } from "@/app/actions/categories";
+import {
+  addCategoryAction,
+  deleteCategoryAction,
+  updateCategoryAction,
+} from "@/app/actions/categories";
 
 export type CategoryRow = {
   id: string;
@@ -61,29 +65,58 @@ export function CategorySection({ categories }: { categories: CategoryRow[] }) {
       </form>
       <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
         {categories.map((c) => (
-          <li
-            key={c.id}
-            className="flex flex-wrap items-start justify-between gap-2 py-3 text-sm"
-          >
-            <div>
-              <span className="font-medium">{c.name}</span>
-              <span className="ml-2 font-mono text-xs text-zinc-500">{c.slug}</span>
-              {c.budgetEnvelopeName ? (
-                <p className="text-xs text-zinc-500">
-                  Envelope: {c.budgetEnvelopeName}
-                </p>
-              ) : null}
-              {c.matchText ? (
-                <p className="text-xs text-zinc-400">Match: {c.matchText}</p>
-              ) : null}
-            </div>
-            <form action={deleteCategoryAction}>
+          <li key={c.id} className="py-4">
+            <form action={updateCategoryAction} className="grid gap-2 sm:grid-cols-2">
+              <input type="hidden" name="id" value={c.id} />
+              <input
+                name="name"
+                defaultValue={c.name}
+                required
+                className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
+              />
+              <span className="self-center font-mono text-xs text-zinc-500 sm:col-span-2">
+                slug: {c.slug}
+              </span>
+              <input
+                name="budgetEnvelopeName"
+                defaultValue={c.budgetEnvelopeName ?? ""}
+                placeholder="Budget envelope name"
+                className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              />
+              <select
+                name="defaultTaxCategory"
+                defaultValue={c.defaultTaxCategory ?? ""}
+                className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              >
+                <option value="">No default tax folder</option>
+                {TAX_CATEGORY_OPTIONS.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              <input
+                name="matchText"
+                defaultValue={c.matchText ?? ""}
+                placeholder="Match text (pipe-separated)"
+                className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
+              />
+              <div className="flex flex-wrap gap-2 sm:col-span-2">
+                <button
+                  type="submit"
+                  className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium dark:border-zinc-600"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+            <form action={deleteCategoryAction} className="mt-2">
               <input type="hidden" name="id" value={c.id} />
               <button
                 type="submit"
                 className="text-xs text-red-600 underline hover:no-underline"
               >
-                Delete
+                Delete category
               </button>
             </form>
           </li>

@@ -13,7 +13,15 @@ const ENTRY_OPTIONS: { value: EntryKind; label: string }[] = [
   { value: "paycheck", label: "Paycheck (money in)" },
 ];
 
-export function QuickForms({ yearMonth }: { yearMonth: string }) {
+export function QuickForms({
+  yearMonth,
+  categories = [],
+  budgetPlans = [],
+}: {
+  yearMonth: string;
+  categories?: { id: string; name: string }[];
+  budgetPlans?: { id: string; name: string }[];
+}) {
   const [kind, setKind] = useState<EntryKind>("expense");
   const [state, action, pending] = useActionState(
     unifiedQuickEntryAction,
@@ -72,8 +80,39 @@ export function QuickForms({ yearMonth }: { yearMonth: string }) {
             name="amount"
             placeholder="Amount"
             inputMode="decimal"
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
           />
+          {categories.length > 0 ? (
+            <select
+              name="categoryId"
+              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              defaultValue=""
+            >
+              <option value="">Category (auto if blank)</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          {budgetPlans.length > 0 ? (
+            <select
+              name="budgetPlanId"
+              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              defaultValue=""
+            >
+              <option value="">Budget envelope (optional)</option>
+              {budgetPlans.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          <p className="text-xs text-zinc-500 sm:col-span-2">
+            Leave category blank to auto-classify from merchant rules and match text.
+          </p>
         </div>
       ) : null}
 

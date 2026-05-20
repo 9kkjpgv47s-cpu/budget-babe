@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { bulkApplyCategoryRulesAction } from "@/app/actions/categories";
+import {
+  bulkApplyCategoryRulesAction,
+  syncCategoryEnvelopesAction,
+} from "@/app/actions/categories";
 import {
   bulkApplyTagsToExpensesAction,
   bulkSetBudgetForExpensesAction,
@@ -88,17 +91,28 @@ export function ExpensesInteractiveList({
           Select rows to apply tags, category, or budget link in bulk. Categories auto-link
           envelopes and tax folders when rules match.
         </p>
-        {uncategorizedCount > 0 ? (
-          <form action={bulkApplyCategoryRulesAction} className="mt-3">
+        <div className="mt-3 flex flex-wrap gap-2">
+          {uncategorizedCount > 0 ? (
+            <form action={bulkApplyCategoryRulesAction}>
+              <input type="hidden" name="yearMonth" value={yearMonth} />
+              <button
+                type="submit"
+                className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100"
+              >
+                Apply rules to {uncategorizedCount} uncategorized
+              </button>
+            </form>
+          ) : null}
+          <form action={syncCategoryEnvelopesAction}>
             <input type="hidden" name="yearMonth" value={yearMonth} />
             <button
               type="submit"
-              className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100"
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200"
             >
-              Apply category rules to {uncategorizedCount} uncategorized
+              Link categorized rows to budget envelopes
             </button>
           </form>
-        ) : null}
+        </div>
         {taxErr ? (
           <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
             {taxErr}

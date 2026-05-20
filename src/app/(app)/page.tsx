@@ -8,15 +8,19 @@ import {
   spentForBudgetPlan,
   envelopeRemaining,
   type BudgetPlanForRollup,
-  type ExpenseForRollup,
 } from "@/lib/budgetRollup";
+import {
+  buildCategoryEnvelopeLookup,
+  toExpenseForRollup,
+} from "@/lib/expenseRollup";
+import { ensureDefaultCategories } from "@/lib/categories";
 import { BudgetCopyHeader } from "./BudgetCopyHeader";
 import { BillRow, BillsSectionHeader } from "./BillRow";
 import { BudgetPlanRow } from "./BudgetPlanRow";
 import { DashboardPanel } from "./DashboardPanel";
 import { HomeMobileInsights } from "./HomeMobileInsights";
 import { PaychecksPanel } from "./PaychecksPanel";
-import { QuickForms } from "./QuickForms";
+import { QuickFormsSection } from "./QuickFormsSection";
 import { applySuggestedRolloversAction } from "@/app/actions/rollover";
 
 function shiftYearMonth(ym: string, delta: number) {
@@ -54,20 +58,32 @@ export default async function HomePage({
   const sp = await searchParams;
   const ym = sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : undefined;
   const yearMonth = ym ?? currentYearMonth();
+  await ensureDefaultCategories();
   const data = await getDashboardData(yearMonth);
+  const categories = await prisma.category.findMany({
+    select: { id: true, name: true, budgetEnvelopeName: true },
+  });
+  const categoryLookup = buildCategoryEnvelopeLookup(categories);
+  const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
   const prevYm = shiftYearMonth(yearMonth, -1);
   const nextYm = shiftYearMonth(yearMonth, 1);
   const prevPeriodExists =
     (await prisma.monthlyPeriod.findUnique({ where: { yearMonth: prevYm } })) !=
     null;
 
-  const expForRollup: ExpenseForRollup[] = data.expenses.map((e) => ({
-    id: e.id,
-    description: e.description,
-    amountCents: e.amountCents,
-    budgetPlanId: e.budgetPlanId,
-    tagsJson: e.tagsJson,
-  }));
+  const expForRollup = data.expenses.map((e) =>
+    toExpenseForRollup(
+      {
+        id: e.id,
+        description: e.description,
+        amountCents: e.amountCents,
+        budgetPlanId: e.budgetPlanId,
+        categoryId: e.categoryId,
+        tagsJson: e.tagsJson,
+      },
+      categoryLookup,
+    ),
+  );
 
   const budgetRows = data.budgetPlans.map((p) => {
     const planR: BudgetPlanForRollup = {
@@ -305,7 +321,7 @@ export default async function HomePage({
           </div>
         </div>
         <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-3 dark:border-emerald-900/60 dark:bg-zinc-900">
-          <QuickForms yearMonth={yearMonth} />
+          <QuickFormsSection yearMonth={yearMonth} />
         </div>
       </section>
 
@@ -575,6 +591,11 @@ export default async function HomePage({
               >
                 <span>
                   {e.description}
+                  {e.categoryId && categoryNameById.get(e.categoryId) ? (
+                    <span className="ml-1 text-xs text-emerald-700 dark:text-emerald-300">
+                      [{categoryNameById.get(e.categoryId)}]
+                    </span>
+                  ) : null}
                   {e.user ? (
                     <span className="text-xs text-zinc-400"> · {e.user.name}</span>
                   ) : null}

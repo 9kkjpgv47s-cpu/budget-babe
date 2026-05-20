@@ -8,8 +8,11 @@ import {
   spentForBudgetPlan,
   envelopeRemaining,
   type BudgetPlanForRollup,
-  type ExpenseForRollup,
 } from "@/lib/budgetRollup";
+import {
+  buildCategoryEnvelopeLookup,
+  toExpenseForRollup,
+} from "@/lib/expenseRollup";
 import { applySuggestedRolloversAction } from "@/app/actions/rollover";
 import { ensureDefaultCategories } from "@/lib/categories";
 import { BudgetAddForm } from "../BudgetAddForm";
@@ -46,13 +49,25 @@ export default async function BudgetsPage({
     prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
   ]);
 
-  const expForRollup: ExpenseForRollup[] = expenses.map((e) => ({
-    id: e.id,
-    description: e.description,
-    amountCents: e.amountCents,
-    budgetPlanId: e.budgetPlanId,
-    tagsJson: e.tagsJson,
-  }));
+  const categoryLookup = buildCategoryEnvelopeLookup(
+    categories.map((c) => ({
+      id: c.id,
+      budgetEnvelopeName: c.budgetEnvelopeName,
+    })),
+  );
+  const expForRollup = expenses.map((e) =>
+    toExpenseForRollup(
+      {
+        id: e.id,
+        description: e.description,
+        amountCents: e.amountCents,
+        budgetPlanId: e.budgetPlanId,
+        categoryId: e.categoryId,
+        tagsJson: e.tagsJson,
+      },
+      categoryLookup,
+    ),
+  );
 
   const budgetRows = budgetPlans.map((p) => {
     const planR: BudgetPlanForRollup = {

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
-import { applyMerchantRulesToTags } from "@/lib/merchantRules";
+import { classifyExpenseForWrite } from "@/lib/merchantRules";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
 
@@ -19,6 +19,7 @@ export async function createSplitExpensesAction(
   const yearMonth = String(formData.get("yearMonth") ?? "").trim();
   const linesRaw = String(formData.get("linesJson") ?? "");
   const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
+  const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
   if (!yearMonth || !linesRaw.trim()) {
     return { error: "Month and split lines are required." };
   }
@@ -39,6 +40,11 @@ export async function createSplitExpensesAction(
     });
     if (!plan) budgetPlanId = null;
   }
+  let sharedCategoryId: string | null = categoryIdRaw || null;
+  if (sharedCategoryId) {
+    const cat = await prisma.category.findUnique({ where: { id: sharedCategoryId } });
+    if (!cat) sharedCategoryId = null;
+  }
   const splitGroupId = randomUUID();
   let sum = 0;
   const parsed: { amountCents: number; description: string }[] = [];
@@ -55,7 +61,10 @@ export async function createSplitExpensesAction(
     return { error: "Total must be positive." };
   }
   for (const p of parsed) {
-    const tagsJson = await applyMerchantRulesToTags(p.description, null);
+    const classified = await classifyExpenseForWrite(p.description, period.id, {
+      categoryId: sharedCategoryId,
+      budgetPlanId,
+    });
     await prisma.expense.create({
       data: {
         monthlyPeriodId: period.id,
@@ -64,8 +73,10 @@ export async function createSplitExpensesAction(
         description: p.description,
         spentAt: new Date(),
         splitGroupId,
-        budgetPlanId,
-        tagsJson,
+        categoryId: classified.categoryId,
+        budgetPlanId: classified.budgetPlanId,
+        taxCategory: classified.taxCategory,
+        tagsJson: classified.tagsJson,
         source: "manual",
       },
     });

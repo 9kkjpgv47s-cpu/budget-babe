@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-import { ensureDefaultCategories, slugifyCategoryName } from "@/lib/categories";
+import {
+  ensureDefaultCategories,
+  resolveBudgetPlanIdForCategory,
+  slugifyCategoryName,
+} from "@/lib/categories";
 import { isValidTaxCategory } from "@/lib/taxCategories";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { classifyExpenseForWrite } from "@/lib/merchantRules";
@@ -48,6 +52,52 @@ export async function addCategoryAction(formData: FormData): Promise<void> {
   revalidateCategoryPaths();
 }
 
+export async function updateCategoryAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const id = String(formData.get("id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!id || !name) return;
+  const matchText = String(formData.get("matchText") ?? "").trim() || null;
+  const budgetEnvelopeName =
+    String(formData.get("budgetEnvelopeName") ?? "").trim() || null;
+  const taxRaw = String(formData.get("defaultTaxCategory") ?? "").trim();
+  const defaultTaxCategory =
+    taxRaw && isValidTaxCategory(taxRaw) ? taxRaw : null;
+  await prisma.category.update({
+    where: { id },
+    data: { name, matchText, budgetEnvelopeName, defaultTaxCategory },
+  });
+  revalidateCategoryPaths();
+}
+
+export async function syncCategoryEnvelopesAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  if (!yearMonth) return;
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const expenses = await prisma.expense.findMany({
+    where: {
+      monthlyPeriodId: period.id,
+      categoryId: { not: null },
+      budgetPlanId: null,
+    },
+    select: { id: true, categoryId: true, taxCategory: true },
+  });
+  for (const exp of expenses) {
+    if (!exp.categoryId) continue;
+    const budgetPlanId = await resolveBudgetPlanIdForCategory(
+      exp.categoryId,
+      period.id,
+    );
+    if (!budgetPlanId) continue;
+    await prisma.expense.update({
+      where: { id: exp.id },
+      data: { budgetPlanId },
+    });
+  }
+  revalidateCategoryPaths(yearMonth);
+}
+
 export async function deleteCategoryAction(formData: FormData): Promise<void> {
   await requireUser();
   const id = String(formData.get("id") ?? "");
@@ -83,11 +133,18 @@ export async function bulkApplyCategoryRulesAction(
       taxCategory: exp.taxCategory,
     });
     if (!classified.categoryId) continue;
+    let budgetPlanId = classified.budgetPlanId;
+    if (!budgetPlanId && classified.categoryId) {
+      budgetPlanId = await resolveBudgetPlanIdForCategory(
+        classified.categoryId,
+        period.id,
+      );
+    }
     await prisma.expense.update({
       where: { id: exp.id },
       data: {
         categoryId: classified.categoryId,
-        budgetPlanId: classified.budgetPlanId,
+        budgetPlanId,
         taxCategory: classified.taxCategory,
         tagsJson: classified.tagsJson,
       },
