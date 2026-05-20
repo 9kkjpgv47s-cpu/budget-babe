@@ -8,6 +8,7 @@ export const runtime = "nodejs";
 
 const links = [
   { href: "/", label: "Overview" },
+  { href: "/receipts", label: "Receipts" },
   { href: "/coach", label: "Coach" },
   { href: "/expenses", label: "Expenses" },
   { href: "/bills", label: "Bills" },
@@ -19,7 +20,6 @@ const links = [
   { href: "/insights", label: "Insights" },
   { href: "/debt", label: "Debt" },
   { href: "/net-worth", label: "Net worth" },
-  { href: "/receipts", label: "Receipts" },
   { href: "/shopping", label: "Shopping" },
   { href: "/goals", label: "Goals" },
 ];

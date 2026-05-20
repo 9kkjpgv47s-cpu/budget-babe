@@ -10,10 +10,10 @@ type MobileNavItem = {
 
 const items: MobileNavItem[] = [
   { href: "/", label: "Home" },
-  { href: "/expenses", label: "Expenses" },
+  { href: "/receipts", label: "Receipts" },
+  { href: "/expenses", label: "Spending" },
   { href: "/bills", label: "Bills" },
   { href: "/budgets", label: "Budgets" },
-  { href: "/coach", label: "Coach" },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {

@@ -9,7 +9,10 @@ import { parseMoneyToCents } from "@/lib/money";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
 import { applyMerchantRulesToTags } from "@/lib/merchantRules";
-import type { ParsedReceiptLine } from "@/lib/receiptOcr";
+import {
+  inferSpentAtFromOcrText,
+  type ParsedReceiptLine,
+} from "@/lib/receiptOcr";
 import { deleteReceiptStored, saveReceiptUpload } from "@/lib/uploads";
 
 function revalidateMoneyFromReceipt(yearMonth: string) {
@@ -110,13 +113,14 @@ export async function createExpenseFromReceiptAction(
     if (!plan) budgetPlanId = null;
   }
   const tagsJson = await applyMerchantRulesToTags(description, null);
+  const spentAt = inferSpentAtFromOcrText(receipt.ocrRawText ?? "", new Date());
   await prisma.expense.create({
     data: {
       monthlyPeriodId: period.id,
       userId: user.userId,
       amountCents,
       description,
-      spentAt: new Date(),
+      spentAt,
       source: "ocr",
       receiptId,
       budgetPlanId,
@@ -134,6 +138,7 @@ export async function createExpensesFromReceiptLinesAction(
   const user = await requireUser();
   const receiptId = String(formData.get("receiptId") ?? "");
   const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
   if (!receiptId || !yearMonth.match(/^\d{4}-\d{2}$/)) {
     return { error: "Missing receipt or month." };
   }
@@ -148,6 +153,14 @@ export async function createExpensesFromReceiptLinesAction(
   if (!receipt?.ocrParsedLines?.trim()) {
     return { error: "No parsed lines on this receipt." };
   }
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  let budgetPlanId: string | null = budgetPlanIdRaw || null;
+  if (budgetPlanId) {
+    const plan = await prisma.budgetPlan.findFirst({
+      where: { id: budgetPlanId, monthlyPeriodId: period.id },
+    });
+    if (!plan) budgetPlanId = null;
+  }
   let parsed: ParsedReceiptLine[];
   try {
     parsed = JSON.parse(receipt.ocrParsedLines) as ParsedReceiptLine[];
@@ -155,7 +168,7 @@ export async function createExpensesFromReceiptLinesAction(
   } catch {
     return { error: "Could not read parsed lines." };
   }
-  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const spentAt = inferSpentAtFromOcrText(receipt.ocrRawText ?? "", new Date());
   const splitGroupId = randomUUID();
   let created = 0;
   for (const line of parsed) {
@@ -174,10 +187,11 @@ export async function createExpensesFromReceiptLinesAction(
         userId: user.userId,
         amountCents: cents,
         description: desc,
-        spentAt: new Date(),
+        spentAt,
         source: "ocr",
         receiptId,
         splitGroupId,
+        budgetPlanId,
         tagsJson,
       },
     });
@@ -190,7 +204,10 @@ export async function createExpensesFromReceiptLinesAction(
     };
   }
   revalidateMoneyFromReceipt(yearMonth);
-  return { ok: true, message: `Posted ${created} expense line(s) with one split group.` };
+  return {
+    ok: true,
+    message: `Posted ${created} expense line(s) with one split group.`,
+  };
 }
 
 export async function moveReceiptToMonthAction(formData: FormData): Promise<void> {

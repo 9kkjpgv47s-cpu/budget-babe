@@ -7,6 +7,7 @@ import { currentYearMonth, parseYearMonth } from "@/lib/yearMonth";
 import { ReceiptUploadForm } from "./ReceiptUploadForm";
 import { ReceiptListItem } from "./ReceiptOcrSection";
 import { OcrStatusPoller } from "./OcrStatusPoller";
+import { ReceiptBlobWarning } from "./ReceiptBlobWarning";
 
 export default async function ReceiptsPage({
   searchParams,
@@ -33,7 +34,7 @@ export default async function ReceiptsPage({
     prisma.budgetPlan.findMany({
       where: { monthlyPeriodId: period.id },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, category: true },
     }),
   ]);
 
@@ -43,6 +44,7 @@ export default async function ReceiptsPage({
 
   return (
     <div className="space-y-8">
+      <ReceiptBlobWarning />
       <OcrStatusPoller active={ocrPending} />
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Receipts</h1>
@@ -54,9 +56,12 @@ export default async function ReceiptsPage({
           light). PDFs still work; scanned PDFs take longer and only the first
           pages are OCR’d.
         </p>
-        <p className="mt-2 text-sm">
+        <p className="mt-2 flex flex-wrap gap-3 text-sm">
           <Link href="/" className="text-emerald-600 underline">
             ← Back to overview
+          </Link>
+          <Link href={`/expenses?ym=${yearMonth}`} className="text-emerald-600 underline">
+            View spending for {yearMonth}
           </Link>
         </p>
       </div>
@@ -64,12 +69,9 @@ export default async function ReceiptsPage({
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">Upload for {yearMonth}</h2>
         <p className="mt-1 text-xs text-zinc-500">
-          Change month from the overview using the arrows, then open this page
-          again, or add{" "}
-          <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">
-            ?ym=YYYY-MM
-          </code>{" "}
-          to the URL.
+          Month: <strong>{yearMonth}</strong>. Change from overview arrows or{" "}
+          <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">?ym=YYYY-MM</code>.
+          After OCR, amounts and dates flow into Expenses automatically when you post.
         </p>
         <ReceiptUploadForm yearMonth={yearMonth} />
       </section>

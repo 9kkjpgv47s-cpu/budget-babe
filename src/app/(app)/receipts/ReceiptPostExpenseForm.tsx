@@ -10,12 +10,16 @@ export function ReceiptPostExpenseForm({
   filename,
   totalCents,
   budgetPlans,
+  suggestedBudgetPlanId,
+  spentAtHint,
 }: {
   receiptId: string;
   yearMonth: string;
   filename: string;
   totalCents: number | null;
   budgetPlans: { id: string; name: string }[];
+  suggestedBudgetPlanId?: string | null;
+  spentAtHint?: string | null;
 }) {
   const [state, action, pending] = useActionState(
     createExpenseFromReceiptAction,
@@ -28,8 +32,13 @@ export function ReceiptPostExpenseForm({
   return (
     <div className="mt-3 rounded border border-emerald-200 bg-emerald-50/40 p-2 dark:border-emerald-900/50 dark:bg-emerald-950/20">
       <p className="mb-2 text-[11px] font-medium text-emerald-900 dark:text-emerald-100">
-        Post as expense
+        Post as one expense (receipt total)
       </p>
+      {spentAtHint ? (
+        <p className="mb-2 text-[10px] text-zinc-600 dark:text-zinc-400">
+          Purchase date from receipt: <strong>{spentAtHint}</strong> (used when you post)
+        </p>
+      ) : null}
       <form action={action} className="grid gap-1.5 text-[11px] sm:grid-cols-2">
         <input type="hidden" name="receiptId" value={receiptId} />
         <input type="hidden" name="yearMonth" value={yearMonth} />
@@ -49,7 +58,7 @@ export function ReceiptPostExpenseForm({
         <select
           name="budgetPlanId"
           className="sm:col-span-2 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
-          defaultValue=""
+          defaultValue={suggestedBudgetPlanId ?? ""}
         >
           <option value="">Budget (optional)</option>
           {budgetPlans.map((p) => (

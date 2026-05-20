@@ -8,10 +8,14 @@ export function ReceiptBatchExpensesForm({
   receiptId,
   yearMonth,
   lineCount,
+  budgetPlans,
+  suggestedBudgetPlanId,
 }: {
   receiptId: string;
   yearMonth: string;
   lineCount: number;
+  budgetPlans: { id: string; name: string }[];
+  suggestedBudgetPlanId?: string | null;
 }) {
   const [state, action, pending] = useActionState(
     createExpensesFromReceiptLinesAction,
@@ -19,9 +23,28 @@ export function ReceiptBatchExpensesForm({
   );
 
   return (
-    <form action={action} className="mt-2 space-y-1">
+    <form action={action} className="mt-2 space-y-2">
       <input type="hidden" name="receiptId" value={receiptId} />
       <input type="hidden" name="yearMonth" value={yearMonth} />
+      {budgetPlans.length > 0 ? (
+        <label className="block text-[11px] text-zinc-600 dark:text-zinc-400">
+          <span className="font-medium text-zinc-700 dark:text-zinc-300">
+            Budget for all lines (optional)
+          </span>
+          <select
+            name="budgetPlanId"
+            defaultValue={suggestedBudgetPlanId ?? ""}
+            className="mt-1 w-full rounded border border-zinc-200 px-2 py-1 text-[11px] dark:border-zinc-700 dark:bg-zinc-950"
+          >
+            <option value="">No budget link</option>
+            {budgetPlans.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <button
         type="submit"
         disabled={pending}

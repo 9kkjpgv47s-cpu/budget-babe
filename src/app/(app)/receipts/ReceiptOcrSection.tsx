@@ -1,5 +1,8 @@
 import { formatCents } from "@/lib/money";
-import type { ParsedReceiptLine } from "@/lib/receiptOcr";
+import {
+  inferSpentAtFromOcrText,
+  type ParsedReceiptLine,
+} from "@/lib/receiptOcr";
 import {
   deleteReceiptAction,
   moveReceiptToMonthAction,
@@ -7,6 +10,7 @@ import {
 } from "@/app/actions/receipts";
 import { ReceiptPostExpenseForm } from "./ReceiptPostExpenseForm";
 import { ReceiptBatchExpensesForm } from "./ReceiptBatchExpensesForm";
+import { suggestBudgetPlanId, type BudgetPlanPick } from "./receiptBudgetSuggest";
 
 type ReceiptRow = {
   id: string;
@@ -21,6 +25,16 @@ type ReceiptRow = {
   ocrParsedLines: string | null;
   ocrConfidence: number | null;
 };
+
+function displayFilename(storagePath: string): string {
+  try {
+    const u = new URL(storagePath);
+    const last = u.pathname.split("/").pop();
+    return last || storagePath;
+  } catch {
+    return storagePath.split("/").pop() || storagePath;
+  }
+}
 
 function statusBadge(status: string) {
   const base =
@@ -47,7 +61,7 @@ export function ReceiptOcrSection({
 }: {
   receipt: ReceiptRow;
   yearMonth: string;
-  budgetPlans: { id: string; name: string }[];
+  budgetPlans: BudgetPlanPick[];
 }) {
   let parsed: ParsedReceiptLine[] = [];
   if (receipt.ocrParsedLines) {
@@ -62,6 +76,22 @@ export function ReceiptOcrSection({
   const linesWithAmount = parsed.filter(
     (l) => typeof l.amountCents === "number" && l.amountCents > 0,
   );
+  const label = displayFilename(receipt.filename);
+  const spentAt =
+    receipt.ocrRawText?.trim()
+      ? inferSpentAtFromOcrText(receipt.ocrRawText, new Date())
+      : null;
+  const spentAtHint = spentAt
+    ? spentAt.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : null;
+  const suggestDesc =
+    linesWithAmount[0]?.description?.trim() || `Receipt: ${label}`;
+  const suggestedBudgetId = suggestBudgetPlanId(suggestDesc, budgetPlans);
+  const readyForReview = receipt.ocrStatus === "completed";
 
   return (
     <div className="mt-3 w-full space-y-2 border-t border-zinc-100 pt-3 text-xs dark:border-zinc-800">
@@ -87,6 +117,35 @@ export function ReceiptOcrSection({
       {receipt.ocrError ? (
         <p className="text-amber-800 dark:text-amber-200">{receipt.ocrError}</p>
       ) : null}
+
+      {readyForReview ? (
+        <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 p-3 dark:border-emerald-800 dark:bg-emerald-950/30">
+          <p className="font-semibold text-emerald-900 dark:text-emerald-100">
+            Ready to post
+          </p>
+          <p className="mt-1 text-[11px] text-emerald-900/90 dark:text-emerald-100/90">
+            {receipt.totalCents != null && receipt.totalCents > 0 ? (
+              <>
+                Total detected:{" "}
+                <span className="font-medium tabular-nums">
+                  {formatCents(receipt.totalCents)}
+                </span>
+                .{" "}
+              </>
+            ) : null}
+            {linesWithAmount.length > 0
+              ? `${linesWithAmount.length} line item(s) with amounts — post all at once or use the total below.`
+              : "No line items with amounts — post using the total form below."}
+            {suggestedBudgetId ? (
+              <>
+                {" "}
+                Suggested budget envelope pre-selected from the description.
+              </>
+            ) : null}
+          </p>
+        </div>
+      ) : null}
+
       {parsed.length > 0 ? (
         <div>
           <p className="mb-1 font-medium text-zinc-700 dark:text-zinc-300">
@@ -126,14 +185,18 @@ export function ReceiptOcrSection({
           receiptId={receipt.id}
           yearMonth={yearMonth}
           lineCount={linesWithAmount.length}
+          budgetPlans={budgetPlans}
+          suggestedBudgetPlanId={suggestedBudgetId}
         />
       ) : null}
       <ReceiptPostExpenseForm
         receiptId={receipt.id}
         yearMonth={yearMonth}
-        filename={receipt.filename}
+        filename={label}
         totalCents={receipt.totalCents}
         budgetPlans={budgetPlans}
+        suggestedBudgetPlanId={suggestedBudgetId}
+        spentAtHint={spentAtHint}
       />
     </div>
   );
@@ -147,9 +210,11 @@ export function ReceiptListItem({
 }: {
   receipt: ReceiptRow;
   yearMonth: string;
-  budgetPlans: { id: string; name: string }[];
+  budgetPlans: BudgetPlanPick[];
   monthOptions: string[];
 }) {
+  const label = displayFilename(receipt.filename);
+
   return (
     <li className="flex flex-wrap items-start justify-between gap-3 py-4 text-sm">
       <div className="min-w-0 flex-1">
@@ -159,7 +224,7 @@ export function ReceiptListItem({
           rel="noreferrer"
           className="font-medium text-emerald-700 underline dark:text-emerald-400"
         >
-          {receipt.filename}
+          {label}
         </a>
         <div className="text-xs text-zinc-500">
           {receipt.uploadedAt.toLocaleString()}

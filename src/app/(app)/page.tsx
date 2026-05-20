@@ -17,6 +17,7 @@ import { DashboardPanel } from "./DashboardPanel";
 import { HomeMobileInsights } from "./HomeMobileInsights";
 import { PaychecksPanel } from "./PaychecksPanel";
 import { QuickForms } from "./QuickForms";
+import { ReceiptQuickCapture } from "./receipts/ReceiptQuickCapture";
 import { applySuggestedRolloversAction } from "@/app/actions/rollover";
 
 function shiftYearMonth(ym: string, delta: number) {
@@ -279,6 +280,8 @@ export default async function HomePage({
         </div>
       </div>
 
+      <ReceiptQuickCapture yearMonth={yearMonth} />
+
       <section className="rounded-2xl border-2 border-emerald-300 bg-emerald-50/60 p-4 shadow-sm dark:border-emerald-800 dark:bg-emerald-950/30">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -291,10 +294,10 @@ export default async function HomePage({
           </div>
           <div className="flex gap-2">
             <Link
-              href="/receipts"
+              href={`/receipts?ym=${yearMonth}`}
               className="rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm font-semibold text-emerald-800 transition-all duration-200 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900/60"
             >
-              Receipt upload
+              Scan receipt
             </Link>
             <Link
               href={`/expenses?ym=${yearMonth}`}

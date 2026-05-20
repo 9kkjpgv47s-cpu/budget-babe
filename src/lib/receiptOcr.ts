@@ -62,6 +62,54 @@ export function parseReceiptLines(raw: string): ParsedReceiptLine[] {
 /**
  * Best-effort total from common receipt keywords.
  */
+const RECEIPT_DATE_PATTERNS: RegExp[] = [
+  /(?:DATE|TRANSACTION\s+DATE|PURCHASE\s+DATE|TIME)[:\s]+(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/i,
+  /(?:DATE|TRANSACTION\s+DATE)[:\s]+(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/i,
+  /\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})\b/,
+];
+
+function normalizeReceiptYear(y: number): number {
+  if (y < 100) return y >= 70 ? 1900 + y : 2000 + y;
+  return y;
+}
+
+/**
+ * Best-effort purchase date from OCR text (US-style dates common on receipts).
+ */
+export function inferSpentAtFromOcrText(
+  rawText: string,
+  fallback: Date = new Date(),
+): Date {
+  const raw = rawText.trim();
+  if (!raw) return fallback;
+  const now = new Date();
+  for (const re of RECEIPT_DATE_PATTERNS) {
+    const m = raw.match(re);
+    if (!m) continue;
+    let year: number;
+    let month: number;
+    let day: number;
+    if (m[1]!.length === 4) {
+      year = parseInt(m[1]!, 10);
+      month = parseInt(m[2]!, 10);
+      day = parseInt(m[3]!, 10);
+    } else {
+      month = parseInt(m[1]!, 10);
+      day = parseInt(m[2]!, 10);
+      year = normalizeReceiptYear(parseInt(m[3]!, 10));
+    }
+    if (month < 1 || month > 12 || day < 1 || day > 31) continue;
+    const candidate = new Date(year, month - 1, day, 12, 0, 0, 0);
+    if (Number.isNaN(candidate.getTime())) continue;
+    if (candidate > now) continue;
+    const tenYearsAgo = new Date(now);
+    tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
+    if (candidate < tenYearsAgo) continue;
+    return candidate;
+  }
+  return fallback;
+}
+
 export function parseLikelyTotalCents(raw: string): number | null {
   const upper = raw.toUpperCase();
   const patterns = [
@@ -220,6 +268,7 @@ export async function processReceiptOcrFile(receiptId: string): Promise<void> {
       });
       revalidatePath("/");
       revalidatePath("/receipts");
+      revalidatePath("/expenses");
       return;
     }
 
@@ -247,6 +296,7 @@ export async function processReceiptOcrFile(receiptId: string): Promise<void> {
     });
     revalidatePath("/");
     revalidatePath("/receipts");
+    revalidatePath("/expenses");
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     await prisma.receipt.update({
@@ -258,5 +308,6 @@ export async function processReceiptOcrFile(receiptId: string): Promise<void> {
     });
     revalidatePath("/");
     revalidatePath("/receipts");
+    revalidatePath("/expenses");
   }
 }

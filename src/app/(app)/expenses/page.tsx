@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { prisma } from "@/lib/prisma";
@@ -55,7 +56,21 @@ export default async function ExpensesPage({
   }));
 
   return (
-    <ExpensesInteractiveList
+    <div className="space-y-4">
+      <div className="sticky top-14 z-30 -mx-1 rounded-xl border border-emerald-200 bg-emerald-50/95 px-4 py-3 shadow-sm backdrop-blur dark:border-emerald-800 dark:bg-emerald-950/90">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
+            Have a receipt photo? OCR fills amount and description for you.
+          </p>
+          <Link
+            href={`/receipts?ym=${ym}`}
+            className="shrink-0 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+          >
+            Add from receipt
+          </Link>
+        </div>
+      </div>
+      <ExpensesInteractiveList
       yearMonth={ym}
       searchQuery={q}
       expenses={rows}
@@ -63,5 +78,6 @@ export default async function ExpensesPage({
       plans={plans.map((p) => ({ id: p.id, name: p.name }))}
       taxErr={taxErr}
     />
+    </div>
   );
 }
