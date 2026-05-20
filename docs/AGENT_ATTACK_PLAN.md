@@ -1,7 +1,31 @@
 # Financial App — Audit & 4-Agent Attack Plan
 
 **Repo:** Household Budget PWA (`/workspace`)  
-**Goal:** State-of-the-art household finance UX where **one entry propagates everywhere**, receipt photos **parse into ledger rows**, and four agents can work **in parallel without merge collisions**.
+**Goal:** State-of-the-art household finance UX where **one entry propagates everywhere**, receipt photos **parse into ledger rows**, and four agents work **at the same time** without merge collisions.
+
+---
+
+## Parallel execution vs merge order (read this first)
+
+| Concept | What it means |
+|---------|----------------|
+| **Agent work** | **All 4 start together** — each checks out `main`, creates their branch, codes immediately. No agent waits for another agent’s PR to merge. |
+| **Merge to `main`** | **Sequential only when integrating** — merge Agent 1 → 2 → 3 → 4 so `receipts.ts` and `entryDefaults.ts` conflicts resolve in a fixed order. That is **not** “run Agent 2 after Agent 1 finishes coding.” |
+| **Shared contract** | `src/lib/entryDefaults.ts` is **already on `main`** (stub). Agents 2–3 **import** it on day one; only **Agent 1** may change its implementation. |
+
+```text
+TIME ──────────────────────────────────────────────────────────────►
+
+  Agent 1  ████████████████████  (branch: agent-1-entry-defaults)
+  Agent 2  ████████████████████  (branch: agent-2-receipt-ux)
+  Agent 3  ████████████████████  (branch: agent-3-categorization)
+  Agent 4  ████████████████████  (branch: agent-4-polish)
+           ↑ all start same day, different files
+
+  Merge    ──► PR1 ──► PR2 ──► PR3 ──► PR4   (integration only)
+```
+
+**Launch all four Cloud Agents in one batch** with the kickoff prompts at the bottom. Use file ownership so nobody edits the same path.
 
 ---
 
@@ -75,13 +99,13 @@ Compared to leading apps (YNAB, Monarch, Copilot, Rocket Money) and 2025–2026 
 
 ### Rules of engagement (all agents)
 
-1. **Branch naming:** `cursor/agent-<N>-<slug>-e9cc` off `main`
-2. **Do not edit files outside your ownership list** without a comment in PR: `// AGENT-N-EXCEPTION: reason`
-3. **Shared contract file** (Agent 1 creates first, others only import):
-   - `src/lib/entryDefaults.ts` — server-only helpers: `getLastExpenseDefaults(userId)`, `applyMerchantRulesToDraft(...)`, `resolveExpenseMonth({ receiptId?, yearMonth? })`
-4. **Merge order:** Agent 1 → Agent 2 → Agent 3 → Agent 4 (rebase each PR onto previous merge)
-5. **No schema migrations** unless Agent 1 owns them; if needed, one migration in Agent 1 PR only
-6. Run `npm run lint` before push; smoke: login → add expense → upload receipt → post expense
+1. **Start in parallel:** branch off **`main` today** — `git checkout main && git pull && git checkout -b cursor/agent-<N>-<slug>-e9cc`
+2. **Branch naming:** `cursor/agent-<N>-<slug>-e9cc`
+3. **Do not edit files outside your ownership list** without PR comment: `// AGENT-N-EXCEPTION: reason`
+4. **Shared contract** (`src/lib/entryDefaults.ts`): **stub on `main`** — Agent 1 **implements/extends**; Agents 2–3 **import only** (never rename exports)
+5. **Merge order (integration only):** PR1 → PR2 → PR3 → PR4; rebase open PRs onto `main` after each merge — **not** a requirement to delay starting work
+6. **No schema migrations** except Agent 1 (one migration max in PR1)
+7. Run `npm run lint` before push
 
 ---
 
@@ -92,7 +116,7 @@ Compared to leading apps (YNAB, Monarch, Copilot, Rocket Money) and 2025–2026 
 ### Owns (exclusive write)
 
 ```
-src/lib/entryDefaults.ts          # NEW — shared contract
+src/lib/entryDefaults.ts          # EXTEND stub (do not break exports Agents 2–3 import)
 src/app/actions/monthly.ts        # unifiedQuickEntryAction, addExpenseCore
 src/app/actions/expenses.ts       # create/update, bulk tags/budget
 src/app/actions/receipts.ts       # ONLY: moveReceipt*, post expense month resolution
@@ -110,9 +134,7 @@ src/lib/formActionState.ts        # if extending success payloads with defaults
 
 ### Tasks
 
-1. Add `entryDefaults.ts`:
-   - Last expense: `budgetPlanId`, `tagsJson`, `payee` for household
-   - `resolvePostingYearMonth({ receipt, pageYearMonth })` — receipt’s `monthlyPeriodId` wins when posting from receipt
+1. Extend `entryDefaults.ts` (stub already exports `getLastExpenseDefaults`, `applyMerchantRulesToDraft`, `resolvePostingYearMonth`)
 2. Extend **QuickForms** expense path: budget `<select>`, optional tags, payee; pre-fill from `entryDefaults`
 3. **moveReceiptToMonthAction**: optionally move linked `Expense` rows (checkbox default on: “Move linked expenses too”)
 4. **Receipt post actions** (server only): use `resolvePostingYearMonth`; fix batch create to accept optional `budgetPlanId`
@@ -168,9 +190,10 @@ src/app/api/receipts/*
 - [ ] User sees parsed line items before typing amounts manually
 - [ ] Does not implement budget/tags on quick add (Agent 1)
 
-### Depends on
+### Parallel notes
 
-- Agent 1 merged **or** rebase onto Agent 1 branch for `resolvePostingYearMonth` in post forms (read-only import)
+- **No wait for Agent 1.** Post/month logic lives in Agent 1’s half of `receipts.ts`; you own upload/OCR UI only.
+- Optional: import `resolvePostingYearMonth` in UI to **display** resolved month (read-only); do not change post actions.
 
 ### Estimated touch surface: ~15 files, medium invasiveness
 
@@ -216,9 +239,9 @@ src/app/(app)/expenses/ExpensesInteractiveList.tsx   # ONLY: suggestion chips UI
 - [ ] Import preview shows rule-applied tags
 - [ ] No receipt UI changes
 
-### Depends on
+### Parallel notes
 
-- Agent 1 `entryDefaults.ts` merged (import only)
+- Import `applyMerchantRulesToDraft` from `entryDefaults.ts` on **`main` stub** — works day one; gets smarter when PR1 merges.
 
 ### Estimated touch surface: ~18 files, medium-high invasiveness
 
@@ -267,9 +290,9 @@ docs/STATE_OF_THE_ART_CHECKLIST.md  # NEW optional scoring sheet
 - [ ] Insights merchant row links to expense filter
 - [ ] No regressions to Agents 1–3 files
 
-### Depends on
+### Parallel notes
 
-- Agents 1–3 merged for accurate checklist; can start read-only audit in parallel
+- **Fully independent** — start immediately; update checklist scores after all PRs merge.
 
 ### Estimated touch surface: ~25 files, lower invasiveness (mostly UI copy + links)
 
@@ -321,26 +344,33 @@ Manual E2E:
 
 ### Agent 1
 
-> You own data propagation per `docs/AGENT_ATTACK_PLAN.md` Agent 1. Branch `cursor/agent-1-entry-defaults-e9cc`. Create `src/lib/entryDefaults.ts`, extend QuickForms and receipt post/move actions. Do not edit `receipts/*` UI or `MobileBottomNav.tsx`.
+> **Start now in parallel.** `docs/AGENT_ATTACK_PLAN.md` Agent 1. Branch `cursor/agent-1-entry-defaults-e9cc` off `main`. **Extend** `src/lib/entryDefaults.ts` (do not remove exports). QuickForms + receipt post/move in `receipts.ts`. Do not edit `receipts/*` UI or `MobileBottomNav.tsx`.
 
 ### Agent 2
 
-> You own receipt UX per `docs/AGENT_ATTACK_PLAN.md` Agent 2. Branch `cursor/agent-2-receipt-ux-e9cc`. Rebase on Agent 1 when available. Mobile nav + overview receipt CTA + OCR prefill. Do not edit QuickForms or `entryDefaults.ts`.
+> **Start now in parallel.** `docs/AGENT_ATTACK_PLAN.md` Agent 2. Branch `cursor/agent-2-receipt-ux-e9cc` off `main`. Mobile nav + overview receipt CTA + OCR prefill. Do **not** wait for Agent 1. Do not edit `entryDefaults.ts` or QuickForms.
 
 ### Agent 3
 
-> You own categorization per `docs/AGENT_ATTACK_PLAN.md` Agent 3. Branch `cursor/agent-3-categorization-e9cc`. Import `entryDefaults` in Plaid/import/shopping. Do not touch receipt UI.
+> **Start now in parallel.** `docs/AGENT_ATTACK_PLAN.md` Agent 3. Branch `cursor/agent-3-categorization-e9cc` off `main`. Import `applyMerchantRulesToDraft` from `entryDefaults.ts` in Plaid/import/shopping. Do not touch receipt UI.
 
 ### Agent 4
 
-> You own tax/insights/polish per `docs/AGENT_ATTACK_PLAN.md` Agent 4. Branch `cursor/agent-4-polish-e9cc`. Tax receipt links, insights drill-downs, checklist doc. Do not touch Agents 1–3 owned paths.
+> **Start now in parallel.** `docs/AGENT_ATTACK_PLAN.md` Agent 4. Branch `cursor/agent-4-polish-e9cc` off `main`. Tax receipt links, insights drill-downs, checklist. Fully independent file set.
 
 ---
 
-## Current agent assignment (this session)
+## How to launch four Cloud Agents at once
 
-**Cloud Agent (this PR):** Audit + attack plan documentation only — **no product code changes** in this branch to avoid preempting parallel agents.
+In Cursor, start **four separate Cloud Agent tasks in the same batch** (or four tabs), each with one kickoff prompt above. Point all four at repo `budget-babe` / branch off **`main`** after this plan PR merges (or merge plan + stub first, then launch).
+
+| Agent | Branch | Blocks another agent? |
+|-------|--------|------------------------|
+| 1 | `cursor/agent-1-entry-defaults-e9cc` | No |
+| 2 | `cursor/agent-2-receipt-ux-e9cc` | No |
+| 3 | `cursor/agent-3-categorization-e9cc` | No |
+| 4 | `cursor/agent-4-polish-e9cc` | No |
 
 ---
 
-*Last updated: 2026-05-20*
+*Last updated: 2026-05-20 — parallel execution clarified*
