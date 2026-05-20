@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
-import { applyMerchantRulesToTags } from "@/lib/merchantRules";
+import { classifyExpenseForWrite } from "@/lib/merchantRules";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 
 export type BulkImportRow = {
@@ -8,6 +8,7 @@ export type BulkImportRow = {
   amountCents: number;
   description: string;
   payee: string | null;
+  categoryLabel?: string | null;
 };
 
 function fingerprint(date: Date, amountCents: number, description: string): string {
@@ -37,7 +38,23 @@ export async function bulkInsertExpenses(
       skipped++;
       continue;
     }
-    const tagsJson = await applyMerchantRulesToTags(parts.description, null);
+    let categoryId: string | null = null;
+    if (parts.categoryLabel?.trim()) {
+      const label = parts.categoryLabel.trim().toLowerCase();
+      const cat = await prisma.category.findFirst({
+        where: {
+          OR: [
+            { slug: label },
+            { name: { equals: parts.categoryLabel.trim(), mode: "insensitive" } },
+          ],
+        },
+      });
+      categoryId = cat?.id ?? null;
+    }
+    const classified = await classifyExpenseForWrite(parts.description, period.id, {
+      categoryId,
+      tagsJson: null,
+    });
     await prisma.expense.create({
       data: {
         monthlyPeriodId: period.id,
@@ -48,7 +65,10 @@ export async function bulkInsertExpenses(
         source,
         importHash: fp,
         payee: parts.payee,
-        tagsJson,
+        categoryId: classified.categoryId,
+        budgetPlanId: classified.budgetPlanId,
+        taxCategory: classified.taxCategory,
+        tagsJson: classified.tagsJson,
       },
     });
     created++;

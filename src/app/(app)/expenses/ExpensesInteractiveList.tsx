@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { bulkApplyCategoryRulesAction } from "@/app/actions/categories";
 import {
   bulkApplyTagsToExpensesAction,
   bulkSetBudgetForExpensesAction,
+  bulkSetCategoryForExpensesAction,
   deleteExpenseAction,
   updateExpenseAction,
 } from "@/app/actions/expenses";
@@ -17,6 +19,8 @@ export type ExpenseRowDTO = {
   amountCents: number;
   spentAt: string;
   budgetPlanId: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
   tagsJson: string | null;
   splitGroupId: string | null;
   userName: string | null;
@@ -51,6 +55,8 @@ export function ExpensesInteractiveList({
   expenses,
   allExpenseCount,
   plans,
+  categories,
+  uncategorizedCount,
   taxErr,
 }: {
   yearMonth: string;
@@ -58,6 +64,8 @@ export function ExpensesInteractiveList({
   expenses: ExpenseRowDTO[];
   allExpenseCount: number;
   plans: { id: string; name: string }[];
+  categories: { id: string; name: string }[];
+  uncategorizedCount: number;
   taxErr?: string | null;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -77,8 +85,20 @@ export function ExpensesInteractiveList({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">All expenses</h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Select rows to apply tags or a budget link in bulk. Edit or delete individually below.
+          Select rows to apply tags, category, or budget link in bulk. Categories auto-link
+          envelopes and tax folders when rules match.
         </p>
+        {uncategorizedCount > 0 ? (
+          <form action={bulkApplyCategoryRulesAction} className="mt-3">
+            <input type="hidden" name="yearMonth" value={yearMonth} />
+            <button
+              type="submit"
+              className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100"
+            >
+              Apply category rules to {uncategorizedCount} uncategorized
+            </button>
+          </form>
+        ) : null}
         {taxErr ? (
           <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
             {taxErr}
@@ -146,6 +166,32 @@ export function ExpensesInteractiveList({
               Apply tags
             </button>
           </form>
+          <form action={bulkSetCategoryForExpensesAction} className="flex flex-wrap items-end gap-2">
+            <input type="hidden" name="yearMonth" value={yearMonth} />
+            <input type="hidden" name="expenseIds" value={idsCsv} />
+            <select
+              name="bulkCategoryId"
+              required
+              className="rounded border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-950"
+              defaultValue=""
+            >
+              <option value="" disabled>
+                Set category…
+              </option>
+              <option value="none">Clear category</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className="rounded border border-zinc-400 px-3 py-1 text-xs font-medium dark:border-zinc-600"
+            >
+              Set category
+            </button>
+          </form>
           <form action={bulkSetBudgetForExpensesAction} className="flex flex-wrap items-end gap-2">
             <input type="hidden" name="yearMonth" value={yearMonth} />
             <input type="hidden" name="expenseIds" value={idsCsv} />
@@ -192,6 +238,13 @@ export function ExpensesInteractiveList({
                 Select
               </label>
               <span className="text-xs text-zinc-500">{new Date(e.spentAt).toLocaleString()}</span>
+              {e.categoryName ? (
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
+                  {e.categoryName}
+                </span>
+              ) : (
+                <span className="text-xs text-zinc-400">Uncategorized</span>
+              )}
               <span>{e.userName}</span>
               <span className="ml-auto tabular-nums font-medium text-zinc-800 dark:text-zinc-200">
                 {formatCents(e.amountCents)}
@@ -221,9 +274,21 @@ export function ExpensesInteractiveList({
                 className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
               />
               <select
+                name="categoryId"
+                defaultValue={e.categoryId ?? ""}
+                className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+              >
+                <option value="">No category</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <select
                 name="budgetPlanId"
                 defaultValue={e.budgetPlanId ?? ""}
-                className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
+                className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
               >
                 <option value="">No budget link</option>
                 {plans.map((p) => (

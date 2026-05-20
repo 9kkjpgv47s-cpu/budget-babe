@@ -13,7 +13,7 @@ import {
 import { parseYearMonth } from "@/lib/yearMonth";
 import type { FormActionState } from "@/lib/formActionState";
 import { mergeTagLists } from "@/lib/budgetRollup";
-import { applyMerchantRulesToTags } from "@/lib/merchantRules";
+import { classifyExpenseForWrite } from "@/lib/merchantRules";
 import { guessPaystubAmountFromBuffer } from "@/lib/paystubOcr";
 import { deletePaystubStored, savePaystubUpload } from "@/lib/uploads";
 
@@ -196,15 +196,22 @@ export async function addExpenseCore(
     });
     if (!plan) budgetPlanId = null;
   }
+  const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
+  let categoryId: string | null = categoryIdRaw || null;
+  if (categoryId) {
+    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (!cat) categoryId = null;
+  }
   const tagsRaw = String(formData.get("tags") ?? "")
     .split(",")
     .map((t) => t.trim().toLowerCase())
     .filter(Boolean);
   const manualTagsJson = tagsRaw.length ? mergeTagLists(tagsRaw) : null;
-  const tagsJson = await applyMerchantRulesToTags(
-    description,
-    manualTagsJson,
-  );
+  const classified = await classifyExpenseForWrite(description, period.id, {
+    categoryId,
+    tagsJson: manualTagsJson,
+    budgetPlanId,
+  });
   const splitGroupId =
     String(formData.get("splitGroupId") ?? "").trim() || null;
 
@@ -214,8 +221,10 @@ export async function addExpenseCore(
       userId: user.userId,
       amountCents: amount,
       description,
-      budgetPlanId,
-      tagsJson,
+      categoryId: classified.categoryId,
+      budgetPlanId: classified.budgetPlanId,
+      taxCategory: classified.taxCategory,
+      tagsJson: classified.tagsJson,
       splitGroupId,
       source: "manual",
     },

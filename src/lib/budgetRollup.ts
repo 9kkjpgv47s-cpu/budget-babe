@@ -31,6 +31,7 @@ export type ExpenseForRollup = {
   description: string;
   amountCents: number;
   budgetPlanId: string | null;
+  categoryId?: string | null;
   tagsJson: string | null;
 };
 

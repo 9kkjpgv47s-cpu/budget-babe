@@ -11,9 +11,11 @@ import {
   type ExpenseForRollup,
 } from "@/lib/budgetRollup";
 import { applySuggestedRolloversAction } from "@/app/actions/rollover";
+import { ensureDefaultCategories } from "@/lib/categories";
 import { BudgetAddForm } from "../BudgetAddForm";
 import { BudgetCopyHeader } from "../BudgetCopyHeader";
 import { BudgetPlanRow } from "../BudgetPlanRow";
+import { CategorySection } from "./CategorySection";
 
 function shiftYearMonth(ym: string, delta: number) {
   return format(addMonths(parseYearMonth(ym), delta), "yyyy-MM");
@@ -25,13 +27,14 @@ export default async function BudgetsPage({
   searchParams: Promise<{ ym?: string }>;
 }) {
   await requireUser();
+  await ensureDefaultCategories();
   const sp = await searchParams;
   const ym = sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
   const period = await getOrCreateMonthlyPeriod(ym);
   const prevYm = shiftYearMonth(ym, -1);
   const nextYm = shiftYearMonth(ym, 1);
 
-  const [budgetPlans, expenses, prevExists] = await Promise.all([
+  const [budgetPlans, expenses, prevExists, categories] = await Promise.all([
     prisma.budgetPlan.findMany({
       where: { monthlyPeriodId: period.id },
       orderBy: { name: "asc" },
@@ -40,6 +43,7 @@ export default async function BudgetsPage({
       where: { monthlyPeriodId: period.id },
     }),
     prisma.monthlyPeriod.findUnique({ where: { yearMonth: prevYm } }),
+    prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
   ]);
 
   const expForRollup: ExpenseForRollup[] = expenses.map((e) => ({
@@ -139,6 +143,17 @@ export default async function BudgetsPage({
         <h2 className="font-medium">Add budget line</h2>
         <BudgetAddForm yearMonth={ym} heading={null} />
       </section>
+
+      <CategorySection
+        categories={categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          matchText: c.matchText,
+          budgetEnvelopeName: c.budgetEnvelopeName,
+          defaultTaxCategory: c.defaultTaxCategory,
+        }))}
+      />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth";
+import { ensureDefaultCategories } from "@/lib/categories";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { prisma } from "@/lib/prisma";
 import { currentYearMonth } from "@/lib/yearMonth";
@@ -10,6 +11,7 @@ export default async function ExpensesPage({
   searchParams: Promise<{ ym?: string; q?: string; taxErr?: string }>;
 }) {
   await requireUser();
+  await ensureDefaultCategories();
   const sp = await searchParams;
   const ym = sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
   const q = (sp.q ?? "").trim();
@@ -32,10 +34,18 @@ export default async function ExpensesPage({
         )
       : allExpenses;
 
-  const plans = await prisma.budgetPlan.findMany({
-    where: { monthlyPeriodId: period.id },
-    orderBy: { name: "asc" },
-  });
+  const [plans, categories, uncategorizedCount] = await Promise.all([
+    prisma.budgetPlan.findMany({
+      where: { monthlyPeriodId: period.id },
+      orderBy: { name: "asc" },
+    }),
+    prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
+    prisma.expense.count({
+      where: { monthlyPeriodId: period.id, categoryId: null },
+    }),
+  ]);
+
+  const categoryById = new Map(categories.map((c) => [c.id, c.name]));
 
   const rows = expenses.map((e) => ({
     id: e.id,
@@ -43,6 +53,8 @@ export default async function ExpensesPage({
     amountCents: e.amountCents,
     spentAt: e.spentAt.toISOString(),
     budgetPlanId: e.budgetPlanId,
+    categoryId: e.categoryId,
+    categoryName: e.categoryId ? (categoryById.get(e.categoryId) ?? null) : null,
     tagsJson: e.tagsJson,
     splitGroupId: e.splitGroupId,
     userName: e.user?.name ?? null,
@@ -61,6 +73,8 @@ export default async function ExpensesPage({
       expenses={rows}
       allExpenseCount={allExpenses.length}
       plans={plans.map((p) => ({ id: p.id, name: p.name }))}
+      categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+      uncategorizedCount={uncategorizedCount}
       taxErr={taxErr}
     />
   );

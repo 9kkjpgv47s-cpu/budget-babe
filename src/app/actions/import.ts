@@ -50,7 +50,13 @@ export async function importCsvExpensesAction(
         "Could not find amount columns. Set column map JSON or use headers Date, Amount, Description.",
     };
   }
-  const bulk: { date: Date; amountCents: number; description: string; payee: string | null }[] = [];
+  const bulk: {
+    date: Date;
+    amountCents: number;
+    description: string;
+    payee: string | null;
+    categoryLabel?: string | null;
+  }[] = [];
   for (let r = 1; r < rows.length; r++) {
     const parts = rowToExpenseParts(rows[r], map);
     if (parts) bulk.push(parts);

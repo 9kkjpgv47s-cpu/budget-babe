@@ -36,17 +36,20 @@ export function ImportBulkSection({
   const [dateCol, setDateCol] = useState("");
   const [amtCol, setAmtCol] = useState("");
   const [descCol, setDescCol] = useState("");
+  const [catCol, setCatCol] = useState("");
 
   const columnMapJson = useMemo(() => {
     const o: Record<string, number> = {};
     const d = Number.parseInt(dateCol, 10);
     const a = Number.parseInt(amtCol, 10);
     const x = Number.parseInt(descCol, 10);
+    const c = Number.parseInt(catCol, 10);
     if (Number.isFinite(d) && d >= 0) o.date = d;
     if (Number.isFinite(a) && a >= 0) o.amount = a;
     if (Number.isFinite(x) && x >= 0) o.description = x;
+    if (Number.isFinite(c) && c >= 0) o.category = c;
     return Object.keys(o).length ? JSON.stringify(o) : "";
-  }, [dateCol, amtCol, descCol]);
+  }, [dateCol, amtCol, descCol, catCol]);
 
   const [splitLines, setSplitLines] = useState([
     { amount: "", description: "" },
@@ -82,6 +85,14 @@ export function ImportBulkSection({
             <input
               value={descCol}
               onChange={(e) => setDescCol(e.target.value)}
+              className="w-12 rounded border border-zinc-300 px-1 dark:border-zinc-700 dark:bg-zinc-950"
+            />
+          </label>
+          <label className="flex items-center gap-1">
+            Category col #
+            <input
+              value={catCol}
+              onChange={(e) => setCatCol(e.target.value)}
               className="w-12 rounded border border-zinc-300 px-1 dark:border-zinc-700 dark:bg-zinc-950"
             />
           </label>
