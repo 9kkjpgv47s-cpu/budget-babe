@@ -25,6 +25,8 @@ Living checklist for the household budget PWA. Update this file when major capab
 - [x] **Quick Add budget link**: optional envelope on spending entry
 - [x] **Plaid sync UX**: post-import link to Expenses for budget assignment
 - [x] **Header nav groups** + preserve `?ym=` on desktop links when month is in URL
+- [x] **Shopping → expense bridge**: log trip total as monthly spending (deduped per trip/month)
+- [x] **Cash-flow silo callouts** on Shopping, Debt, Net worth, Goals
 
 ## Planned / backlog
 

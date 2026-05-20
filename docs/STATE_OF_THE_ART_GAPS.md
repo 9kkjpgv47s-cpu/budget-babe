@@ -37,7 +37,7 @@ Comparison against **Mint**, **YNAB**, **Monarch Money**, and **Copilot**-class 
 | Split transaction on manual entry | YNAB | Import/split wizard only |
 | Profile edit (name/email) | Standard | Register-only |
 | Pay stub OCR progress UI | — | Silent best-effort |
-| Shopping trip → expense | — | **Silos** — trips do not post to ledger |
+| Shopping trip → expense | — | **Shipped** — per-trip button posts to month ledger |
 | Plaid → default budget envelope | Monarch rules | Not built (no schema) |
 
 ## P2 — Larger builds
@@ -57,7 +57,7 @@ These modules **do not** change overview income, spent, or coach math unless you
 
 | Module | Stored as | Cash-flow impact |
 |--------|-----------|------------------|
-| **Shopping trips** | `ShoppingTrip` + items | Memory/suggestions only |
+| **Shopping trips** | `ShoppingTrip` + items | Optional **Log as expense** per trip; otherwise memory only |
 | **Debt accounts** | `DebtAccount` balances | Tracking only |
 | **Net worth** | `NetWorthAccount` + snapshots | Tracking only |
 | **Savings goals** | `SavingsGoal.savedAmountCents` | Manual progress, not bank-linked |
@@ -70,10 +70,11 @@ These modules **do not** change overview income, spent, or coach math unless you
 - Quick Add: optional budget envelope
 - Plaid sync: CTA to Expenses after import
 - Header nav: grouped links + month context when `?ym=` present
+- Shopping → expense bridge + silo callouts on tracking-only pages
 
 ## Recommended next epics (post four-agent plan)
 
 1. Agent 1 — `monthLinks` + unified income in trends  
 2. Agent 2 — Receipt in mobile nav + Quick Add scan  
 3. Agent 3 — Form reset / controlled tax fields  
-4. Shopping → “Log trip total as expense” bridge (optional P1)
+4. Split shopping line items into multiple expenses (optional)

@@ -40,7 +40,7 @@ On **Shopping**, the trip form pre-fills a **usual basket** from items that repe
 
 By design, these areas are **separate ledgers** until you enter amounts on the overview or Expenses:
 
-- **Shopping** — trip memory and suggestions only (no automatic expenses).
+- **Shopping** — trip memory and suggestions; use **Log as expense** on a saved trip to add its total to monthly spending (not automatic).
 - **Debt** — balance tracking, not monthly income/spending.
 - **Net worth** — manual account snapshots, not paycheck or budget math.
 - **Goals** — saved progress is manual, not tied to bank balances.

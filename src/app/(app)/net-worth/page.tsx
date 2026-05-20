@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { formatCents } from "@/lib/money";
+import { currentYearMonth } from "@/lib/yearMonth";
+import { CashFlowSiloCallout } from "@/components/CashFlowSiloCallout";
 import {
   addNetWorthAccountAction,
   deleteNetWorthAccountAction,
@@ -34,11 +36,13 @@ export default async function NetWorthPage() {
           Manual accounts (no bank sync). Record snapshots to track history.
         </p>
         <p className="mt-2 text-sm">
-          <Link href="/" className="text-emerald-600 underline">
+          <Link href={`/?ym=${currentYearMonth()}`} className="text-emerald-600 underline">
             ← Overview
           </Link>
         </p>
       </div>
+
+      <CashFlowSiloCallout variant="net-worth" yearMonth={currentYearMonth()} />
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">Current totals</h2>
