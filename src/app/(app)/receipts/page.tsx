@@ -19,6 +19,8 @@ import {
   parseReceiptFilter,
   type ReceiptListRow,
 } from "./receiptFilters";
+import { ReceiptAutoPostWatcher } from "./ReceiptAutoPostWatcher";
+import { ReceiptFailedBulkActions } from "./ReceiptFailedBulkActions";
 
 export default async function ReceiptsPage({
   searchParams,
@@ -83,6 +85,7 @@ export default async function ReceiptsPage({
       <ReceiptBlobWarning />
       <ReceiptFocusScroll focusId={focusId} />
       <OcrStatusPoller active={ocrPending} />
+      <ReceiptAutoPostWatcher yearMonth={yearMonth} />
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Receipts</h1>
         <div className="mt-3">
@@ -134,6 +137,12 @@ export default async function ReceiptsPage({
               : null}
           </span>
         </div>
+        {filter === "failed" ? (
+          <ReceiptFailedBulkActions
+            yearMonth={yearMonth}
+            failedCount={counts.failed}
+          />
+        ) : null}
         <div className="mt-4 space-y-4">
           <ReceiptFilterTabs
             yearMonth={yearMonth}
@@ -165,6 +174,16 @@ export default async function ReceiptsPage({
           <p className="mt-4 text-sm text-zinc-500">
             No receipts match this filter
             {query ? ` or “${query}”` : ""}.
+          </p>
+        ) : null}
+        {receipts.length > 0 ? (
+          <p className="mt-4 text-xs text-zinc-500">
+            <a
+              href={`/api/receipts/export?ym=${yearMonth}`}
+              className="text-emerald-700 underline dark:text-emerald-400"
+            >
+              Download receipts CSV for {yearMonth}
+            </a>
           </p>
         ) : null}
       </section>

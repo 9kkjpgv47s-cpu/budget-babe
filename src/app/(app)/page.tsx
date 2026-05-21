@@ -19,6 +19,7 @@ import { PaychecksPanel } from "./PaychecksPanel";
 import { QuickForms } from "./QuickForms";
 import { ReceiptQuickCapture } from "./receipts/ReceiptQuickCapture";
 import { ReceiptsOverviewStrip } from "./receipts/ReceiptsOverviewStrip";
+import { ReceiptBatchPostButton } from "./receipts/ReceiptBatchPostButton";
 import { applySuggestedRolloversAction } from "@/app/actions/rollover";
 
 function shiftYearMonth(ym: string, delta: number) {
@@ -606,6 +607,23 @@ export default async function HomePage({
           </Link>
         </div>
         <ReceiptsOverviewStrip receipts={data.receipts} yearMonth={yearMonth} />
+        {(() => {
+          const readyCount = data.receipts.filter(
+            (r) =>
+              r._count.expenses === 0 &&
+              r.ocrStatus === "completed" &&
+              r.totalCents != null &&
+              r.totalCents > 0,
+          ).length;
+          return readyCount > 0 ? (
+            <div className="mt-4">
+              <ReceiptBatchPostButton
+                yearMonth={yearMonth}
+                readyCount={readyCount}
+              />
+            </div>
+          ) : null;
+        })()}
       </section>
     </div>
   );

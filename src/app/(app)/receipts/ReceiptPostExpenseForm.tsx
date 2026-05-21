@@ -68,6 +68,12 @@ export function ReceiptPostExpenseForm({
           defaultValue={defaultDesc}
           className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
         />
+        <input
+          name="payee"
+          placeholder="Payee (store)"
+          defaultValue={payeeHint ?? ""}
+          className="sm:col-span-2 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+        />
         <select
           name="budgetPlanId"
           className="sm:col-span-2 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"

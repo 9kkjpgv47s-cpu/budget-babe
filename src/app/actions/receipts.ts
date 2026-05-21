@@ -10,7 +10,6 @@ import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
 import { applyMerchantRulesToTags } from "@/lib/merchantRules";
 import type { ParsedReceiptLine } from "@/lib/receiptOcr";
-import { suggestBudgetPlanId } from "@/app/(app)/receipts/receiptBudgetSuggest";
 import { buildReceiptExpenseMeta } from "@/app/(app)/receipts/receiptExpenseMeta";
 import { postReceiptTotalCore } from "@/app/(app)/receipts/postReceiptTotalCore";
 import { deleteReceiptStored, saveReceiptUpload } from "@/lib/uploads";
@@ -97,6 +96,7 @@ export async function createExpenseFromReceiptAction(
   const yearMonth = String(formData.get("yearMonth") ?? "").trim();
   const amountRaw = String(formData.get("amount") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const payeeRaw = String(formData.get("payee") ?? "").trim();
   const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
   if (!receiptId || !yearMonth.match(/^\d{4}-\d{2}$/)) {
     return { error: "Missing receipt or month." };
@@ -129,6 +129,7 @@ export async function createExpenseFromReceiptAction(
     }
   }
   const meta = buildReceiptExpenseMeta(receipt, parsed, description);
+  if (payeeRaw) meta.payee = payeeRaw.slice(0, 200);
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   let budgetPlanId: string | null = budgetPlanIdRaw || null;
   if (budgetPlanId) {
@@ -246,9 +247,7 @@ export async function createExpensesFromReceiptLinesAction(
     };
   }
   const receipt = await prisma.receipt.findUnique({ where: { id: receiptId } });
-  if (!receipt?.ocrParsedLines?.trim()) {
-    return { error: "No parsed lines on this receipt." };
-  }
+  if (!receipt) return { error: "Receipt not found." };
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   let budgetPlanId: string | null = budgetPlanIdRaw || null;
   if (budgetPlanId) {
@@ -257,12 +256,24 @@ export async function createExpensesFromReceiptLinesAction(
     });
     if (!plan) budgetPlanId = null;
   }
+  const linesJsonRaw = String(formData.get("linesJson") ?? "").trim();
   let parsed: ParsedReceiptLine[];
-  try {
-    parsed = JSON.parse(receipt.ocrParsedLines) as ParsedReceiptLine[];
-    if (!Array.isArray(parsed)) return { error: "Invalid parsed lines data." };
-  } catch {
-    return { error: "Could not read parsed lines." };
+  if (linesJsonRaw) {
+    try {
+      parsed = JSON.parse(linesJsonRaw) as ParsedReceiptLine[];
+      if (!Array.isArray(parsed)) return { error: "Invalid edited lines." };
+    } catch {
+      return { error: "Could not read edited lines." };
+    }
+  } else if (receipt.ocrParsedLines?.trim()) {
+    try {
+      parsed = JSON.parse(receipt.ocrParsedLines) as ParsedReceiptLine[];
+      if (!Array.isArray(parsed)) return { error: "Invalid parsed lines data." };
+    } catch {
+      return { error: "Could not read parsed lines." };
+    }
+  } else {
+    return { error: "No parsed lines on this receipt." };
   }
   const { payee, spentAt } = buildReceiptExpenseMeta(receipt, parsed);
   const splitGroupId = randomUUID();
@@ -349,6 +360,49 @@ export async function deleteReceiptAction(formData: FormData): Promise<void> {
     revalidatePath("/receipts");
     revalidatePath("/expenses");
   }
+}
+
+export async function batchReprocessFailedReceiptsAction(
+  _prev: FormActionState | undefined,
+  formData: FormData,
+): Promise<FormActionState> {
+  await requireUser();
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  if (!yearMonth.match(/^\d{4}-\d{2}$/)) {
+    return { error: "Missing month." };
+  }
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const failed = await prisma.receipt.findMany({
+    where: {
+      monthlyPeriodId: period.id,
+      ocrStatus: { in: ["failed", "skipped"] },
+    },
+    select: { id: true },
+  });
+  if (failed.length === 0) {
+    return { error: "No failed or skipped receipts this month." };
+  }
+  for (const { id } of failed) {
+    await prisma.receipt.update({
+      where: { id },
+      data: {
+        ocrStatus: "pending",
+        ocrError: null,
+        ocrRawText: null,
+        ocrParsedLines: null,
+        ocrConfidence: null,
+      },
+    });
+    after(() => {
+      void import("@/lib/receiptOcr").then((m) => m.processReceiptOcrFile(id));
+    });
+  }
+  revalidatePath("/");
+  revalidatePath("/receipts");
+  return {
+    ok: true,
+    message: `Re-queued OCR for ${failed.length} receipt${failed.length === 1 ? "" : "s"}.`,
+  };
 }
 
 export async function reprocessReceiptOcrAction(formData: FormData): Promise<void> {

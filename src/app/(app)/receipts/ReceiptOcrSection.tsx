@@ -190,6 +190,7 @@ export function ReceiptOcrSection({
           lineCount={linesWithAmount.length}
           budgetPlans={budgetPlans}
           suggestedBudgetPlanId={suggestedBudgetId}
+          parsedLines={parsed}
         />
       ) : null}
       {receipt.expenseCount === 0 ? (

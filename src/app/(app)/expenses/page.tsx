@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { currentYearMonth } from "@/lib/yearMonth";
 import { ExpensesInteractiveList } from "./ExpensesInteractiveList";
 import { ReceiptQuickCapture } from "../receipts/ReceiptQuickCapture";
+import { ReceiptLinkedExpensesStrip } from "../receipts/ReceiptLinkedExpensesStrip";
 
 export default async function ExpensesPage({
   searchParams,
@@ -58,6 +59,7 @@ export default async function ExpensesPage({
   return (
     <div className="space-y-4">
       <ReceiptQuickCapture yearMonth={ym} variant="compact" />
+      <ReceiptLinkedExpensesStrip yearMonth={ym} />
       <ExpensesInteractiveList
       yearMonth={ym}
       searchQuery={q}

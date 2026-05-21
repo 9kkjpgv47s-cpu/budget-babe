@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { uploadReceiptAction } from "@/app/actions/receipts";
 import { initialFormState } from "@/lib/formActionState";
 import { compressReceiptImageIfNeeded } from "./compressReceiptImageClient";
+import { setAutoPostReceiptId } from "./ReceiptAutoPostWatcher";
 
 export function ReceiptUploadForm({
   yearMonth,
@@ -23,6 +24,7 @@ export function ReceiptUploadForm({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [fileLabel, setFileLabel] = useState<string | null>(null);
+  const [autoPost, setAutoPost] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileId = `receipt-file${formIdSuffix}`;
 
@@ -33,10 +35,12 @@ export function ReceiptUploadForm({
   }, [previewUrl]);
 
   useEffect(() => {
-    if (!redirectAfterUpload || !state?.ok || !state.receiptId) return;
+    if (!state?.ok || !state.receiptId) return;
+    if (autoPost) setAutoPostReceiptId(state.receiptId);
+    if (!redirectAfterUpload) return;
     router.push(`/receipts?ym=${yearMonth}&focus=${state.receiptId}`);
     router.refresh();
-  }, [redirectAfterUpload, state, yearMonth, router]);
+  }, [redirectAfterUpload, autoPost, state, yearMonth, router]);
 
   function applyFile(file: File | null) {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -172,6 +176,20 @@ export function ReceiptUploadForm({
           className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
         />
       </div>
+      <label className="flex cursor-pointer items-start gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+        <input
+          type="checkbox"
+          checked={autoPost}
+          onChange={(e) => setAutoPost(e.target.checked)}
+          className="mt-0.5"
+        />
+        <span>
+          <strong className="text-zinc-800 dark:text-zinc-200">
+            Auto-post total when OCR finishes
+          </strong>{" "}
+          — uses detected amount and store name (you can undo in Expenses).
+        </span>
+      </label>
       <button
         type="submit"
         disabled={pending}
