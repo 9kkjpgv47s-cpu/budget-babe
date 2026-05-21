@@ -6,9 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { currentYearMonth, parseYearMonth } from "@/lib/yearMonth";
 import { ensureDefaultCategories } from "@/lib/categories";
 import {
-  getLastExpenseDefaultsForYearMonth,
-  resolveReceiptPostingContext,
-  sanitizeExpenseDefaultsForPlans,
+  batchResolveReceiptPostingContexts,
   suggestReceiptExpenseDescription,
 } from "@/lib/entryDefaults";
 import { ReceiptUploadForm } from "./ReceiptUploadForm";
@@ -40,33 +38,34 @@ export default async function ReceiptsPage({
   const receipts = await prisma.receipt.findMany({
     where: { monthlyPeriodId: period.id },
     orderBy: { uploadedAt: "desc" },
-    include: { user: { select: { name: true } } },
+    include: {
+      user: { select: { name: true } },
+      monthlyPeriod: { select: { yearMonth: true } },
+    },
   });
 
-  const receiptRows = await Promise.all(
-    receipts.map(async (r) => {
-      const ctx = await resolveReceiptPostingContext(r.id, yearMonth);
-      const rawDefaults = await getLastExpenseDefaultsForYearMonth(ctx.yearMonth);
-      const defaults = sanitizeExpenseDefaultsForPlans(
-        rawDefaults,
-        ctx.plans.map((p) => p.id),
-        categoryIds,
-      );
-      return {
-        receipt: r,
-        postingYearMonth: ctx.yearMonth,
-        postingBudgetPlans: ctx.plans.map((p) => ({ id: p.id, name: p.name })),
-        defaultBudgetPlanId: defaults.budgetPlanId,
-        defaultCategoryId: defaults.categoryId,
-        defaultPayee: defaults.payee,
-        suggestedDescription: suggestReceiptExpenseDescription({
-          filename: r.filename,
-          note: r.note,
-          ocrParsedLines: r.ocrParsedLines,
-        }),
-      };
-    }),
+  const contextByReceipt = await batchResolveReceiptPostingContexts(
+    receipts,
+    yearMonth,
+    categoryIds,
   );
+
+  const receiptRows = receipts.map((r) => {
+    const ctx = contextByReceipt.get(r.id)!;
+    return {
+      receipt: r,
+      postingYearMonth: ctx.postingYearMonth,
+      postingBudgetPlans: ctx.postingBudgetPlans,
+      defaultBudgetPlanId: ctx.defaultBudgetPlanId,
+      defaultCategoryId: ctx.defaultCategoryId,
+      defaultPayee: ctx.defaultPayee,
+      suggestedDescription: suggestReceiptExpenseDescription({
+        filename: r.filename,
+        note: r.note,
+        ocrParsedLines: r.ocrParsedLines,
+      }),
+    };
+  });
 
   const ocrPending = receipts.some(
     (r) => r.ocrStatus === "pending" || r.ocrStatus === "processing",
@@ -74,7 +73,7 @@ export default async function ReceiptsPage({
 
   return (
     <div className="space-y-8">
-      <OcrStatusPoller active={ocrPending} />
+      <OcrStatusPoller active={ocrPending} yearMonth={yearMonth} />
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Receipts</h1>
         <p className="mt-1 text-sm text-zinc-500">
@@ -128,6 +127,6 @@ export default async function ReceiptsPage({
           <p className="mt-4 text-sm text-zinc-500">No receipts for this month.</p>
         ) : null}
       </section>
-    </div>
+    </motion.div>
   );
 }

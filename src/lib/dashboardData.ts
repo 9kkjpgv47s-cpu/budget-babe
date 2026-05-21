@@ -1,7 +1,8 @@
+import { cache } from "react";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
-export async function getOrCreateMonthlyPeriod(yearMonth: string) {
+async function getOrCreateMonthlyPeriodUncached(yearMonth: string) {
   const existing = await prisma.monthlyPeriod.findUnique({
     where: { yearMonth },
   });
@@ -27,6 +28,8 @@ export async function getOrCreateMonthlyPeriod(yearMonth: string) {
     throw error;
   }
 }
+
+export const getOrCreateMonthlyPeriod = cache(getOrCreateMonthlyPeriodUncached);
 
 export async function ensureHouseholdSettings() {
   const existing = await prisma.householdSettings.findUnique({
@@ -54,7 +57,7 @@ export async function ensureHouseholdSettings() {
   }
 }
 
-export async function getDashboardData(yearMonth: string) {
+async function getDashboardDataUncached(yearMonth: string) {
   await ensureHouseholdSettings();
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   const settings = await prisma.householdSettings.findUnique({
@@ -139,3 +142,6 @@ export async function getDashboardData(yearMonth: string) {
     savingsGoals,
   };
 }
+
+/** Per-request dedupe when multiple server components load the same month. */
+export const getDashboardData = cache(getDashboardDataUncached);

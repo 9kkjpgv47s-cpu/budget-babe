@@ -1,12 +1,14 @@
-import path from "path";
-import { readFile, stat } from "fs/promises";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { filenameHintFromStoragePath } from "@/lib/uploads";
+import {
+  filenameHintFromStoragePath,
+  readPaystubBinary,
+  uploadsUseVercelBlob,
+} from "@/lib/uploads";
 
 function contentTypeFromName(name: string): string {
-  const ext = path.extname(name).toLowerCase();
+  const ext = name.slice(name.lastIndexOf(".")).toLowerCase();
   if (ext === ".pdf") return "application/pdf";
   if (ext === ".png") return "image/png";
   if (ext === ".webp") return "image/webp";
@@ -31,23 +33,37 @@ export async function GET(
     return new NextResponse("Not found", { status: 404 });
   }
 
+  const hint = filenameHintFromStoragePath(ref);
+  const type = contentTypeFromName(hint);
+
   if (ref.startsWith("https://") || ref.startsWith("http://")) {
+    if (uploadsUseVercelBlob()) {
+      try {
+        const buf = await readPaystubBinary(ref);
+        return new NextResponse(new Uint8Array(buf), {
+          headers: {
+            "Content-Type": type,
+            "Content-Disposition": `inline; filename="${hint}"`,
+            "Cache-Control": "private, no-store",
+          },
+        });
+      } catch {
+        return new NextResponse("File missing", { status: 404 });
+      }
+    }
     return NextResponse.redirect(ref);
   }
 
-  const filePath = path.join(process.cwd(), "data", "paystubs", path.basename(ref));
   try {
-    await stat(filePath);
+    const buf = await readPaystubBinary(ref);
+    return new NextResponse(new Uint8Array(buf), {
+      headers: {
+        "Content-Type": type,
+        "Content-Disposition": `inline; filename="${hint}"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
   } catch {
     return new NextResponse("File missing", { status: 404 });
   }
-  const buf = await readFile(filePath);
-  const hint = filenameHintFromStoragePath(ref);
-  const type = contentTypeFromName(hint);
-  return new NextResponse(buf, {
-    headers: {
-      "Content-Type": type,
-      "Content-Disposition": `inline; filename="${hint}"`,
-    },
-  });
 }

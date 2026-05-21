@@ -178,6 +178,73 @@ export async function resolveReceiptPostingContext(
   return { yearMonth, plans };
 }
 
+export type ReceiptPostingRowContext = {
+  receiptId: string;
+  postingYearMonth: string;
+  postingBudgetPlans: BudgetPlanOption[];
+  defaultBudgetPlanId: string | null;
+  defaultCategoryId: string | null;
+  defaultPayee: string | null;
+};
+
+/**
+ * Batch-load posting context for all receipts on a page (avoids N+1).
+ */
+export async function batchResolveReceiptPostingContexts(
+  receipts: { id: string; monthlyPeriod?: { yearMonth: string } | null }[],
+  pageYearMonth: string,
+  categoryIds?: string[],
+): Promise<Map<string, ReceiptPostingRowContext>> {
+  const uniqueYms = new Set<string>([pageYearMonth]);
+  for (const r of receipts) {
+    uniqueYms.add(r.monthlyPeriod?.yearMonth ?? pageYearMonth);
+  }
+
+  const [plansByYm, defaultsByYm] = await Promise.all([
+    Promise.all(
+      [...uniqueYms].map(async (ym) => ({
+        ym,
+        plans: await getBudgetPlansForYearMonth(ym),
+      })),
+    ),
+    Promise.all(
+      [...uniqueYms].map(async (ym) => ({
+        ym,
+        defaults: await getLastExpenseDefaultsForYearMonth(ym),
+      })),
+    ),
+  ]);
+
+  const plansMap = new Map(plansByYm.map((p) => [p.ym, p.plans]));
+  const defaultsMap = new Map(defaultsByYm.map((d) => [d.ym, d.defaults]));
+
+  const out = new Map<string, ReceiptPostingRowContext>();
+  for (const r of receipts) {
+    const ym = r.monthlyPeriod?.yearMonth ?? pageYearMonth;
+    const plans = plansMap.get(ym) ?? [];
+    const defaults = defaultsMap.get(ym) ?? {
+      budgetPlanId: null,
+      tagsJson: null,
+      payee: null,
+    };
+    const planIds = new Set(plans.map((p) => p.id));
+    const sanitized = sanitizeExpenseDefaultsForPlans(
+      defaults,
+      planIds,
+      categoryIds,
+    );
+    out.set(r.id, {
+      receiptId: r.id,
+      postingYearMonth: ym,
+      postingBudgetPlans: plans,
+      defaultBudgetPlanId: sanitized.budgetPlanId,
+      defaultCategoryId: sanitized.categoryId,
+      defaultPayee: sanitized.payee,
+    });
+  }
+  return out;
+}
+
 /** Ensure budget plan belongs to the target month period. */
 export async function coerceBudgetPlanInPeriod(
   budgetPlanId: string | null,

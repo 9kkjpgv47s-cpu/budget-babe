@@ -105,6 +105,8 @@ model Expense {
   taxAudits           TaxExpenseAudit[]
 
   @@index([monthlyPeriodId, importHash])
+  @@index([monthlyPeriodId, spentAt])
+  @@index([spentAt])
   @@index([receiptId])
   @@index([categoryId])
   @@index([taxApplicability, spentAt])
@@ -135,6 +137,8 @@ model Bill {
   amountCents     Int
   dueDate         DateTime
   paid            Boolean       @default(false)
+
+  @@index([monthlyPeriodId])
 }
 
 model BudgetPlan {
@@ -148,6 +152,8 @@ model BudgetPlan {
   /// Money carried into this month for this envelope (from prior month or manual)
   rolledInCents   Int           @default(0)
   expenses        Expense[]
+
+  @@index([monthlyPeriodId])
 }
 
 /// Global: if expense description contains pattern, add tag (for budget rollups & filters)
@@ -228,6 +234,8 @@ model Receipt {
   /// 0–100 from Tesseract when available
   ocrConfidence   Int?
   expenses        Expense[]
+
+  @@index([monthlyPeriodId])
 }
 
 model ShoppingTrip {
@@ -236,6 +244,8 @@ model ShoppingTrip {
   shoppedAt  DateTime           @default(now())
   totalCents Int                @default(0)
   items      ShoppingTripItem[]
+
+  @@index([shoppedAt])
 }
 
 model ShoppingTripItem {

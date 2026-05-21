@@ -64,15 +64,64 @@ export default async function HomePage({
   const ym = sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : undefined;
   const yearMonth = ym ?? currentYearMonth();
   await ensureDefaultCategories();
-  const data = await getDashboardData(yearMonth);
-  const rawDefaults = await getLastExpenseDefaultsForYearMonth(yearMonth);
+  const prevYm = shiftYearMonth(yearMonth, -1);
+  const nextYm = shiftYearMonth(yearMonth, 1);
+  const historyYms = [
+    shiftYearMonth(yearMonth, -1),
+    shiftYearMonth(yearMonth, -2),
+    shiftYearMonth(yearMonth, -3),
+  ];
+  const calendarYms = [prevYm, yearMonth, nextYm];
+  const lookupYms = Array.from(new Set([...historyYms, ...calendarYms]));
+  const lookupYmsWithoutCurrent = lookupYms.filter((m) => m !== yearMonth);
+
+  const [data, rawDefaults, prevPeriodExists, periodSnapshots, categories] =
+    await Promise.all([
+      getDashboardData(yearMonth),
+      getLastExpenseDefaultsForYearMonth(yearMonth),
+      prisma.monthlyPeriod
+        .findUnique({ where: { yearMonth: prevYm }, select: { id: true } })
+        .then((p) => p != null),
+      prisma.monthlyPeriod.findMany({
+        where: { yearMonth: { in: lookupYmsWithoutCurrent } },
+        select: {
+          yearMonth: true,
+          incomeCents: true,
+          bills: {
+            select: {
+              amountCents: true,
+              dueDate: true,
+              paid: true,
+            },
+          },
+          budgetPlans: {
+            select: {
+              id: true,
+              name: true,
+              category: true,
+            },
+          },
+          expenses: {
+            select: {
+              id: true,
+              amountCents: true,
+              spentAt: true,
+              description: true,
+              tagsJson: true,
+              payee: true,
+              budgetPlanId: true,
+            },
+          },
+        },
+      }),
+      prisma.category.findMany({
+        select: { id: true, name: true, slug: true, budgetEnvelopeName: true },
+      }),
+    ]);
   const quickAddBudgetPlans = data.budgetPlans.map((p) => ({
     id: p.id,
     name: p.name,
   }));
-  const categories = await prisma.category.findMany({
-    select: { id: true, name: true, slug: true, budgetEnvelopeName: true },
-  });
   const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
   const expenseDefaults = sanitizeExpenseDefaultsForPlans(
     rawDefaults,
@@ -92,11 +141,6 @@ export default async function HomePage({
     lastTags.length > 0 ||
     expenseDefaults.payee;
   const categoryLookup = buildCategoryEnvelopeLookup(categories);
-  const prevYm = shiftYearMonth(yearMonth, -1);
-  const nextYm = shiftYearMonth(yearMonth, 1);
-  const prevPeriodExists =
-    (await prisma.monthlyPeriod.findUnique({ where: { yearMonth: prevYm } })) !=
-    null;
 
   const expForRollup = data.expenses.map((e) =>
     toExpenseForRollup(
@@ -125,47 +169,6 @@ export default async function HomePage({
     return { plan: p, spent, remaining };
   });
 
-  const historyYms = [
-    shiftYearMonth(yearMonth, -1),
-    shiftYearMonth(yearMonth, -2),
-    shiftYearMonth(yearMonth, -3),
-  ];
-  const calendarYms = [prevYm, yearMonth, nextYm];
-  const lookupYms = Array.from(new Set([...historyYms, ...calendarYms]));
-
-  const periodSnapshots = await prisma.monthlyPeriod.findMany({
-    where: { yearMonth: { in: lookupYms } },
-    select: {
-      yearMonth: true,
-      incomeCents: true,
-      bills: {
-        select: {
-          amountCents: true,
-          dueDate: true,
-          paid: true,
-        },
-      },
-      budgetPlans: {
-        select: {
-          id: true,
-          name: true,
-          category: true,
-        },
-      },
-      expenses: {
-        select: {
-          id: true,
-          amountCents: true,
-          spentAt: true,
-          description: true,
-          tagsJson: true,
-          payee: true,
-          budgetPlanId: true,
-        },
-      },
-    },
-  });
-
   const periodByMonth = new Map<
     string,
     {
@@ -183,6 +186,28 @@ export default async function HomePage({
       expenses: period.expenses,
     });
   }
+  periodByMonth.set(yearMonth, {
+    incomeCents: data.incomeCents,
+    bills: data.bills.map((b) => ({
+      amountCents: b.amountCents,
+      dueDate: b.dueDate,
+      paid: b.paid,
+    })),
+    budgetPlans: data.budgetPlans.map((p) => ({
+      id: p.id,
+      name: p.name,
+      category: p.category,
+    })),
+    expenses: data.expenses.map((e) => ({
+      id: e.id,
+      amountCents: e.amountCents,
+      spentAt: e.spentAt,
+      description: e.description,
+      tagsJson: e.tagsJson,
+      payee: e.payee,
+      budgetPlanId: e.budgetPlanId,
+    })),
+  });
 
   const historyGroceryMonthly = historyYms.map((ymKey) =>
     sumCents(

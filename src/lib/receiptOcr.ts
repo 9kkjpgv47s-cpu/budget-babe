@@ -1,6 +1,7 @@
 import path from "path";
 import { readFile } from "fs/promises";
-import { revalidatePath } from "next/cache";
+import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
+import { currentYearMonth } from "@/lib/yearMonth";
 import { prisma } from "@/lib/prisma";
 import { parseMoneyToCents } from "@/lib/money";
 import {
@@ -197,9 +198,17 @@ export async function extractMoneyDocumentText(
   return extractMoneyDocumentFromBuffer(buf, filename);
 }
 
+function revalidateReceiptOcrViews(yearMonth: string) {
+  revalidateLedgerPaths(yearMonth, ["overview", "receipts"]);
+}
+
 export async function processReceiptOcrFile(receiptId: string): Promise<void> {
-  const receipt = await prisma.receipt.findUnique({ where: { id: receiptId } });
+  const receipt = await prisma.receipt.findUnique({
+    where: { id: receiptId },
+    include: { monthlyPeriod: { select: { yearMonth: true } } },
+  });
   if (!receipt) return;
+  const yearMonth = receipt.monthlyPeriod?.yearMonth ?? currentYearMonth();
 
   await prisma.receipt.update({
     where: { id: receiptId },
@@ -218,8 +227,7 @@ export async function processReceiptOcrFile(receiptId: string): Promise<void> {
           ocrError: extracted.message,
         },
       });
-      revalidatePath("/");
-      revalidatePath("/receipts");
+      revalidateReceiptOcrViews(yearMonth);
       return;
     }
 
@@ -245,8 +253,7 @@ export async function processReceiptOcrFile(receiptId: string): Promise<void> {
       where: { id: receiptId },
       data: update,
     });
-    revalidatePath("/");
-    revalidatePath("/receipts");
+    revalidateReceiptOcrViews(yearMonth);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     await prisma.receipt.update({
@@ -256,7 +263,6 @@ export async function processReceiptOcrFile(receiptId: string): Promise<void> {
         ocrError: message.slice(0, 2000),
       },
     });
-    revalidatePath("/");
-    revalidatePath("/receipts");
+    revalidateReceiptOcrViews(yearMonth);
   }
 }

@@ -6,6 +6,7 @@
  * Agent 3 (Plaid/CSV): use `finalizeImportedExpense` from `@/lib/entryDefaults`.
  * Agent 1 (move month): call `propagateExpenseToTargetPeriod` from `@/lib/entryDefaults`.
  */
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import {
   fieldsFromCategoryId,
@@ -28,16 +29,20 @@ export type CategorySuggestion = {
  * `applyMerchantRulesToDraft` from `@/lib/entryDefaults`.
  */
 
-/**
- * Apply global merchant rules: if description contains pattern, add tag (lowercase stored).
- */
-export async function applyMerchantRulesToTags(
+export type MerchantRuleRow = { pattern: string; tag: string };
+
+export const loadMerchantRules = cache(async (): Promise<MerchantRuleRow[]> => {
+  return prisma.merchantRule.findMany({
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: { pattern: true, tag: true },
+  });
+});
+
+export function applyMerchantRulesToTagsSync(
   description: string,
   existingTagsJson: string | null,
-): Promise<string | null> {
-  const rules = await prisma.merchantRule.findMany({
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-  });
+  rules: MerchantRuleRow[],
+): string | null {
   const desc = description.toLowerCase();
   const fromRules: string[] = [];
   for (const r of rules) {
@@ -47,6 +52,17 @@ export async function applyMerchantRulesToTags(
   }
   const existing = parseTagsJson(existingTagsJson);
   return mergeTagLists(existing, fromRules);
+}
+
+/**
+ * Apply global merchant rules: if description contains pattern, add tag (lowercase stored).
+ */
+export async function applyMerchantRulesToTags(
+  description: string,
+  existingTagsJson: string | null,
+): Promise<string | null> {
+  const rules = await loadMerchantRules();
+  return applyMerchantRulesToTagsSync(description, existingTagsJson, rules);
 }
 
 /**

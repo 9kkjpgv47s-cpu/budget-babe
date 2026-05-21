@@ -3,7 +3,11 @@ import { readFile, stat } from "fs/promises";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { filenameHintFromStoragePath } from "@/lib/uploads";
+import {
+  filenameHintFromStoragePath,
+  readReceiptBinary,
+  uploadsUseVercelBlob,
+} from "@/lib/uploads";
 
 function contentTypeFromName(name: string): string {
   const ext = path.extname(name).toLowerCase();
@@ -28,7 +32,24 @@ export async function GET(
   }
 
   const ref = receipt.filename;
+  const hint = filenameHintFromStoragePath(ref);
+  const type = contentTypeFromName(hint);
+
   if (ref.startsWith("https://") || ref.startsWith("http://")) {
+    if (uploadsUseVercelBlob()) {
+      try {
+        const buf = await readReceiptBinary(ref);
+        return new NextResponse(new Uint8Array(buf), {
+          headers: {
+            "Content-Type": type,
+            "Content-Disposition": `inline; filename="${hint}"`,
+            "Cache-Control": "private, no-store",
+          },
+        });
+      } catch {
+        return new NextResponse("File missing", { status: 404 });
+      }
+    }
     return NextResponse.redirect(ref);
   }
 
@@ -39,12 +60,11 @@ export async function GET(
     return new NextResponse("File missing", { status: 404 });
   }
   const buf = await readFile(filePath);
-  const hint = filenameHintFromStoragePath(ref);
-  const type = contentTypeFromName(hint);
-  return new NextResponse(buf, {
+  return new NextResponse(new Uint8Array(buf), {
     headers: {
       "Content-Type": type,
       "Content-Disposition": `inline; filename="${hint}"`,
+      "Cache-Control": "private, no-store",
     },
   });
 }

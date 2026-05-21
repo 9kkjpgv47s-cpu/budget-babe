@@ -1,17 +1,23 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { coerceCategoryId } from "@/lib/categories";
+import { currentYearMonth } from "@/lib/yearMonth";
 import { applyMerchantRulesToExistingExpenses } from "@/lib/merchantRules";
 import type { FormActionState } from "@/lib/formActionState";
 
 function revalidateMerchantRuleTargets(yearMonth: string) {
-  revalidateLedgerPaths(yearMonth);
-  revalidatePath("/import");
+  revalidateLedgerPaths(yearMonth, [
+    "import",
+    "expenses",
+    "budgets",
+    "insights",
+    "overview",
+    "tax",
+  ]);
 }
 
 export async function addMerchantRuleAction(formData: FormData): Promise<void> {
@@ -24,7 +30,7 @@ export async function addMerchantRuleAction(formData: FormData): Promise<void> {
   await prisma.merchantRule.create({
     data: { pattern, tag, categoryId, sortOrder: 0 },
   });
-  revalidatePath("/import");
+  revalidateLedgerPaths(currentYearMonth(), ["import"]);
 }
 
 export async function updateMerchantRuleAction(formData: FormData): Promise<void> {
@@ -39,7 +45,7 @@ export async function updateMerchantRuleAction(formData: FormData): Promise<void
     where: { id },
     data: { pattern, tag, categoryId },
   });
-  revalidatePath("/import");
+  revalidateLedgerPaths(currentYearMonth(), ["import"]);
 }
 
 export async function deleteMerchantRuleAction(formData: FormData): Promise<void> {
@@ -47,7 +53,7 @@ export async function deleteMerchantRuleAction(formData: FormData): Promise<void
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await prisma.merchantRule.delete({ where: { id } });
-  revalidatePath("/import");
+  revalidateLedgerPaths(currentYearMonth(), ["import"]);
 }
 
 export async function applyMerchantRulesToMonthAction(
@@ -70,7 +76,6 @@ export async function applyMerchantRulesToMonthAction(
     yearMonth,
   );
   revalidateMerchantRuleTargets(yearMonth);
-  revalidatePath("/tax");
   const { updated, scanned, tagsChanged, budgetLinked, payeeSet, categorySet } =
     result;
   if (updated === 0) {

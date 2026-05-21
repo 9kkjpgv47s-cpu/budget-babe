@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { getPlaidApi } from "@/lib/plaidClient";
 import { prisma } from "@/lib/prisma";
 import { formatPlaidError } from "@/lib/plaidError";
+import { storePlaidAccessToken } from "@/lib/plaidStorage";
+import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
+import { currentYearMonth } from "@/lib/yearMonth";
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -34,14 +36,13 @@ export async function POST(request: Request) {
     await prisma.plaidItem.create({
       data: {
         itemId: item_id,
-        accessToken: access_token,
+        accessToken: storePlaidAccessToken(access_token),
         institutionId: it.institution_id ?? null,
         institutionName,
         userId: session.user.userId,
       },
     });
-    revalidatePath("/plaid");
-    revalidatePath("/");
+    revalidateLedgerPaths(currentYearMonth(), ["plaid", "overview"]);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const msg = formatPlaidError(e, "public token exchange");

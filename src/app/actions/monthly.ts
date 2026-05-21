@@ -1,6 +1,7 @@
 "use server";
 
 import path from "path";
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { addMonths, endOfDay, format, startOfDay } from "date-fns";
@@ -20,7 +21,11 @@ import {
 } from "@/lib/entryDefaults";
 import { coerceCategoryId, linkCategoriesToBudgetEnvelope } from "@/lib/categories";
 import { guessPaystubAmountFromBuffer } from "@/lib/paystubOcr";
-import { deletePaystubStored, savePaystubUpload } from "@/lib/uploads";
+import {
+  deletePaystubStored,
+  readPaystubBinary,
+  savePaystubUpload,
+} from "@/lib/uploads";
 
 async function periodFromYearMonth(yearMonth: string) {
   return getOrCreateMonthlyPeriod(yearMonth);
@@ -45,7 +50,7 @@ export async function addPaycheckCore(
     return { error: "Invalid paycheck date." };
   }
 
-  let amountCents = amountTyped;
+  const amountCents = amountTyped;
   let imageFilename: string | null = null;
 
   try {
@@ -65,11 +70,54 @@ export async function addPaycheckCore(
       stubHintName = `${safeBase || "paystub"}${ext}`;
 
       if (amountCents == null) {
-        amountCents = await guessPaystubAmountFromBuffer(
-          stubBytes,
-          stubHintName,
-        );
+        imageFilename = await savePaystubUpload({
+          buffer: stubBytes,
+          basename: file instanceof File ? file.name : stubHintName,
+        });
+        const period = await periodFromYearMonth(yearMonth);
+        const storedPath = imageFilename;
+        const hint = stubHintName;
+        const periodId = period.id;
+        const received = receivedOn;
+        const noteVal = note;
+
+        after(async () => {
+          try {
+            const buf = await readPaystubBinary(storedPath);
+            const cents = await guessPaystubAmountFromBuffer(buf, hint);
+            if (cents == null) return;
+            await prisma.paycheck.create({
+              data: {
+                monthlyPeriodId: periodId,
+                amountCents: cents,
+                receivedOn: received,
+                note: noteVal,
+                imageFilename: storedPath,
+              },
+            });
+            revalidateLedgerPaths(yearMonth, [
+              "overview",
+              "coach",
+              "flow",
+              "insights",
+            ]);
+          } catch (err) {
+            console.error("[paystub] deferred OCR failed", err);
+          }
+        });
+
+        revalidateLedgerPaths(yearMonth, ["overview"]);
+        return {
+          ok: true,
+          message:
+            "Pay stub uploaded — we are reading the amount in the background. Refresh in a few seconds.",
+        };
       }
+
+      imageFilename = await savePaystubUpload({
+        buffer: stubBytes,
+        basename: file instanceof File ? file.name : stubHintName,
+      });
     }
 
     if (amountCents == null) {
@@ -77,13 +125,6 @@ export async function addPaycheckCore(
         error:
           "Enter the take-home amount, or upload a clear photo/PDF of your pay stub so we can read it.",
       };
-    }
-
-    if (stubBytes) {
-      imageFilename = await savePaystubUpload({
-        buffer: stubBytes,
-        basename: file instanceof File ? file.name : stubHintName,
-      });
     }
 
     const period = await periodFromYearMonth(yearMonth);
@@ -281,11 +322,22 @@ export async function toggleBillPaidAction(formData: FormData): Promise<void> {
   const billId = String(formData.get("billId") ?? "");
   const paid = String(formData.get("paid") ?? "") === "true";
   if (!billId) return;
+  const bill = await prisma.bill.findUnique({
+    where: { id: billId },
+    select: { monthlyPeriod: { select: { yearMonth: true } } },
+  });
+  if (!bill?.monthlyPeriod) return;
   await prisma.bill.update({
     where: { id: billId },
     data: { paid },
   });
-  revalidateBills();
+  revalidateLedgerPaths(bill.monthlyPeriod.yearMonth, [
+    "overview",
+    "bills",
+    "budgets",
+    "coach",
+    "flow",
+  ]);
 }
 
 function revalidateBills() {

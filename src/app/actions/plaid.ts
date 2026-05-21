@@ -1,17 +1,21 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { getPlaidApi } from "@/lib/plaidClient";
 import { prisma } from "@/lib/prisma";
 import { syncPlaidItemTransactions } from "@/lib/plaidSync";
 import { getSession } from "@/lib/auth";
+import { getPlaidAccessToken } from "@/lib/plaidStorage";
+import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
+import { currentYearMonth } from "@/lib/yearMonth";
 
-function revalidatePlaidRelated() {
-  revalidatePath("/plaid");
-  revalidatePath("/expenses");
-  revalidatePath("/");
-  revalidatePath("/flow");
-  revalidatePath("/insights");
+function revalidatePlaidRelated(yearMonth = currentYearMonth()) {
+  revalidateLedgerPaths(yearMonth, [
+    "plaid",
+    "expenses",
+    "overview",
+    "flow",
+    "insights",
+  ]);
 }
 
 export async function syncPlaidItemAction(
@@ -53,7 +57,9 @@ export async function disconnectPlaidItemAction(
   const client = getPlaidApi();
   if (client) {
     try {
-      await client.itemRemove({ access_token: item.accessToken });
+      await client.itemRemove({
+        access_token: getPlaidAccessToken(item.accessToken),
+      });
     } catch {
       // Still drop local row if Plaid revoke fails (e.g. expired item).
     }

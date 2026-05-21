@@ -4,21 +4,50 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 /**
- * Poll server-rendered page while any receipt is still being OCR'd.
+ * Lightweight OCR status poll — refreshes the page only when processing finishes.
  */
-export function OcrStatusPoller({ active }: { active: boolean }) {
+export function OcrStatusPoller({
+  active,
+  yearMonth,
+}: {
+  active: boolean;
+  yearMonth: string;
+}) {
   const router = useRouter();
   const ticks = useRef(0);
+  const wasActive = useRef(active);
 
   useEffect(() => {
-    if (!active) return;
-    const id = setInterval(() => {
+    if (!active) {
+      if (wasActive.current) {
+        router.refresh();
+      }
+      wasActive.current = false;
+      return;
+    }
+    wasActive.current = true;
+
+    const id = setInterval(async () => {
       ticks.current += 1;
-      router.refresh();
-      if (ticks.current >= 45) clearInterval(id);
-    }, 2000);
+      try {
+        const res = await fetch(
+          `/api/receipts/ocr-status?ym=${encodeURIComponent(yearMonth)}`,
+          { cache: "no-store" },
+        );
+        if (!res.ok) return;
+        const data = (await res.json()) as { active?: boolean };
+        if (!data.active) {
+          clearInterval(id);
+          router.refresh();
+        }
+      } catch {
+        /* ignore transient network errors */
+      }
+      if (ticks.current >= 60) clearInterval(id);
+    }, 3000);
+
     return () => clearInterval(id);
-  }, [active, router]);
+  }, [active, yearMonth, router]);
 
   return null;
 }
