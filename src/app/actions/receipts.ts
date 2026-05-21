@@ -12,7 +12,11 @@ import { applyMerchantRulesToTags } from "@/lib/merchantRules";
 import type { ParsedReceiptLine } from "@/lib/receiptOcr";
 import { buildReceiptExpenseMeta } from "@/app/(app)/receipts/receiptExpenseMeta";
 import { postReceiptTotalCore } from "@/app/(app)/receipts/postReceiptTotalCore";
-import { deleteReceiptStored, saveReceiptUpload } from "@/lib/uploads";
+import {
+  deleteReceiptStored,
+  normalizeReceiptImageBuffer,
+  saveReceiptUpload,
+} from "@/lib/uploads";
 
 function revalidateMoneyFromReceipt(yearMonth: string) {
   revalidatePath("/");
@@ -42,10 +46,11 @@ export async function uploadReceiptCore(
     return { error: "File must be 8MB or smaller." };
   }
   const period = await getOrCreateMonthlyPeriod(yearMonth);
-  const bytes = Buffer.from(await file.arrayBuffer());
+  const rawBytes = Buffer.from(await file.arrayBuffer());
+  const normalized = await normalizeReceiptImageBuffer(rawBytes, file.name);
   const storagePath = await saveReceiptUpload({
-    buffer: bytes,
-    basename: file.name,
+    buffer: normalized.buffer,
+    basename: normalized.basename,
   });
   const rec = await prisma.receipt.create({
     data: {

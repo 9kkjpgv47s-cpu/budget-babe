@@ -6,7 +6,6 @@ import {
   type ParsedReceiptLine,
 } from "@/lib/receiptOcr";
 import {
-  deleteReceiptAction,
   moveReceiptToMonthAction,
   reprocessReceiptOcrAction,
 } from "@/app/actions/receipts";
@@ -16,6 +15,7 @@ import { ReceiptQuickPostButton } from "./ReceiptQuickPostButton";
 import { suggestBudgetPlanId, type BudgetPlanPick } from "./receiptBudgetSuggest";
 import { displayFilename, ocrStatusBadgeClass } from "./receiptDisplay";
 import { ReceiptThumbnail } from "./ReceiptThumbnail";
+import { ReceiptDeleteButton } from "./ReceiptDeleteButton";
 
 type ReceiptRow = {
   id: string;
@@ -282,15 +282,10 @@ export function ReceiptListItem({
           </button>
         </form>
       </div>
-      <form action={deleteReceiptAction}>
-        <input type="hidden" name="id" value={receipt.id} />
-        <button
-          type="submit"
-          className="text-xs text-red-600 underline hover:no-underline"
-        >
-          Delete
-        </button>
-      </form>
+      <ReceiptDeleteButton
+        receiptId={receipt.id}
+        expenseCount={receipt.expenseCount}
+      />
     </li>
   );
 }

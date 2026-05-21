@@ -21,6 +21,7 @@ import {
 } from "./receiptFilters";
 import { ReceiptAutoPostWatcher } from "./ReceiptAutoPostWatcher";
 import { ReceiptFailedBulkActions } from "./ReceiptFailedBulkActions";
+import { ReceiptMonthStats } from "./ReceiptMonthStats";
 
 export default async function ReceiptsPage({
   searchParams,
@@ -91,6 +92,13 @@ export default async function ReceiptsPage({
         <div className="mt-3">
           <ReceiptMonthHeader yearMonth={yearMonth} />
         </div>
+        <ReceiptMonthStats
+          receipts={receipts.map((r) => ({
+            ocrStatus: r.ocrStatus,
+            totalCents: r.totalCents,
+            expenseCount: r._count.expenses,
+          }))}
+        />
         <p className="mt-1 text-sm text-zinc-500">
           <strong className="text-zinc-800 dark:text-zinc-200">
             Use your camera or photo library

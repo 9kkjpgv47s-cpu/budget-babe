@@ -68,6 +68,7 @@ export function ReceiptAutoPostWatcher({ yearMonth }: { yearMonth: string }) {
         clearAutoPostReceiptId();
         running.current = false;
         if (result.ok) {
+          router.push(`/expenses?ym=${yearMonth}`);
           router.refresh();
         }
       } catch {

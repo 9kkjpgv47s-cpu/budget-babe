@@ -113,7 +113,8 @@ export function ReceiptUploadForm({
       >
         <p className="text-xs text-zinc-500">
           <strong className="text-zinc-700 dark:text-zinc-300">Drop a photo here</strong>{" "}
-          or use the file picker. Large photos are compressed automatically before upload.
+          or use the file picker. HEIC/iPhone photos convert to JPEG automatically. Large
+        photos are compressed before upload.
         </p>
         {previewUrl ? (
           <div className="mt-3 flex items-start gap-3">
@@ -138,7 +139,7 @@ export function ReceiptUploadForm({
               id={fileId}
               name="file"
               type="file"
-              accept="image/*,application/pdf"
+              accept="image/*,image/heic,image/heif,application/pdf"
               capture="environment"
               required
               className="mt-1 block w-full text-sm"

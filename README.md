@@ -90,7 +90,16 @@ After each upload, the server runs **OCR in the background** (`next/after`):
 - **Photos**: [Tesseract.js](https://github.com/naptha/tesseract.js) extracts text. TIFF inputs are converted with Sharp first.
 - **PDFs** (optional): [pdf-parse](https://www.npmjs.com/package/pdf-parse) reads **embedded** text when present; otherwise the server **renders the first five pages** and runs Tesseract (requires the native [`canvas`](https://www.npmjs.com/package/canvas) package — on Linux you typically need `build-essential`, `libcairo2-dev`, `libpango1.0-dev`, `libjpeg-dev`, `libgif-dev`, and `librsvg2-dev` for `npm install` to compile it).
 
-Parsed **line items** (description + trailing price) and a **likely total** (from keywords like `TOTAL`) are stored on the receipt row when the parser finds them. The Receipts page polls until processing finishes. You can **post an expense** from a receipt (uses OCR total if amount is blank), or **post all parsed lines** as linked split expenses when amounts exist.
+Parsed **line items** (description + trailing price) and a **likely total** (from keywords like `TOTAL`) are stored on the receipt row when the parser finds them. The **`/receipts`** page polls until processing finishes, with filter tabs (Ready / Reading / Posted / Failed), search, month navigation, and optional **post all ready** in one action.
+
+From a receipt you can:
+
+- **Quick post** the OCR total (store name, payee, date, budget hint)
+- **Post line items** as split expenses (edit lines before posting)
+- **Auto-post when ready** (opt-in on upload)
+- **Re-run OCR** on failures in bulk
+
+Linked spending appears on **`/expenses`** with links back to the scan. Export metadata: **`GET /api/receipts/export?ym=YYYY-MM`**. iPhone **HEIC** photos are converted to JPEG on upload.
 
 First production deploy may download Tesseract language data on demand (~few MB for `eng`).
 

@@ -33,6 +33,15 @@ Receipt capture, OCR, discoverability, and posting to spending. All items below 
 - `GET /api/receipts/ocr-pending` — nav badge counts
 - `GET /api/receipts/export` — month metadata CSV
 
+## Polish (phase 6)
+
+- Mobile **More** menu (Coach, Budgets, Import, Tax, Flow, Insights)
+- Month stats strip on `/receipts`
+- Delete confirmation when expenses are linked
+- HEIC/HEIF → JPEG normalization on upload
+- Post-success navigation to `/expenses` for quick/batch/auto post
+- OCR poller respects tab visibility
+
 ## Explicitly out of lane (other agents)
 
 - Unified QuickForms fields → **Gamma** (`ExpensesInteractiveList`, `QuickForms`)

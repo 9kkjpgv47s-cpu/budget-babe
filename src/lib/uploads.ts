@@ -23,6 +23,25 @@ export function uploadsUseVercelBlob(): boolean {
   return Boolean(blobToken());
 }
 
+/** iPhone HEIC/HEIF → JPEG for OCR and browser preview. */
+export async function normalizeReceiptImageBuffer(
+  buffer: Buffer,
+  basename: string,
+): Promise<{ buffer: Buffer; basename: string }> {
+  const lower = basename.toLowerCase();
+  if (!lower.endsWith(".heic") && !lower.endsWith(".heif")) {
+    return { buffer, basename };
+  }
+  try {
+    const sharp = (await import("sharp")).default;
+    const out = await sharp(buffer).jpeg({ quality: 88 }).toBuffer();
+    const base = basename.replace(/\.(heic|heif)$/i, "") || "receipt";
+    return { buffer: out, basename: `${base}.jpg` };
+  } catch {
+    return { buffer, basename };
+  }
+}
+
 export async function saveReceiptUpload(params: {
   buffer: Buffer;
   basename: string;

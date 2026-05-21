@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MobileReceiptOcrBadge } from "./receipts/MobileReceiptOcrBadge";
+import { MobileNavMoreMenu } from "./MobileNavMoreMenu";
 
 type MobileNavItem = {
   href: string;
@@ -14,7 +15,6 @@ const items: MobileNavItem[] = [
   { href: "/receipts", label: "Receipts" },
   { href: "/expenses", label: "Spending" },
   { href: "/bills", label: "Bills" },
-  { href: "/budgets", label: "Budgets" },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {
@@ -49,6 +49,9 @@ export function MobileBottomNav() {
             </li>
           );
         })}
+        <li>
+          <MobileNavMoreMenu />
+        </li>
       </ul>
     </nav>
   );

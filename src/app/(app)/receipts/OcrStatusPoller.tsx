@@ -23,15 +23,28 @@ export function OcrStatusPoller({ active }: { active: boolean }) {
     }
     setTimedOut(false);
     ticks.current = 0;
-    const id = setInterval(() => {
+    function tick() {
+      if (typeof document !== "undefined" && document.hidden) return;
       ticks.current += 1;
       router.refresh();
       if (ticks.current >= MAX_TICKS) {
-        clearInterval(id);
         setTimedOut(true);
+        return false;
       }
+      return true;
+    }
+    tick();
+    const id = setInterval(() => {
+      if (!tick()) clearInterval(id);
     }, POLL_MS);
-    return () => clearInterval(id);
+    const onVisible = () => {
+      if (!document.hidden && active) tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [active, router]);
 
   if (!active && !timedOut) return null;

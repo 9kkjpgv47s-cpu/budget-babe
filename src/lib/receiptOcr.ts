@@ -164,6 +164,7 @@ export function parseLikelyTotalCents(raw: string): number | null {
     /AMOUNT\s+DUE[:\s]+[\$€£]?\s*([\d,]+\.\d{2})/i,
     /BALANCE[:\s]+[\$€£]?\s*([\d,]+\.\d{2})/i,
     /GRAND\s*TOTAL[:\s]+[\$€£]?\s*([\d,]+\.\d{2})/i,
+    /([\d,]+\.\d{2})\s+TOTAL\b/i,
     /^[\$€£]?\s*([\d,]+\.\d{2})\s*$/m,
   ];
   for (const re of patterns) {

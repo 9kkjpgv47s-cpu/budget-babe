@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { quickPostReceiptTotalAction } from "@/app/actions/receipts";
 import { formatCents } from "@/lib/money";
 import { initialFormState } from "@/lib/formActionState";
@@ -18,10 +19,17 @@ export function ReceiptQuickPostButton({
   descriptionHint: string;
   ocrConfidence?: number | null;
 }) {
+  const router = useRouter();
   const [state, action, pending] = useActionState(
     quickPostReceiptTotalAction,
     initialFormState,
   );
+
+  useEffect(() => {
+    if (!state?.ok) return;
+    router.push(`/expenses?ym=${yearMonth}`);
+    router.refresh();
+  }, [state?.ok, yearMonth, router]);
 
   return (
     <form action={action} className="mt-2">

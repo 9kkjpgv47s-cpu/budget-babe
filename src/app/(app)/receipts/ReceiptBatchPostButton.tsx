@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { batchPostReadyReceiptsAction } from "@/app/actions/receipts";
 import { initialFormState } from "@/lib/formActionState";
 
@@ -11,10 +12,17 @@ export function ReceiptBatchPostButton({
   yearMonth: string;
   readyCount: number;
 }) {
+  const router = useRouter();
   const [state, action, pending] = useActionState(
     batchPostReadyReceiptsAction,
     initialFormState,
   );
+
+  useEffect(() => {
+    if (!state?.ok) return;
+    router.push(`/expenses?ym=${yearMonth}`);
+    router.refresh();
+  }, [state?.ok, yearMonth, router]);
 
   if (readyCount === 0) return null;
 
