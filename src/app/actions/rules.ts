@@ -21,6 +21,25 @@ export async function addMerchantRuleAction(formData: FormData): Promise<void> {
   revalidatePath("/import");
 }
 
+export async function updateMerchantRuleAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const id = String(formData.get("id") ?? "");
+  const pattern = String(formData.get("pattern") ?? "").trim().toLowerCase();
+  const tag = String(formData.get("tag") ?? "").trim().toLowerCase();
+  const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
+  if (!id || !pattern || !tag) return;
+  let categoryId: string | null = categoryIdRaw || null;
+  if (categoryId) {
+    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (!cat) categoryId = null;
+  }
+  await prisma.merchantRule.update({
+    where: { id },
+    data: { pattern, tag, categoryId },
+  });
+  revalidatePath("/import");
+}
+
 export async function deleteMerchantRuleAction(formData: FormData): Promise<void> {
   await requireUser();
   const id = String(formData.get("id") ?? "");

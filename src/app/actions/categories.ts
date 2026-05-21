@@ -106,6 +106,45 @@ export async function deleteCategoryAction(formData: FormData): Promise<void> {
   revalidateCategoryPaths();
 }
 
+/** Create budget envelopes for categories that have budgetEnvelopeName but no matching plan this month. */
+export async function createMissingCategoryEnvelopesAction(
+  formData: FormData,
+): Promise<void> {
+  await requireUser();
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  const limitRaw = String(formData.get("defaultLimit") ?? "").trim();
+  if (!yearMonth) return;
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const categories = await prisma.category.findMany({
+    where: { budgetEnvelopeName: { not: null } },
+  });
+  const plans = await prisma.budgetPlan.findMany({
+    where: { monthlyPeriodId: period.id },
+    select: { name: true },
+  });
+  const planNames = new Set(plans.map((p) => p.name.toLowerCase()));
+  const limitCents = limitRaw
+    ? Math.round(Number.parseFloat(limitRaw.replace(/[$,]/g, "")) * 100)
+    : 0;
+  const safeLimit = Number.isFinite(limitCents) && limitCents >= 0 ? limitCents : 0;
+
+  for (const cat of categories) {
+    const env = cat.budgetEnvelopeName?.trim();
+    if (!env || planNames.has(env.toLowerCase())) continue;
+    await prisma.budgetPlan.create({
+      data: {
+        monthlyPeriodId: period.id,
+        name: env,
+        category: cat.matchText ?? cat.slug,
+        limitCents: safeLimit,
+        note: `Auto-created for category “${cat.name}”`,
+      },
+    });
+    planNames.add(env.toLowerCase());
+  }
+  revalidateCategoryPaths(yearMonth);
+}
+
 export async function bulkApplyCategoryRulesAction(
   formData: FormData,
 ): Promise<void> {

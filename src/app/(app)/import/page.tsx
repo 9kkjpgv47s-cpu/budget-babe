@@ -2,11 +2,12 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { currentYearMonth } from "@/lib/yearMonth";
-import { deleteMerchantRuleAction, addMerchantRuleAction } from "@/app/actions/rules";
+import { addMerchantRuleAction } from "@/app/actions/rules";
 import { ensureDefaultCategories } from "@/lib/categories";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { CategorySection } from "../budgets/CategorySection";
 import { ImportBulkSection } from "./ImportBulkSection";
+import { MerchantRulesList } from "./MerchantRulesList";
 
 export default async function ImportPage({
   searchParams,
@@ -125,37 +126,16 @@ export default async function ImportPage({
             Add rule
           </button>
         </form>
-        <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
-          {rules.map((r) => (
-            <li
-              key={r.id}
-              className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"
-            >
-              <span>
-                <span className="font-mono text-zinc-600">{r.pattern}</span>
-                {" → "}
-                <span className="font-medium">{r.tag}</span>
-                {r.category ? (
-                  <span className="ml-2 text-xs text-emerald-700 dark:text-emerald-300">
-                    [{r.category.name}]
-                  </span>
-                ) : null}
-              </span>
-              <form action={deleteMerchantRuleAction}>
-                <input type="hidden" name="id" value={r.id} />
-                <button
-                  type="submit"
-                  className="text-xs text-red-600 underline hover:no-underline"
-                >
-                  Delete
-                </button>
-              </form>
-            </li>
-          ))}
-        </ul>
-        {rules.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500">No rules yet.</p>
-        ) : null}
+        <MerchantRulesList
+          rules={rules.map((r) => ({
+            id: r.id,
+            pattern: r.pattern,
+            tag: r.tag,
+            categoryId: r.categoryId,
+            categoryName: r.category?.name ?? null,
+          }))}
+          categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+        />
       </section>
     </div>
   );

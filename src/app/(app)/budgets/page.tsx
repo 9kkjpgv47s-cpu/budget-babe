@@ -18,7 +18,9 @@ import { ensureDefaultCategories } from "@/lib/categories";
 import { BudgetAddForm } from "../BudgetAddForm";
 import { BudgetCopyHeader } from "../BudgetCopyHeader";
 import { BudgetPlanRow } from "../BudgetPlanRow";
+import { CategoryEnvelopePanel } from "./CategoryEnvelopePanel";
 import { CategorySection } from "./CategorySection";
+import { CategorySpendSummary } from "./CategorySpendSummary";
 
 function shiftYearMonth(ym: string, delta: number) {
   return format(addMonths(parseYearMonth(ym), delta), "yyyy-MM");
@@ -68,6 +70,22 @@ export default async function BudgetsPage({
       categoryLookup,
     ),
   );
+
+  const categorySpendMap = new Map<string, { name: string; count: number; totalCents: number }>();
+  for (const e of expenses) {
+    if (!e.categoryId) continue;
+    const cat = categories.find((c) => c.id === e.categoryId);
+    if (!cat) continue;
+    const cur = categorySpendMap.get(cat.id) ?? {
+      name: cat.name,
+      count: 0,
+      totalCents: 0,
+    };
+    cur.count += 1;
+    cur.totalCents += e.amountCents;
+    categorySpendMap.set(cat.id, cur);
+  }
+  const categorySpendRows = [...categorySpendMap.values()];
 
   const budgetRows = budgetPlans.map((p) => {
     const planR: BudgetPlanForRollup = {
@@ -134,6 +152,18 @@ export default async function BudgetsPage({
           hasPrevPeriod={prevExists != null}
         />
       </section>
+
+      <CategoryEnvelopePanel
+        yearMonth={ym}
+        categories={categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          budgetEnvelopeName: c.budgetEnvelopeName,
+        }))}
+        planNames={budgetPlans.map((p) => p.name)}
+      />
+
+      <CategorySpendSummary rows={categorySpendRows} />
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">This month ({budgetPlans.length})</h2>

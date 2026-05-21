@@ -103,6 +103,21 @@ export type CategoryFieldPatch = {
 };
 
 /** Apply category defaults onto expense fields for a given month. */
+export function categoriesMissingEnvelopes(
+  categories: { id: string; name: string; budgetEnvelopeName: string | null }[],
+  planNamesLower: Set<string>,
+): { id: string; name: string; budgetEnvelopeName: string }[] {
+  const out: { id: string; name: string; budgetEnvelopeName: string }[] = [];
+  for (const c of categories) {
+    const env = c.budgetEnvelopeName?.trim();
+    if (!env) continue;
+    if (!planNamesLower.has(env.toLowerCase())) {
+      out.push({ id: c.id, name: c.name, budgetEnvelopeName: env });
+    }
+  }
+  return out;
+}
+
 export async function fieldsFromCategoryId(
   categoryId: string | null,
   monthlyPeriodId: string,

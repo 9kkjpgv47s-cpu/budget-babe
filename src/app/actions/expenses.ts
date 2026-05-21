@@ -5,7 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
 import { mergeTagLists, parseTagsJson } from "@/lib/budgetRollup";
-import { classifyExpenseForWrite } from "@/lib/merchantRules";
+import {
+  applyMerchantRulesToTags,
+  classifyExpenseForWrite,
+} from "@/lib/merchantRules";
 import { fieldsFromCategoryId } from "@/lib/categories";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 
@@ -195,6 +198,49 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
       tagsJson: classified.tagsJson,
     },
   });
+  revalidateAll(yearMonth);
+}
+
+/** Re-apply merchant tag rules to every expense in the month (keeps explicit category). */
+export async function reapplyMerchantRulesAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  if (!yearMonth) return;
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const expenses = await prisma.expense.findMany({
+    where: { monthlyPeriodId: period.id },
+    select: {
+      id: true,
+      description: true,
+      tagsJson: true,
+      categoryId: true,
+      budgetPlanId: true,
+      taxCategory: true,
+    },
+  });
+  for (const exp of expenses) {
+    const tagsJson = await applyMerchantRulesToTags(exp.description, exp.tagsJson);
+    await prisma.expense.update({
+      where: { id: exp.id },
+      data: { tagsJson },
+    });
+    if (exp.categoryId) continue;
+    const classified = await classifyExpenseForWrite(exp.description, period.id, {
+      tagsJson,
+      budgetPlanId: exp.budgetPlanId,
+      taxCategory: exp.taxCategory,
+    });
+    if (!classified.categoryId) continue;
+    await prisma.expense.update({
+      where: { id: exp.id },
+      data: {
+        categoryId: classified.categoryId,
+        budgetPlanId: classified.budgetPlanId,
+        taxCategory: classified.taxCategory,
+        tagsJson: classified.tagsJson,
+      },
+    });
+  }
   revalidateAll(yearMonth);
 }
 
