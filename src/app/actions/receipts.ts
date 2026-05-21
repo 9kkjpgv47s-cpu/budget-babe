@@ -247,7 +247,7 @@ export async function moveReceiptToMonthAction(formData: FormData): Promise<void
     for (const exp of linked) {
       const budgetPlanId = await remapBudgetPlanToPeriod(
         exp.budgetPlanId,
-        rec.monthlyPeriodId,
+        rec.monthlyPeriodId ?? period.id,
         period.id,
       );
       await prisma.expense.update({

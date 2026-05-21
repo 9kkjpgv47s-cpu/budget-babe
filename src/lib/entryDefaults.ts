@@ -113,7 +113,7 @@ export async function resolvePostingYearMonth(
     where: { id: input.receiptId },
     select: { monthlyPeriod: { select: { yearMonth: true } } },
   });
-  return receipt?.monthlyPeriod.yearMonth ?? input.pageYearMonth;
+  return receipt?.monthlyPeriod?.yearMonth ?? input.pageYearMonth;
 }
 
 /** Load budget plans for a resolved posting month. */
