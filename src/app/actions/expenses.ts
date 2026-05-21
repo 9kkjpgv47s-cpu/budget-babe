@@ -10,7 +10,6 @@ import {
   finalizeExpenseDraftForPeriod,
   getBudgetPlansForYearMonth,
 } from "@/lib/entryDefaults";
-import { applyMerchantRulesToTags } from "@/lib/merchantRules";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 
 function revalidateAll(yearMonth: string) {
@@ -44,8 +43,25 @@ export async function bulkApplyTagsToExpensesAction(formData: FormData): Promise
       tagMode === "replace"
         ? mergeTagLists(tagsRaw)
         : mergeTagLists(parseTagsJson(exp.tagsJson), tagsRaw);
-    const tagsJson = await applyMerchantRulesToTags(exp.description, manual ?? exp.tagsJson);
-    await prisma.expense.update({ where: { id }, data: { tagsJson } });
+    const plans = await getBudgetPlansForYearMonth(yearMonth);
+    const draft = await finalizeExpenseDraftForPeriod(
+      {
+        description: exp.description,
+        tagsJson: manual ?? exp.tagsJson,
+        budgetPlanId: exp.budgetPlanId,
+        payee: exp.payee,
+      },
+      period.id,
+      plans,
+    );
+    await prisma.expense.update({
+      where: { id },
+      data: {
+        tagsJson: draft.tagsJson,
+        budgetPlanId: draft.budgetPlanId,
+        payee: draft.payee,
+      },
+    });
   }
   revalidateAll(yearMonth);
 }
@@ -67,12 +83,30 @@ export async function bulkSetBudgetForExpensesAction(formData: FormData): Promis
     if (!plan) return;
     budgetPlanId = plan.id;
   }
+  const plans = await getBudgetPlansForYearMonth(yearMonth);
   for (const id of ids) {
     const exp = await prisma.expense.findFirst({
       where: { id, monthlyPeriodId: period.id },
     });
     if (!exp) continue;
-    await prisma.expense.update({ where: { id }, data: { budgetPlanId } });
+    const draft = await finalizeExpenseDraftForPeriod(
+      {
+        description: exp.description,
+        tagsJson: exp.tagsJson,
+        budgetPlanId,
+        payee: exp.payee,
+      },
+      period.id,
+      plans,
+    );
+    await prisma.expense.update({
+      where: { id },
+      data: {
+        budgetPlanId: draft.budgetPlanId,
+        tagsJson: draft.tagsJson,
+        payee: draft.payee,
+      },
+    });
   }
   revalidateAll(yearMonth);
 }

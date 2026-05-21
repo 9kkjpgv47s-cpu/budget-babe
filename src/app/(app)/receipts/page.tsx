@@ -7,6 +7,7 @@ import { currentYearMonth, parseYearMonth } from "@/lib/yearMonth";
 import {
   getLastExpenseDefaultsForYearMonth,
   resolveReceiptPostingContext,
+  suggestReceiptExpenseDescription,
 } from "@/lib/entryDefaults";
 import { ReceiptUploadForm } from "./ReceiptUploadForm";
 import { ReceiptListItem } from "./ReceiptOcrSection";
@@ -44,6 +45,11 @@ export default async function ReceiptsPage({
         postingBudgetPlans: ctx.plans.map((p) => ({ id: p.id, name: p.name })),
         defaultBudgetPlanId: defaults.budgetPlanId,
         defaultPayee: defaults.payee,
+        suggestedDescription: suggestReceiptExpenseDescription({
+          filename: r.filename,
+          note: r.note,
+          ocrParsedLines: r.ocrParsedLines,
+        }),
       };
     }),
   );
@@ -98,6 +104,7 @@ export default async function ReceiptsPage({
               defaultBudgetPlanId={row.defaultBudgetPlanId}
               defaultPayee={row.defaultPayee}
               postingYearMonth={row.postingYearMonth}
+              suggestedDescription={row.suggestedDescription}
             />
           ))}
         </ul>

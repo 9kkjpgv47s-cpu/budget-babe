@@ -14,6 +14,7 @@ import {
   getLastExpenseDefaultsForYearMonth,
   remapBudgetPlanToPeriod,
   resolveReceiptPostingContext,
+  suggestReceiptExpenseDescription,
 } from "@/lib/entryDefaults";
 import type { ParsedReceiptLine } from "@/lib/receiptOcr";
 import { deleteReceiptStored, saveReceiptUpload } from "@/lib/uploads";
@@ -99,7 +100,13 @@ export async function createExpenseFromReceiptAction(
       error: "Enter an amount in dollars, or wait for OCR to set a receipt total.",
     };
   }
-  if (!description) description = `Receipt: ${receipt.filename}`;
+  if (!description) {
+    description = suggestReceiptExpenseDescription({
+      filename: receipt.filename,
+      note: receipt.note,
+      ocrParsedLines: receipt.ocrParsedLines,
+    });
+  }
   const pageYmForResolve =
     postingHint.match(/^\d{4}-\d{2}$/) ? postingHint : pageYearMonth;
   const { yearMonth, plans } = await resolveReceiptPostingContext(

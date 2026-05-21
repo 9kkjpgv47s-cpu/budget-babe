@@ -153,10 +153,6 @@ export async function coerceBudgetPlanInPeriod(
   return plan?.id ?? null;
 }
 
-/**
- * Apply merchant rules + budget suggestion, then validate budget in period.
- * Use from all manual expense create/update paths.
- */
 /** Reuse a payee when description contains a recent payee string this month. */
 export async function suggestPayeeForDescription(
   description: string,
@@ -242,5 +238,101 @@ export function sanitizeExpenseDefaultsForPlans(
       defaults.budgetPlanId && ids.has(defaults.budgetPlanId)
         ? defaults.budgetPlanId
         : null,
+  };
+}
+
+/** Best-effort description when posting a receipt to the ledger. */
+export function suggestReceiptExpenseDescription(receipt: {
+  filename: string;
+  note: string | null;
+  ocrParsedLines: string | null;
+}): string {
+  if (receipt.note?.trim()) return receipt.note.trim().slice(0, 500);
+  if (receipt.ocrParsedLines?.trim()) {
+    try {
+      const lines = JSON.parse(receipt.ocrParsedLines) as {
+        description?: string;
+      }[];
+      if (Array.isArray(lines)) {
+        const first = lines.find((l) => String(l.description ?? "").trim());
+        if (first?.description) {
+          return String(first.description).trim().slice(0, 500);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return `Receipt: ${receipt.filename}`;
+}
+
+export type ApplyDefaultsResult = {
+  updated: number;
+  scanned: number;
+  tagsChanged: number;
+  budgetLinked: number;
+  payeeSet: number;
+};
+
+/**
+ * Re-apply merchant rules, budget suggestion, and payee hints to existing rows in a month.
+ */
+export async function applyEntryDefaultsToExistingExpenses(
+  monthlyPeriodId: string,
+  yearMonth: string,
+): Promise<ApplyDefaultsResult> {
+  const plans = await getBudgetPlansForYearMonth(yearMonth);
+  const expenses = await prisma.expense.findMany({
+    where: { monthlyPeriodId },
+    select: {
+      id: true,
+      description: true,
+      tagsJson: true,
+      budgetPlanId: true,
+      payee: true,
+    },
+  });
+
+  let updated = 0;
+  let tagsChanged = 0;
+  let budgetLinked = 0;
+  let payeeSet = 0;
+
+  for (const exp of expenses) {
+    const draft = await finalizeExpenseDraftForPeriod(
+      {
+        description: exp.description,
+        tagsJson: exp.tagsJson,
+        budgetPlanId: exp.budgetPlanId,
+        payee: exp.payee,
+      },
+      monthlyPeriodId,
+      plans,
+    );
+    const tagsSame = (draft.tagsJson ?? null) === (exp.tagsJson ?? null);
+    const budgetSame = (draft.budgetPlanId ?? null) === (exp.budgetPlanId ?? null);
+    const payeeSame = (draft.payee ?? null) === (exp.payee ?? null);
+    if (tagsSame && budgetSame && payeeSame) continue;
+
+    await prisma.expense.update({
+      where: { id: exp.id },
+      data: {
+        tagsJson: draft.tagsJson,
+        budgetPlanId: draft.budgetPlanId,
+        payee: draft.payee,
+      },
+    });
+    updated += 1;
+    if (!tagsSame) tagsChanged += 1;
+    if (!budgetSame && draft.budgetPlanId) budgetLinked += 1;
+    if (!payeeSame && draft.payee) payeeSet += 1;
+  }
+
+  return {
+    updated,
+    scanned: expenses.length,
+    tagsChanged,
+    budgetLinked,
+    payeeSet,
   };
 }
