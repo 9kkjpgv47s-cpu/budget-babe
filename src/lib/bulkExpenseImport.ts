@@ -1,7 +1,11 @@
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
-import { applyMerchantRulesToTags } from "@/lib/merchantRules";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
+import {
+  finalizeExpenseDraftForPeriod,
+  getBudgetPlansForYearMonth,
+  getLastExpenseDefaultsForYearMonth,
+} from "@/lib/entryDefaults";
 
 export type BulkImportRow = {
   date: Date;
@@ -22,6 +26,10 @@ export async function bulkInsertExpenses(
   source: "csv" | "ofx" | "qif",
 ): Promise<{ created: number; skipped: number }> {
   const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const [plans, lastDefaults] = await Promise.all([
+    getBudgetPlansForYearMonth(yearMonth),
+    getLastExpenseDefaultsForYearMonth(yearMonth),
+  ]);
   let created = 0;
   let skipped = 0;
   for (const parts of rows) {
@@ -37,7 +45,16 @@ export async function bulkInsertExpenses(
       skipped++;
       continue;
     }
-    const tagsJson = await applyMerchantRulesToTags(parts.description, null);
+    const draft = await finalizeExpenseDraftForPeriod(
+      {
+        description: parts.description,
+        tagsJson: lastDefaults.tagsJson,
+        budgetPlanId: lastDefaults.budgetPlanId,
+        payee: parts.payee ?? lastDefaults.payee,
+      },
+      period.id,
+      plans,
+    );
     await prisma.expense.create({
       data: {
         monthlyPeriodId: period.id,
@@ -47,8 +64,9 @@ export async function bulkInsertExpenses(
         spentAt: parts.date,
         source,
         importHash: fp,
-        payee: parts.payee,
-        tagsJson,
+        payee: draft.payee,
+        tagsJson: draft.tagsJson,
+        budgetPlanId: draft.budgetPlanId,
       },
     });
     created++;

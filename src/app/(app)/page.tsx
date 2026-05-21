@@ -5,6 +5,7 @@ import { getDashboardData } from "@/lib/dashboardData";
 import { formatCents } from "@/lib/money";
 import { currentYearMonth, parseYearMonth } from "@/lib/yearMonth";
 import {
+  parseTagsJson,
   spentForBudgetPlan,
   envelopeRemaining,
   type BudgetPlanForRollup,
@@ -16,7 +17,10 @@ import { BudgetPlanRow } from "./BudgetPlanRow";
 import { DashboardPanel } from "./DashboardPanel";
 import { HomeMobileInsights } from "./HomeMobileInsights";
 import { PaychecksPanel } from "./PaychecksPanel";
-import { getLastExpenseDefaultsForYearMonth } from "@/lib/entryDefaults";
+import {
+  getLastExpenseDefaultsForYearMonth,
+  sanitizeExpenseDefaultsForPlans,
+} from "@/lib/entryDefaults";
 import { QuickForms } from "./QuickForms";
 import { applySuggestedRolloversAction } from "@/app/actions/rollover";
 
@@ -56,13 +60,21 @@ export default async function HomePage({
   const ym = sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : undefined;
   const yearMonth = ym ?? currentYearMonth();
   const data = await getDashboardData(yearMonth);
-  const [expenseDefaults] = await Promise.all([
-    getLastExpenseDefaultsForYearMonth(yearMonth),
-  ]);
+  const rawDefaults = await getLastExpenseDefaultsForYearMonth(yearMonth);
   const quickAddBudgetPlans = data.budgetPlans.map((p) => ({
     id: p.id,
     name: p.name,
   }));
+  const expenseDefaults = sanitizeExpenseDefaultsForPlans(
+    rawDefaults,
+    quickAddBudgetPlans.map((p) => p.id),
+  );
+  const lastBudgetName = expenseDefaults.budgetPlanId
+    ? data.budgetPlans.find((p) => p.id === expenseDefaults.budgetPlanId)?.name
+    : null;
+  const lastTags = parseTagsJson(expenseDefaults.tagsJson);
+  const hasLastEntryHint =
+    lastBudgetName != null || lastTags.length > 0 || expenseDefaults.payee;
   const prevYm = shiftYearMonth(yearMonth, -1);
   const nextYm = shiftYearMonth(yearMonth, 1);
   const prevPeriodExists =
@@ -313,6 +325,14 @@ export default async function HomePage({
           </div>
         </div>
         <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-3 dark:border-emerald-900/60 dark:bg-zinc-900">
+          {hasLastEntryHint ? (
+            <p className="mb-3 text-xs text-zinc-500">
+              Pre-filled from your last entry this month
+              {lastBudgetName ? ` · Budget: ${lastBudgetName}` : ""}
+              {lastTags.length ? ` · Tags: ${lastTags.join(", ")}` : ""}
+              {expenseDefaults.payee ? ` · Payee: ${expenseDefaults.payee}` : ""}
+            </p>
+          ) : null}
           <QuickForms
             yearMonth={yearMonth}
             budgetPlans={quickAddBudgetPlans}

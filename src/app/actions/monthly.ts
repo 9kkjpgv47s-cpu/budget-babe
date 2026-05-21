@@ -2,6 +2,7 @@
 
 import path from "path";
 import { revalidatePath } from "next/cache";
+import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { addMonths, endOfDay, format, startOfDay } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
@@ -221,10 +222,7 @@ export async function addExpenseCore(
       source: "manual",
     },
   });
-  revalidatePath("/");
-  revalidatePath("/budgets");
-  revalidatePath("/insights");
-  revalidatePath("/flow");
+  revalidateLedgerPaths(yearMonth);
   return { ok: true };
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { unifiedQuickEntryAction } from "@/app/actions/monthly";
 import { initialFormState } from "@/lib/formActionState";
 import { tagsJsonToCommaList } from "@/lib/budgetRollup";
@@ -29,13 +30,23 @@ export function QuickForms({
   budgetPlans: { id: string; name: string }[];
   expenseDefaults: ExpenseDefaults;
 }) {
+  const router = useRouter();
   const [kind, setKind] = useState<EntryKind>("expense");
   const [state, action, pending] = useActionState(
     unifiedQuickEntryAction,
     initialFormState,
   );
 
+  useEffect(() => {
+    if (state?.ok) router.refresh();
+  }, [state?.ok, router]);
+
   const defaultTags = tagsJsonToCommaList(expenseDefaults.tagsJson);
+  const defaultBudgetId =
+    expenseDefaults.budgetPlanId &&
+    budgetPlans.some((p) => p.id === expenseDefaults.budgetPlanId)
+      ? expenseDefaults.budgetPlanId
+      : "";
 
   const submitLabel =
     kind === "expense"
@@ -99,7 +110,8 @@ export function QuickForms({
           />
           <select
             name="budgetPlanId"
-            defaultValue={expenseDefaults.budgetPlanId ?? ""}
+            defaultValue={defaultBudgetId}
+            key={`budget-${defaultBudgetId}-${state?.ok ? "ok" : "idle"}`}
             className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
           >
             <option value="">Budget envelope (optional)</option>

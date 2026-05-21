@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
@@ -14,16 +14,7 @@ import { applyMerchantRulesToTags } from "@/lib/merchantRules";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 
 function revalidateAll(yearMonth: string) {
-  revalidatePath("/");
-  revalidatePath("/budgets");
-  revalidatePath("/bills");
-  revalidatePath("/expenses");
-  revalidatePath(`/expenses?ym=${yearMonth}`);
-  revalidatePath("/import");
-  revalidatePath("/insights");
-  revalidatePath("/flow");
-  revalidatePath("/coach");
-  revalidatePath("/tax");
+  revalidateLedgerPaths(yearMonth);
 }
 
 function parseExpenseIds(raw: string): string[] {

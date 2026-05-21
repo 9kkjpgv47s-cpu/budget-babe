@@ -193,3 +193,18 @@ export async function remapBudgetPlanToPeriod(
   });
   return target?.id ?? null;
 }
+
+/** Sanitize defaults when a budget line was deleted or month has no plans yet. */
+export function sanitizeExpenseDefaultsForPlans(
+  defaults: ExpenseEntryDefaults,
+  planIds: Set<string> | string[],
+): ExpenseEntryDefaults {
+  const ids = planIds instanceof Set ? planIds : new Set(planIds);
+  return {
+    ...defaults,
+    budgetPlanId:
+      defaults.budgetPlanId && ids.has(defaults.budgetPlanId)
+        ? defaults.budgetPlanId
+        : null,
+  };
+}

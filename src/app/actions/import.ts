@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { requireUser } from "@/lib/auth";
 import {
   detectColumns,
@@ -15,15 +15,7 @@ import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
 
 function rev(yearMonth: string) {
-  revalidatePath("/");
-  revalidatePath("/budgets");
-  revalidatePath("/bills");
-  revalidatePath("/import");
-  revalidatePath("/insights");
-  revalidatePath("/flow");
-  revalidatePath("/coach");
-  revalidatePath("/expenses");
-  revalidatePath(`/expenses?ym=${yearMonth}`);
+  revalidateLedgerPaths(yearMonth);
 }
 
 export async function importCsvExpensesAction(

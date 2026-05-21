@@ -3,6 +3,7 @@
 import { randomUUID } from "crypto";
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
+import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
@@ -18,16 +19,7 @@ import type { ParsedReceiptLine } from "@/lib/receiptOcr";
 import { deleteReceiptStored, saveReceiptUpload } from "@/lib/uploads";
 
 function revalidateMoneyFromReceipt(yearMonth: string) {
-  revalidatePath("/");
-  revalidatePath("/receipts");
-  revalidatePath("/expenses");
-  revalidatePath(`/expenses?ym=${yearMonth}`);
-  revalidatePath("/insights");
-  revalidatePath("/flow");
-  revalidatePath("/coach");
-  revalidatePath("/budgets");
-  revalidatePath("/bills");
-  revalidatePath("/import");
+  revalidateLedgerPaths(yearMonth);
 }
 
 export async function uploadReceiptCore(

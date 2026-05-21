@@ -1,7 +1,7 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { revalidatePath } from "next/cache";
+import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
@@ -84,14 +84,6 @@ export async function createSplitExpensesAction(
       },
     });
   }
-  revalidatePath("/");
-  revalidatePath("/budgets");
-  revalidatePath("/bills");
-  revalidatePath("/expenses");
-  revalidatePath(`/expenses?ym=${yearMonth}`);
-  revalidatePath("/insights");
-  revalidatePath("/import");
-  revalidatePath("/flow");
-  revalidatePath("/coach");
+  revalidateLedgerPaths(yearMonth);
   return { ok: true, message: `Saved ${parsed.length} split lines (${splitGroupId.slice(0, 8)}…).` };
 }
