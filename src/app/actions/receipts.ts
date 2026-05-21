@@ -73,6 +73,7 @@ export async function createExpenseFromReceiptAction(
   const user = await requireUser();
   const receiptId = String(formData.get("receiptId") ?? "");
   const pageYearMonth = String(formData.get("yearMonth") ?? "").trim();
+  const postingHint = String(formData.get("postingYearMonth") ?? "").trim();
   const amountRaw = String(formData.get("amount") ?? "").trim();
   let description = String(formData.get("description") ?? "").trim();
   const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
@@ -99,9 +100,11 @@ export async function createExpenseFromReceiptAction(
     };
   }
   if (!description) description = `Receipt: ${receipt.filename}`;
+  const pageYmForResolve =
+    postingHint.match(/^\d{4}-\d{2}$/) ? postingHint : pageYearMonth;
   const { yearMonth, plans } = await resolveReceiptPostingContext(
     receiptId,
-    pageYearMonth,
+    pageYmForResolve,
   );
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   const lastDefaults = await getLastExpenseDefaultsForYearMonth(yearMonth);
@@ -131,7 +134,11 @@ export async function createExpenseFromReceiptAction(
   });
   revalidateMoneyFromReceipt(yearMonth);
   if (pageYearMonth !== yearMonth) revalidateMoneyFromReceipt(pageYearMonth);
-  return { ok: true };
+  const msg =
+    yearMonth !== pageYearMonth
+      ? `Expense added to ${yearMonth} (receipt month).`
+      : "Expense added — view on Overview or Expenses.";
+  return { ok: true, message: msg };
 }
 
 export async function createExpensesFromReceiptLinesAction(
@@ -141,6 +148,7 @@ export async function createExpensesFromReceiptLinesAction(
   const user = await requireUser();
   const receiptId = String(formData.get("receiptId") ?? "");
   const pageYearMonth = String(formData.get("yearMonth") ?? "").trim();
+  const postingHint = String(formData.get("postingYearMonth") ?? "").trim();
   const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
   if (!receiptId || !pageYearMonth.match(/^\d{4}-\d{2}$/)) {
     return { error: "Missing receipt or month." };
@@ -163,9 +171,11 @@ export async function createExpensesFromReceiptLinesAction(
   } catch {
     return { error: "Could not read parsed lines." };
   }
+  const pageYmForResolve =
+    postingHint.match(/^\d{4}-\d{2}$/) ? postingHint : pageYearMonth;
   const { yearMonth, plans } = await resolveReceiptPostingContext(
     receiptId,
-    pageYearMonth,
+    pageYmForResolve,
   );
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   const lastDefaults = await getLastExpenseDefaultsForYearMonth(yearMonth);
@@ -217,7 +227,12 @@ export async function createExpensesFromReceiptLinesAction(
   }
   revalidateMoneyFromReceipt(yearMonth);
   if (pageYearMonth !== yearMonth) revalidateMoneyFromReceipt(pageYearMonth);
-  return { ok: true, message: `Posted ${created} expense line(s) with one split group.` };
+  const monthNote =
+    yearMonth !== pageYearMonth ? ` to ${yearMonth}` : "";
+  return {
+    ok: true,
+    message: `Posted ${created} expense line(s)${monthNote} with one split group.`,
+  };
 }
 
 export async function moveReceiptToMonthAction(formData: FormData): Promise<void> {

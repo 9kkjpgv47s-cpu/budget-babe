@@ -4,6 +4,10 @@ import { requireUser } from "@/lib/auth";
 import { currentYearMonth } from "@/lib/yearMonth";
 import { deleteMerchantRuleAction, addMerchantRuleAction } from "@/app/actions/rules";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
+import {
+  getLastExpenseDefaultsForYearMonth,
+  sanitizeExpenseDefaultsForPlans,
+} from "@/lib/entryDefaults";
 import { ImportBulkSection } from "./ImportBulkSection";
 
 export default async function ImportPage({
@@ -24,6 +28,10 @@ export default async function ImportPage({
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });
+  const splitDefaults = sanitizeExpenseDefaultsForPlans(
+    await getLastExpenseDefaultsForYearMonth(yearMonth),
+    budgetPlans.map((p) => p.id),
+  );
 
   return (
     <div className="space-y-10">
@@ -63,7 +71,11 @@ export default async function ImportPage({
         </p>
       </div>
 
-      <ImportBulkSection yearMonth={yearMonth} budgetPlans={budgetPlans} />
+      <ImportBulkSection
+        yearMonth={yearMonth}
+        budgetPlans={budgetPlans}
+        defaultBudgetPlanId={splitDefaults.budgetPlanId}
+      />
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">Merchant rules</h2>

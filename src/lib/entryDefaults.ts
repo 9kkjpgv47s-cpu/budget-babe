@@ -157,6 +157,28 @@ export async function coerceBudgetPlanInPeriod(
  * Apply merchant rules + budget suggestion, then validate budget in period.
  * Use from all manual expense create/update paths.
  */
+/** Reuse a payee when description contains a recent payee string this month. */
+export async function suggestPayeeForDescription(
+  description: string,
+  monthlyPeriodId: string,
+): Promise<string | null> {
+  const recent = await prisma.expense.findMany({
+    where: { monthlyPeriodId, payee: { not: null } },
+    orderBy: { spentAt: "desc" },
+    take: 40,
+    select: { payee: true },
+  });
+  const d = description.toLowerCase();
+  const seen = new Set<string>();
+  for (const row of recent) {
+    const p = row.payee?.trim();
+    if (!p || p.length < 3 || seen.has(p.toLowerCase())) continue;
+    seen.add(p.toLowerCase());
+    if (d.includes(p.toLowerCase())) return p;
+  }
+  return null;
+}
+
 export async function finalizeExpenseDraftForPeriod(
   draft: MerchantRuleDraft,
   monthlyPeriodId: string,
@@ -167,7 +189,21 @@ export async function finalizeExpenseDraftForPeriod(
     withRules.budgetPlanId,
     monthlyPeriodId,
   );
-  return { ...withRules, budgetPlanId };
+  let payee = withRules.payee;
+  if (!payee?.trim() && draft.description.trim()) {
+    payee = await suggestPayeeForDescription(draft.description, monthlyPeriodId);
+  }
+  return { ...withRules, budgetPlanId, payee: payee ?? null };
+}
+
+export function expenseDefaultsFromDraft(
+  draft: MerchantRuleDraft,
+): ExpenseEntryDefaults {
+  return {
+    budgetPlanId: draft.budgetPlanId,
+    tagsJson: draft.tagsJson,
+    payee: draft.payee,
+  };
 }
 
 /**

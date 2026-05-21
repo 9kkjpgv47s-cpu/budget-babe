@@ -12,9 +12,11 @@ import { initialFormState } from "@/lib/formActionState";
 export function ImportBulkSection({
   yearMonth,
   budgetPlans,
+  defaultBudgetPlanId,
 }: {
   yearMonth: string;
   budgetPlans: { id: string; name: string }[];
+  defaultBudgetPlanId?: string | null;
 }) {
   const [csvState, csvAction, csvPending] = useActionState(
     importCsvExpensesAction,
@@ -188,7 +190,7 @@ export function ImportBulkSection({
           <select
             name="budgetPlanId"
             className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-            defaultValue=""
+            defaultValue={defaultBudgetPlanId ?? ""}
           >
             <option value="">Shared budget (optional)</option>
             {budgetPlans.map((p) => (
