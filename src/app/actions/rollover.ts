@@ -4,11 +4,8 @@ import { revalidatePath } from "next/cache";
 import { addMonths, format } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-import {
-  spentForBudgetPlan,
-  type BudgetPlanForRollup,
-  type ExpenseForRollup,
-} from "@/lib/budgetRollup";
+import { spentForBudgetPlan, type BudgetPlanForRollup } from "@/lib/budgetRollup";
+import { loadExpenseRollupsForPeriodId } from "@/lib/expenseRollup";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { parseYearMonth } from "@/lib/yearMonth";
 
@@ -44,19 +41,11 @@ export async function applySuggestedRolloversForYearMonth(
   ]);
   if (!prevPeriod) return;
 
-  const [curPlans, prevPlans, prevExpenses] = await Promise.all([
+  const [curPlans, prevPlans, prevExpRoll] = await Promise.all([
     prisma.budgetPlan.findMany({ where: { monthlyPeriodId: curPeriod.id } }),
     prisma.budgetPlan.findMany({ where: { monthlyPeriodId: prevPeriod.id } }),
-    prisma.expense.findMany({ where: { monthlyPeriodId: prevPeriod.id } }),
+    loadExpenseRollupsForPeriodId(prevPeriod.id),
   ]);
-
-  const prevExpRoll: ExpenseForRollup[] = prevExpenses.map((e) => ({
-    id: e.id,
-    description: e.description,
-    amountCents: e.amountCents,
-    budgetPlanId: e.budgetPlanId,
-    tagsJson: e.tagsJson,
-  }));
 
   for (const cp of curPlans) {
     const match = prevPlans.find((p) => normName(p.name) === normName(cp.name));

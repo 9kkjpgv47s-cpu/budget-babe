@@ -24,7 +24,10 @@ export default async function ImportPage({
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       include: { category: { select: { id: true, name: true } } },
     }),
-    prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
+    prisma.category.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      include: { _count: { select: { expenses: true } } },
+    }),
   ]);
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   const budgetPlans = await prisma.budgetPlan.findMany({
@@ -41,8 +44,9 @@ export default async function ImportPage({
           Paste bank **CSV**, **OFX/QFX**, or **QIF** exports. Duplicates in the
           same month are skipped. Optional column numbers fix weird CSV layouts.
           Rules add tags when a description contains your pattern. Optional category
-          assigns a canonical class (links budget envelope + tax folder). CSV may
-          include a Category column.
+          assigns a canonical class (links budget envelope + tax folder). CSV import
+          and export support a <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">category</code>{" "}
+          column (name or slug).
         </p>
         <p className="mt-2 text-sm">
           <Link href={`/?ym=${yearMonth}`} className="text-emerald-600 underline">
@@ -86,6 +90,7 @@ export default async function ImportPage({
           matchText: c.matchText,
           budgetEnvelopeName: c.budgetEnvelopeName,
           defaultTaxCategory: c.defaultTaxCategory,
+          expenseCount: c._count.expenses,
         }))}
       />
 

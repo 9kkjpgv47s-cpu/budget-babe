@@ -9,10 +9,7 @@ import {
   envelopeRemaining,
   type BudgetPlanForRollup,
 } from "@/lib/budgetRollup";
-import {
-  buildCategoryEnvelopeLookup,
-  toExpenseForRollup,
-} from "@/lib/expenseRollup";
+import { loadExpenseRollupsForYearMonth } from "@/lib/expenseRollup";
 import { applySuggestedRolloversAction } from "@/app/actions/rollover";
 import { ensureDefaultCategories } from "@/lib/categories";
 import { BudgetAddForm } from "../BudgetAddForm";
@@ -39,37 +36,23 @@ export default async function BudgetsPage({
   const prevYm = shiftYearMonth(ym, -1);
   const nextYm = shiftYearMonth(ym, 1);
 
-  const [budgetPlans, expenses, prevExists, categories] = await Promise.all([
-    prisma.budgetPlan.findMany({
-      where: { monthlyPeriodId: period.id },
-      orderBy: { name: "asc" },
-    }),
-    prisma.expense.findMany({
-      where: { monthlyPeriodId: period.id },
-    }),
-    prisma.monthlyPeriod.findUnique({ where: { yearMonth: prevYm } }),
-    prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
-  ]);
-
-  const categoryLookup = buildCategoryEnvelopeLookup(
-    categories.map((c) => ({
-      id: c.id,
-      budgetEnvelopeName: c.budgetEnvelopeName,
-    })),
-  );
-  const expForRollup = expenses.map((e) =>
-    toExpenseForRollup(
-      {
-        id: e.id,
-        description: e.description,
-        amountCents: e.amountCents,
-        budgetPlanId: e.budgetPlanId,
-        categoryId: e.categoryId,
-        tagsJson: e.tagsJson,
-      },
-      categoryLookup,
-    ),
-  );
+  const [budgetPlans, expForRollup, prevExists, categories, expenses] =
+    await Promise.all([
+      prisma.budgetPlan.findMany({
+        where: { monthlyPeriodId: period.id },
+        orderBy: { name: "asc" },
+      }),
+      loadExpenseRollupsForYearMonth(ym),
+      prisma.monthlyPeriod.findUnique({ where: { yearMonth: prevYm } }),
+      prisma.category.findMany({
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        include: { _count: { select: { expenses: true } } },
+      }),
+      prisma.expense.findMany({
+        where: { monthlyPeriodId: period.id },
+        select: { id: true, categoryId: true, amountCents: true },
+      }),
+    ]);
 
   const categorySpendMap = new Map<string, { name: string; count: number; totalCents: number }>();
   for (const e of expenses) {
@@ -197,6 +180,7 @@ export default async function BudgetsPage({
           matchText: c.matchText,
           budgetEnvelopeName: c.budgetEnvelopeName,
           defaultTaxCategory: c.defaultTaxCategory,
+          expenseCount: c._count.expenses,
         }))}
       />
     </div>

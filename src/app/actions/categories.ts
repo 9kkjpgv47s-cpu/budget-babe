@@ -7,6 +7,7 @@ import {
   applyCategoryDefaultsToExpense,
   ensureDefaultCategories,
   fieldsFromCategoryId,
+  linkCategoriesToBudgetEnvelope,
   resolveBudgetPlanIdForCategory,
   slugifyCategoryName,
 } from "@/lib/categories";
@@ -52,6 +53,7 @@ export async function addCategoryAction(formData: FormData): Promise<void> {
       sortOrder: (maxOrder._max.sortOrder ?? 0) + 1,
     },
   });
+  await linkCategoriesToBudgetEnvelope(budgetEnvelopeName);
   revalidateCategoryPaths();
 }
 
@@ -129,6 +131,12 @@ export async function deleteCategoryAction(formData: FormData): Promise<void> {
   await requireUser();
   const id = String(formData.get("id") ?? "");
   if (!id) return;
+  const used = await prisma.expense.count({ where: { categoryId: id } });
+  if (used > 0) return;
+  await prisma.merchantRule.updateMany({
+    where: { categoryId: id },
+    data: { categoryId: null },
+  });
   await prisma.category.delete({ where: { id } });
   revalidateCategoryPaths();
 }

@@ -237,9 +237,16 @@ src/app/(app)/import/**                 # Column mapping + category assignment o
 
 ### Acceptance criteria
 
-- [ ] Single migration tranche; `prisma migrate` passes
-- [ ] Expense saved with category → insights/budget rollups reflect without manual envelope pick
-- [ ] Public `suggestCategoryForDescription` exported; no imports from `receipts/` into `expenses/` (one-way)
+- [x] Single migration tranche; `prisma migrate` passes
+- [x] Expense saved with category → insights/budget rollups reflect without manual envelope pick
+- [x] Public `suggestCategoryForDescription` exported; no imports from `receipts/` into `expenses/` (one-way)
+
+### Shipped beyond original deliverables (Agent 3 branch)
+
+- Quick add + split + import category pickers; live suggestion API (`/api/categories/suggest`)
+- Tax folder sync from categories (bulk + per-save); budget envelope auto-link on plan create/rename
+- Missing-envelope panel; spending-by-category summary; editable merchant rules
+- CSV export includes `category` / `category_slug`; rollover uses category-aware rollups
 
 ---
 

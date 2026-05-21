@@ -12,6 +12,7 @@ export type CategoryRow = {
   matchText: string | null;
   budgetEnvelopeName: string | null;
   defaultTaxCategory: string | null;
+  expenseCount: number;
 };
 
 export function CategorySection({ categories }: { categories: CategoryRow[] }) {
@@ -110,15 +111,22 @@ export function CategorySection({ categories }: { categories: CategoryRow[] }) {
                 </button>
               </div>
             </form>
-            <form action={deleteCategoryAction} className="mt-2">
-              <input type="hidden" name="id" value={c.id} />
-              <button
-                type="submit"
-                className="text-xs text-red-600 underline hover:no-underline"
-              >
-                Delete category
-              </button>
-            </form>
+            {c.expenseCount > 0 ? (
+              <p className="mt-2 text-xs text-zinc-500">
+                {c.expenseCount} expense{c.expenseCount === 1 ? "" : "s"} use this category —
+                reassign before delete.
+              </p>
+            ) : (
+              <form action={deleteCategoryAction} className="mt-2">
+                <input type="hidden" name="id" value={c.id} />
+                <button
+                  type="submit"
+                  className="text-xs text-red-600 underline hover:no-underline"
+                >
+                  Delete category
+                </button>
+              </form>
+            )}
           </li>
         ))}
       </ul>
