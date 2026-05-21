@@ -45,6 +45,7 @@ export function ReceiptPostExpenseForm({
       <form action={action} className="grid gap-1.5 text-[11px] sm:grid-cols-2">
         <input type="hidden" name="receiptId" value={receiptId} />
         <input type="hidden" name="yearMonth" value={yearMonth} />
+        <input type="hidden" name="postingYearMonth" value={postingYearMonth} />
         <input
           name="amount"
           placeholder="Amount (uses OCR total if empty)"
@@ -88,7 +89,7 @@ export function ReceiptPostExpenseForm({
         ) : null}
         {state?.ok ? (
           <p className="sm:col-span-2 text-xs text-emerald-800 dark:text-emerald-200">
-            Expense added — view on Overview or Expenses.
+            {state.message ?? "Expense added — view on Overview or Expenses."}
           </p>
         ) : null}
       </form>

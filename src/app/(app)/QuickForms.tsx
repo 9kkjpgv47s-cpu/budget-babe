@@ -32,21 +32,30 @@ export function QuickForms({
 }) {
   const router = useRouter();
   const [kind, setKind] = useState<EntryKind>("expense");
+  const [liveDefaults, setLiveDefaults] = useState(expenseDefaults);
   const [state, action, pending] = useActionState(
     unifiedQuickEntryAction,
     initialFormState,
   );
 
   useEffect(() => {
-    if (state?.ok) router.refresh();
-  }, [state?.ok, router]);
+    setLiveDefaults(expenseDefaults);
+  }, [expenseDefaults]);
 
-  const defaultTags = tagsJsonToCommaList(expenseDefaults.tagsJson);
+  useEffect(() => {
+    if (state?.ok) {
+      if (state.entryDefaults) setLiveDefaults(state.entryDefaults);
+      router.refresh();
+    }
+  }, [state?.ok, state?.entryDefaults, router]);
+
+  const defaultTags = tagsJsonToCommaList(liveDefaults.tagsJson);
   const defaultBudgetId =
-    expenseDefaults.budgetPlanId &&
-    budgetPlans.some((p) => p.id === expenseDefaults.budgetPlanId)
-      ? expenseDefaults.budgetPlanId
+    liveDefaults.budgetPlanId &&
+    budgetPlans.some((p) => p.id === liveDefaults.budgetPlanId)
+      ? liveDefaults.budgetPlanId
       : "";
+  const formKey = state?.ok ? `saved-${defaultBudgetId}-${defaultTags}` : "idle";
 
   const submitLabel =
     kind === "expense"
@@ -58,7 +67,12 @@ export function QuickForms({
           : "Add paycheck";
 
   return (
-    <form action={action} className="mt-4 space-y-4" encType="multipart/form-data">
+    <form
+      key={kind === "expense" ? formKey : kind}
+      action={action}
+      className="mt-4 space-y-4"
+      encType="multipart/form-data"
+    >
       <input type="hidden" name="yearMonth" value={yearMonth} />
 
       <div className="space-y-2">
@@ -105,7 +119,7 @@ export function QuickForms({
           <input
             name="payee"
             placeholder="Payee / store (optional)"
-            defaultValue={expenseDefaults.payee ?? ""}
+            defaultValue={liveDefaults.payee ?? ""}
             className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
           />
           <div className="sm:col-span-2">

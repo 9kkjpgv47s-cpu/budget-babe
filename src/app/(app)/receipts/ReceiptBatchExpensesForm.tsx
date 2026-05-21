@@ -28,6 +28,7 @@ export function ReceiptBatchExpensesForm({
     <form action={action} className="mt-2 space-y-1">
       <input type="hidden" name="receiptId" value={receiptId} />
       <input type="hidden" name="yearMonth" value={yearMonth} />
+      <input type="hidden" name="postingYearMonth" value={postingYearMonth} />
       {budgetPlans.length > 0 ? (
         <select
           name="budgetPlanId"

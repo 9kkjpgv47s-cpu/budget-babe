@@ -15,6 +15,7 @@ import { parseYearMonth } from "@/lib/yearMonth";
 import type { FormActionState } from "@/lib/formActionState";
 import {
   commaListToTagsJson,
+  expenseDefaultsFromDraft,
   finalizeExpenseDraftForPeriod,
   getBudgetPlansForYearMonth,
 } from "@/lib/entryDefaults";
@@ -223,7 +224,7 @@ export async function addExpenseCore(
     },
   });
   revalidateLedgerPaths(yearMonth);
-  return { ok: true };
+  return { ok: true, entryDefaults: expenseDefaultsFromDraft(draft) };
 }
 
 export async function addExpenseAction(
