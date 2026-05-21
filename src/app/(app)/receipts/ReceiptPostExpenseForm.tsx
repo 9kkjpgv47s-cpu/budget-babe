@@ -7,12 +7,12 @@ import { initialFormState } from "@/lib/formActionState";
 export function ReceiptPostExpenseForm({
   receiptId,
   yearMonth,
-  filename,
   totalCents,
   budgetPlans,
   defaultBudgetPlanId,
   defaultPayee,
   postingYearMonth,
+  suggestedDescription,
 }: {
   receiptId: string;
   yearMonth: string;
@@ -23,6 +23,7 @@ export function ReceiptPostExpenseForm({
   defaultPayee?: string | null;
   /** Resolved ledger month (receipt month wins over page ?ym=). */
   postingYearMonth: string;
+  suggestedDescription: string;
 }) {
   const [state, action, pending] = useActionState(
     createExpenseFromReceiptAction,
@@ -30,7 +31,7 @@ export function ReceiptPostExpenseForm({
   );
   const defaultAmt =
     totalCents != null && totalCents > 0 ? (totalCents / 100).toFixed(2) : "";
-  const defaultDesc = `Receipt: ${filename}`;
+  const defaultDesc = suggestedDescription;
 
   return (
     <div className="mt-3 rounded border border-emerald-200 bg-emerald-50/40 p-2 dark:border-emerald-900/50 dark:bg-emerald-950/20">

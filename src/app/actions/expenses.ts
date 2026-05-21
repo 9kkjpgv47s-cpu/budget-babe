@@ -49,10 +49,21 @@ export async function bulkApplyTagsToExpensesAction(formData: FormData): Promise
       tagMode === "replace"
         ? mergeTagLists(tagsRaw)
         : mergeTagLists(parseTagsJson(exp.tagsJson), tagsRaw);
+    const plans = await getBudgetPlansForYearMonth(yearMonth);
+    const draft = await finalizeExpenseDraftForPeriod(
+      {
+        description: exp.description,
+        tagsJson: manual ?? exp.tagsJson,
+        budgetPlanId: exp.budgetPlanId,
+        payee: exp.payee,
+      },
+      period.id,
+      plans,
+    );
     const classified = await classifyExpenseForWrite(exp.description, period.id, {
       categoryId: exp.categoryId,
-      tagsJson: manual,
-      budgetPlanId: exp.budgetPlanId,
+      tagsJson: draft.tagsJson,
+      budgetPlanId: draft.budgetPlanId,
       taxCategory: exp.taxCategory,
     });
     await prisma.expense.update({
@@ -60,8 +71,9 @@ export async function bulkApplyTagsToExpensesAction(formData: FormData): Promise
       data: {
         tagsJson: classified.tagsJson,
         categoryId: classified.categoryId,
-        budgetPlanId: classified.budgetPlanId,
+        budgetPlanId: classified.budgetPlanId ?? draft.budgetPlanId,
         taxCategory: classified.taxCategory,
+        payee: draft.payee,
       },
     });
   }
@@ -85,12 +97,30 @@ export async function bulkSetBudgetForExpensesAction(formData: FormData): Promis
     if (!plan) return;
     budgetPlanId = plan.id;
   }
+  const plans = await getBudgetPlansForYearMonth(yearMonth);
   for (const id of ids) {
     const exp = await prisma.expense.findFirst({
       where: { id, monthlyPeriodId: period.id },
     });
     if (!exp) continue;
-    await prisma.expense.update({ where: { id }, data: { budgetPlanId } });
+    const draft = await finalizeExpenseDraftForPeriod(
+      {
+        description: exp.description,
+        tagsJson: exp.tagsJson,
+        budgetPlanId,
+        payee: exp.payee,
+      },
+      period.id,
+      plans,
+    );
+    await prisma.expense.update({
+      where: { id },
+      data: {
+        budgetPlanId: draft.budgetPlanId,
+        tagsJson: draft.tagsJson,
+        payee: draft.payee,
+      },
+    });
   }
   revalidateAll(yearMonth);
 }

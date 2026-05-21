@@ -46,30 +46,20 @@ export async function applyMerchantRulesToTags(
 }
 
 /**
- * Re-run all merchant rules against existing expenses for a month.
- * Only updates rows whose tag JSON would change.
+ * Re-run entry defaults (tags, budget suggestion, payee) on existing expenses for a month.
  */
 export async function applyMerchantRulesToExistingExpenses(
   monthlyPeriodId: string,
+  yearMonth: string,
 ): Promise<{ updated: number; scanned: number }> {
-  const expenses = await prisma.expense.findMany({
-    where: { monthlyPeriodId },
-    select: { id: true, description: true, tagsJson: true },
-  });
-
-  let updated = 0;
-  for (const exp of expenses) {
-    const nextTags = await applyMerchantRulesToTags(exp.description, exp.tagsJson);
-    const prev = exp.tagsJson ?? null;
-    if (nextTags === prev) continue;
-    await prisma.expense.update({
-      where: { id: exp.id },
-      data: { tagsJson: nextTags },
-    });
-    updated += 1;
-  }
-
-  return { updated, scanned: expenses.length };
+  const { applyEntryDefaultsToExistingExpenses } = await import(
+    "@/lib/entryDefaults"
+  );
+  const result = await applyEntryDefaultsToExistingExpenses(
+    monthlyPeriodId,
+    yearMonth,
+  );
+  return { updated: result.updated, scanned: result.scanned };
 }
 
 function descriptionMatchesPattern(description: string, pattern: string): boolean {
