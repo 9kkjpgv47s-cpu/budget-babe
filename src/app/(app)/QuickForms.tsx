@@ -216,6 +216,11 @@ export function QuickForms({
       {state?.error ? (
         <p className="text-sm text-red-600">{state.error}</p>
       ) : null}
+      {state?.ok ? (
+        <p className="text-sm text-emerald-700 dark:text-emerald-300">
+          Saved. Budget and tags will pre-fill your next entry this month.
+        </p>
+      ) : null}
     </form>
   );
 }

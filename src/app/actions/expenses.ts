@@ -53,7 +53,7 @@ export async function bulkApplyTagsToExpensesAction(formData: FormData): Promise
       tagMode === "replace"
         ? mergeTagLists(tagsRaw)
         : mergeTagLists(parseTagsJson(exp.tagsJson), tagsRaw);
-    const tagsJson = await applyMerchantRulesToTags(exp.description, manual);
+    const tagsJson = await applyMerchantRulesToTags(exp.description, manual ?? exp.tagsJson);
     await prisma.expense.update({ where: { id }, data: { tagsJson } });
   }
   revalidateAll(yearMonth);

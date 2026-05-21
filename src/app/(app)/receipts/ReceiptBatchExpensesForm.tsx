@@ -10,12 +10,14 @@ export function ReceiptBatchExpensesForm({
   lineCount,
   budgetPlans,
   defaultBudgetPlanId,
+  postingYearMonth,
 }: {
   receiptId: string;
   yearMonth: string;
   lineCount: number;
   budgetPlans: { id: string; name: string }[];
   defaultBudgetPlanId?: string | null;
+  postingYearMonth: string;
 }) {
   const [state, action, pending] = useActionState(
     createExpensesFromReceiptLinesAction,
@@ -50,6 +52,9 @@ export function ReceiptBatchExpensesForm({
       <p className="text-[10px] text-zinc-500">
         One split group, each line linked to this receipt. Won’t run if any expense
         already uses this receipt.
+        {postingYearMonth !== yearMonth ? (
+          <> Posts to ledger month {postingYearMonth}.</>
+        ) : null}
       </p>
       {state?.error ? <p className="text-[11px] text-red-600">{state.error}</p> : null}
       {state?.message ? (

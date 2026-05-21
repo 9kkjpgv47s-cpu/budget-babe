@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { currentYearMonth, parseYearMonth } from "@/lib/yearMonth";
 import {
   getLastExpenseDefaultsForYearMonth,
-  resolvePostingYearMonth,
+  resolveReceiptPostingContext,
 } from "@/lib/entryDefaults";
 import { ReceiptUploadForm } from "./ReceiptUploadForm";
 import { ReceiptListItem } from "./ReceiptOcrSection";
@@ -28,19 +28,25 @@ export default async function ReceiptsPage({
     format(addMonths(parseYearMonth(yearMonth), i - 6), "yyyy-MM"),
   );
 
-  const [receipts, budgetPlans, expenseDefaults] = await Promise.all([
-    prisma.receipt.findMany({
-      where: { monthlyPeriodId: period.id },
-      orderBy: { uploadedAt: "desc" },
-      include: { user: { select: { name: true } } },
+  const receipts = await prisma.receipt.findMany({
+    where: { monthlyPeriodId: period.id },
+    orderBy: { uploadedAt: "desc" },
+    include: { user: { select: { name: true } } },
+  });
+
+  const receiptRows = await Promise.all(
+    receipts.map(async (r) => {
+      const ctx = await resolveReceiptPostingContext(r.id, yearMonth);
+      const defaults = await getLastExpenseDefaultsForYearMonth(ctx.yearMonth);
+      return {
+        receipt: r,
+        postingYearMonth: ctx.yearMonth,
+        postingBudgetPlans: ctx.plans.map((p) => ({ id: p.id, name: p.name })),
+        defaultBudgetPlanId: defaults.budgetPlanId,
+        defaultPayee: defaults.payee,
+      };
     }),
-    prisma.budgetPlan.findMany({
-      where: { monthlyPeriodId: period.id },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
-    getLastExpenseDefaultsForYearMonth(yearMonth),
-  ]);
+  );
 
   const ocrPending = receipts.some(
     (r) => r.ocrStatus === "pending" || r.ocrStatus === "processing",
@@ -82,26 +88,16 @@ export default async function ReceiptsPage({
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">This month</h2>
         <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
-          {(
-            await Promise.all(
-              receipts.map(async (r) => ({
-                receipt: r,
-                postingYearMonth: await resolvePostingYearMonth({
-                  receiptId: r.id,
-                  pageYearMonth: yearMonth,
-                }),
-              })),
-            )
-          ).map(({ receipt: r, postingYearMonth }) => (
+          {receiptRows.map((row) => (
             <ReceiptListItem
-              key={r.id}
-              receipt={r}
+              key={row.receipt.id}
+              receipt={row.receipt}
               yearMonth={yearMonth}
-              budgetPlans={budgetPlans}
+              budgetPlans={row.postingBudgetPlans}
               monthOptions={monthOptions}
-              defaultBudgetPlanId={expenseDefaults.budgetPlanId}
-              defaultPayee={expenseDefaults.payee}
-              postingYearMonth={postingYearMonth}
+              defaultBudgetPlanId={row.defaultBudgetPlanId}
+              defaultPayee={row.defaultPayee}
+              postingYearMonth={row.postingYearMonth}
             />
           ))}
         </ul>

@@ -169,3 +169,27 @@ export async function finalizeExpenseDraftForPeriod(
   );
   return { ...withRules, budgetPlanId };
 }
+
+/**
+ * When an expense moves to another month, map budget by envelope name in the target month.
+ */
+export async function remapBudgetPlanToPeriod(
+  budgetPlanId: string | null,
+  sourceMonthlyPeriodId: string,
+  targetMonthlyPeriodId: string,
+): Promise<string | null> {
+  if (!budgetPlanId) return null;
+  if (sourceMonthlyPeriodId === targetMonthlyPeriodId) {
+    return coerceBudgetPlanInPeriod(budgetPlanId, targetMonthlyPeriodId);
+  }
+  const source = await prisma.budgetPlan.findFirst({
+    where: { id: budgetPlanId, monthlyPeriodId: sourceMonthlyPeriodId },
+    select: { name: true },
+  });
+  if (!source) return null;
+  const target = await prisma.budgetPlan.findFirst({
+    where: { monthlyPeriodId: targetMonthlyPeriodId, name: source.name },
+    select: { id: true },
+  });
+  return target?.id ?? null;
+}

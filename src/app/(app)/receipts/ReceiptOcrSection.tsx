@@ -134,6 +134,7 @@ export function ReceiptOcrSection({
           lineCount={linesWithAmount.length}
           budgetPlans={budgetPlans}
           defaultBudgetPlanId={defaultBudgetPlanId}
+          postingYearMonth={postingYearMonth}
         />
       ) : null}
       <ReceiptPostExpenseForm

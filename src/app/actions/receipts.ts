@@ -11,6 +11,7 @@ import type { FormActionState } from "@/lib/formActionState";
 import {
   finalizeExpenseDraftForPeriod,
   getLastExpenseDefaultsForYearMonth,
+  remapBudgetPlanToPeriod,
   resolveReceiptPostingContext,
 } from "@/lib/entryDefaults";
 import type { ParsedReceiptLine } from "@/lib/receiptOcr";
@@ -247,10 +248,21 @@ export async function moveReceiptToMonthAction(formData: FormData): Promise<void
     data: { monthlyPeriodId: period.id },
   });
   if (moveLinkedExpenses) {
-    await prisma.expense.updateMany({
+    const linked = await prisma.expense.findMany({
       where: { receiptId },
-      data: { monthlyPeriodId: period.id },
+      select: { id: true, budgetPlanId: true },
     });
+    for (const exp of linked) {
+      const budgetPlanId = await remapBudgetPlanToPeriod(
+        exp.budgetPlanId,
+        rec.monthlyPeriodId,
+        period.id,
+      );
+      await prisma.expense.update({
+        where: { id: exp.id },
+        data: { monthlyPeriodId: period.id, budgetPlanId },
+      });
+    }
   }
   revalidatePath("/receipts");
   revalidateMoneyFromReceipt(targetYm);
