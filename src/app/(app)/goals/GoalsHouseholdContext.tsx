@@ -2,14 +2,26 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getDashboardData } from "@/lib/dashboardData";
 import { buildPaycheckCoach } from "@/lib/paycheckCoach";
+import {
+  buildGoalsCoachRecommendations,
+  snapshotGoalsForCoach,
+} from "@/lib/coachGoalRecommendations";
 import { formatCents } from "@/lib/money";
 
 export async function GoalsHouseholdContext({ yearMonth }: { yearMonth: string }) {
-  const [data, goalTotals] = await Promise.all([
+  const [data, goalTotals, goalRows] = await Promise.all([
     getDashboardData(yearMonth),
     prisma.savingsGoal.aggregate({
       _sum: { savedAmountCents: true, targetAmountCents: true },
       _count: true,
+    }),
+    prisma.savingsGoal.findMany({
+      orderBy: { title: "asc" },
+      select: {
+        title: true,
+        targetAmountCents: true,
+        savedAmountCents: true,
+      },
     }),
   ]);
 
@@ -39,6 +51,14 @@ export async function GoalsHouseholdContext({ yearMonth }: { yearMonth: string }
   const coachMonthlySave =
     coach != null
       ? coach.savingsThisPayCents * data.payPeriodsPerMonth
+      : null;
+  const coachGoalHint =
+    coachMonthlySave != null && coachMonthlySave > 0
+      ? buildGoalsCoachRecommendations(
+          coachMonthlySave,
+          data.payPeriodsPerMonth,
+          snapshotGoalsForCoach(goalRows),
+        )[0]
       : null;
 
   return (
@@ -99,13 +119,18 @@ export async function GoalsHouseholdContext({ yearMonth }: { yearMonth: string }
           </dd>
         </div>
       </dl>
+      {coachGoalHint ? (
+        <p className="mt-3 rounded-lg bg-violet-100/80 px-3 py-2 text-xs text-violet-950 dark:bg-violet-950/50 dark:text-violet-100">
+          {coachGoalHint}
+        </p>
+      ) : null}
       <p className="mt-3 text-xs">
         <Link href={`/?ym=${yearMonth}`} className="text-emerald-700 underline dark:text-emerald-400">
           Overview
         </Link>
         {" · "}
         <Link href={`/coach?ym=${yearMonth}`} className="text-emerald-700 underline dark:text-emerald-400">
-          Coach settings
+          Coach recommendations
         </Link>
       </p>
     </section>

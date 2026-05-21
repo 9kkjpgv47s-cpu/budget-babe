@@ -1,9 +1,10 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { formatCents } from "@/lib/money";
 import { currentYearMonth } from "@/lib/yearMonth";
 import { CashFlowSiloCallout } from "@/components/CashFlowSiloCallout";
+import { NetWorthCashFlowCompare } from "@/components/NetWorthCashFlowCompare";
+import { MonthWorkflowLinks } from "@/components/MonthWorkflowLinks";
 import {
   addNetWorthAccountAction,
   deleteNetWorthAccountAction,
@@ -11,8 +12,15 @@ import {
   updateNetWorthAccountAction,
 } from "@/app/actions/networth";
 
-export default async function NetWorthPage() {
+export default async function NetWorthPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ym?: string }>;
+}) {
   await requireUser();
+  const sp = await searchParams;
+  const yearMonth =
+    sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
   const [accounts, snapshots] = await Promise.all([
     prisma.netWorthAccount.findMany({ orderBy: { sortOrder: "asc" } }),
     prisma.netWorthSnapshot.findMany({
@@ -35,14 +43,14 @@ export default async function NetWorthPage() {
         <p className="mt-1 text-sm text-zinc-500">
           Manual accounts (no bank sync). Record snapshots to track history.
         </p>
-        <p className="mt-2 text-sm">
-          <Link href={`/?ym=${currentYearMonth()}`} className="text-emerald-600 underline">
-            ← Overview
-          </Link>
-        </p>
+        <div className="mt-2">
+          <MonthWorkflowLinks yearMonth={yearMonth} />
+        </div>
       </div>
 
-      <CashFlowSiloCallout variant="net-worth" yearMonth={currentYearMonth()} />
+      <CashFlowSiloCallout variant="net-worth" yearMonth={yearMonth} />
+
+      <NetWorthCashFlowCompare yearMonth={yearMonth} />
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">Current totals</h2>

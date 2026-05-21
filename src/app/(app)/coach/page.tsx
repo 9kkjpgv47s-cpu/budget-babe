@@ -1,9 +1,15 @@
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { getDashboardData } from "@/lib/dashboardData";
 import { currentYearMonth } from "@/lib/yearMonth";
 import { formatCents } from "@/lib/money";
 import { buildPaycheckCoach } from "@/lib/paycheckCoach";
+import {
+  buildGoalsCoachRecommendations,
+  snapshotGoalsForCoach,
+} from "@/lib/coachGoalRecommendations";
+import { MonthWorkflowLinks } from "@/components/MonthWorkflowLinks";
 import { CoachSettingsForm } from "./CoachSettingsForm";
 
 export default async function CoachPage({
@@ -14,7 +20,17 @@ export default async function CoachPage({
   await requireUser();
   const sp = await searchParams;
   const ym = sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
-  const data = await getDashboardData(ym);
+  const [data, savingsGoals] = await Promise.all([
+    getDashboardData(ym),
+    prisma.savingsGoal.findMany({
+      orderBy: { title: "asc" },
+      select: {
+        title: true,
+        targetAmountCents: true,
+        savedAmountCents: true,
+      },
+    }),
+  ]);
 
   const coach = buildPaycheckCoach({
     monthlyIncomeCents: data.incomeCents,
@@ -37,6 +53,22 @@ export default async function CoachPage({
     monthSpendCents: data.spentTotal,
   });
 
+  const coachMonthlySave =
+    coach != null
+      ? coach.savingsThisPayCents * data.payPeriodsPerMonth
+      : 0;
+  const goalRecs =
+    coach != null
+      ? buildGoalsCoachRecommendations(
+          coachMonthlySave,
+          data.payPeriodsPerMonth,
+          snapshotGoalsForCoach(savingsGoals),
+        )
+      : [];
+  const allRecommendations = coach
+    ? [...coach.recommendations, ...goalRecs]
+    : [];
+
   return (
     <div className="space-y-10">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -47,13 +79,23 @@ export default async function CoachPage({
             target — geared toward ending each pay period with cushion.
           </p>
         </div>
-        <Link
-          href={`/?ym=${ym}`}
-          className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-        >
-          Home
-        </Link>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Link
+            href={`/goals?ym=${ym}`}
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-violet-300 bg-violet-50 px-4 text-sm font-medium text-violet-900 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-100"
+          >
+            Savings goals
+          </Link>
+          <Link
+            href={`/?ym=${ym}`}
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+          >
+            Overview
+          </Link>
+        </div>
       </div>
+
+      <MonthWorkflowLinks yearMonth={ym} />
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">Household snapshot ({ym})</h2>
@@ -243,9 +285,17 @@ export default async function CoachPage({
           </section>
 
           <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="font-medium">Recommendations</h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-medium">Recommendations</h2>
+              <Link
+                href={`/goals?ym=${ym}`}
+                className="text-xs font-medium text-violet-700 underline dark:text-violet-300"
+              >
+                Update goal progress →
+              </Link>
+            </div>
             <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-zinc-700 dark:text-zinc-300">
-              {coach.recommendations.map((r, i) => (
+              {allRecommendations.map((r, i) => (
                 <li key={i}>{r}</li>
               ))}
             </ul>

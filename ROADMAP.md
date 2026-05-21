@@ -30,6 +30,8 @@ Living checklist for the household budget PWA. Update this file when major capab
 - [x] **Import next steps** after CSV/OFX/QIF (merchant rules anchor + budget assign link)
 - [x] **Goals cash-flow context** (income, coach save target, spent vs manual goal totals)
 - [x] **Month workflow links** on analysis/import pages; Insights uncategorized → Expenses CTA
+- [x] **Debt / net worth cash-flow compare** panels vs overview income and cash left
+- [x] **Coach ↔ goals** recommendations (save target vs manual goal progress)
 
 ## Planned / backlog
 
