@@ -1,15 +1,17 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { currentYearMonth } from "@/lib/yearMonth";
-import { deleteMerchantRuleAction, addMerchantRuleAction } from "@/app/actions/rules";
+import { addMerchantRuleAction } from "@/app/actions/rules";
+import { ensureDefaultCategories } from "@/lib/categories";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { MonthWorkflowLinks } from "@/components/MonthWorkflowLinks";
 import {
   getLastExpenseDefaultsForYearMonth,
   sanitizeExpenseDefaultsForPlans,
 } from "@/lib/entryDefaults";
+import { CategorySection } from "../budgets/CategorySection";
 import { ImportBulkSection } from "./ImportBulkSection";
+import { MerchantRulesList } from "./MerchantRulesList";
 import { ApplyMerchantRulesButton } from "./ApplyMerchantRulesButton";
 
 export default async function ImportPage({
@@ -18,12 +20,20 @@ export default async function ImportPage({
   searchParams: Promise<{ ym?: string }>;
 }) {
   await requireUser();
+  await ensureDefaultCategories();
   const sp = await searchParams;
   const yearMonth =
     sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
-  const rules = await prisma.merchantRule.findMany({
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-  });
+  const [rules, categories] = await Promise.all([
+    prisma.merchantRule.findMany({
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      include: { category: { select: { id: true, name: true } } },
+    }),
+    prisma.category.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      include: { _count: { select: { expenses: true } } },
+    }),
+  ]);
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   const budgetPlans = await prisma.budgetPlan.findMany({
     where: { monthlyPeriodId: period.id },
@@ -42,8 +52,10 @@ export default async function ImportPage({
         <p className="mt-1 max-w-2xl text-sm text-zinc-500">
           Paste bank **CSV**, **OFX/QFX**, or **QIF** exports. Duplicates in the
           same month are skipped. Optional column numbers fix weird CSV layouts.
-          Rules add tags when a description contains your pattern — tags help
-          match budget lines.
+          Rules add tags when a description contains your pattern. Optional category
+          assigns a canonical class (links budget envelope + tax folder). CSV import
+          and export support a <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">category</code>{" "}
+          column (name or slug).
         </p>
         <div className="mt-2">
           <MonthWorkflowLinks yearMonth={yearMonth} />
@@ -76,6 +88,19 @@ export default async function ImportPage({
         yearMonth={yearMonth}
         budgetPlans={budgetPlans}
         defaultBudgetPlanId={splitDefaults.budgetPlanId}
+        categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+      />
+
+      <CategorySection
+        categories={categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          matchText: c.matchText,
+          budgetEnvelopeName: c.budgetEnvelopeName,
+          defaultTaxCategory: c.defaultTaxCategory,
+          expenseCount: c._count.expenses,
+        }))}
       />
 
       <section
@@ -86,7 +111,7 @@ export default async function ImportPage({
         <p className="mt-1 text-xs text-zinc-500">
           If description contains <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">pattern</code>, add{" "}
           <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">tag</code>{" "}
-          (used in budget matching and Insights).
+          (used in budget matching and Insights). Optional category links envelope + tax folder.
         </p>
         <form action={addMerchantRuleAction} className="mt-4 flex flex-wrap items-end gap-2">
           <input
@@ -99,6 +124,18 @@ export default async function ImportPage({
             placeholder="groceries"
             className="min-w-[8rem] flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
           />
+          <select
+            name="categoryId"
+            className="min-w-[8rem] rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            defaultValue=""
+          >
+            <option value="">No category</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
           <button
             type="submit"
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
@@ -106,32 +143,17 @@ export default async function ImportPage({
             Add rule
           </button>
         </form>
-        <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
-          {rules.map((r) => (
-            <li
-              key={r.id}
-              className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"
-            >
-              <span>
-                <span className="font-mono text-zinc-600">{r.pattern}</span>
-                {" → "}
-                <span className="font-medium">{r.tag}</span>
-              </span>
-              <form action={deleteMerchantRuleAction}>
-                <input type="hidden" name="id" value={r.id} />
-                <button
-                  type="submit"
-                  className="text-xs text-red-600 underline hover:no-underline"
-                >
-                  Delete
-                </button>
-              </form>
-            </li>
-          ))}
-        </ul>
-        {rules.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500">No rules yet.</p>
-        ) : (
+        <MerchantRulesList
+          rules={rules.map((r) => ({
+            id: r.id,
+            pattern: r.pattern,
+            tag: r.tag,
+            categoryId: r.categoryId,
+            categoryName: r.category?.name ?? null,
+          }))}
+          categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+        />
+        {rules.length === 0 ? null : (
           <ApplyMerchantRulesButton yearMonth={yearMonth} />
         )}
       </section>

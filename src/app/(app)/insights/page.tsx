@@ -9,8 +9,8 @@ import {
   spentForBudgetPlan,
   envelopeRemaining,
   type BudgetPlanForRollup,
-  type ExpenseForRollup,
 } from "@/lib/budgetRollup";
+import { loadExpenseRollupsForYearMonth } from "@/lib/expenseRollup";
 
 function normalizeMerchant(desc: string): string {
   return desc
@@ -30,15 +30,10 @@ export default async function InsightsPage({
   await requireUser();
   const sp = await searchParams;
   const ym = sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
-  const data = await getDashboardData(ym);
-
-  const expRollup: ExpenseForRollup[] = data.expenses.map((e) => ({
-    id: e.id,
-    description: e.description,
-    amountCents: e.amountCents,
-    budgetPlanId: e.budgetPlanId,
-    tagsJson: e.tagsJson,
-  }));
+  const [data, expRollup] = await Promise.all([
+    getDashboardData(ym),
+    loadExpenseRollupsForYearMonth(ym),
+  ]);
 
   const planRollup: BudgetPlanForRollup[] = data.budgetPlans.map((p) => ({
     id: p.id,
@@ -55,17 +50,8 @@ export default async function InsightsPage({
     return { plan: p, spent, cap, remaining };
   });
 
-  const uncategorized = data.expenses.filter(
-    (e) => !planRollup.some((p) => expenseMatchesBudgetPlan(
-      {
-        id: e.id,
-        description: e.description,
-        amountCents: e.amountCents,
-        budgetPlanId: e.budgetPlanId,
-        tagsJson: e.tagsJson,
-      },
-      p,
-    )),
+  const uncategorized = expRollup.filter(
+    (e) => !planRollup.some((p) => expenseMatchesBudgetPlan(e, p)),
   );
   const uncSum = uncategorized.reduce((s, e) => s + e.amountCents, 0);
 
@@ -94,8 +80,8 @@ export default async function InsightsPage({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Spending insights</h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Budget lines, uncategorized spend, and merchants that show up often
-          (possible subscriptions).
+          Budget lines (including spend matched via spending categories), uncategorized
+          spend, and merchants that show up often (possible subscriptions).
         </p>
         <div className="mt-2">
           <MonthWorkflowLinks yearMonth={ym} />

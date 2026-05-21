@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "crypto";
+import { revalidatePath } from "next/cache";
 import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
@@ -10,6 +11,8 @@ import {
   getBudgetPlansForYearMonth,
   getLastExpenseDefaultsForYearMonth,
 } from "@/lib/entryDefaults";
+import { fieldsFromCategoryId } from "@/lib/categories";
+import { classifyExpenseForWrite } from "@/lib/merchantRules";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
 
@@ -23,6 +26,7 @@ export async function createSplitExpensesAction(
   const yearMonth = String(formData.get("yearMonth") ?? "").trim();
   const linesRaw = String(formData.get("linesJson") ?? "");
   const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
+  const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
   if (!yearMonth || !linesRaw.trim()) {
     return { error: "Month and split lines are required." };
   }
@@ -42,6 +46,11 @@ export async function createSplitExpensesAction(
   ]);
   let sharedBudgetId: string | null =
     budgetPlanIdRaw || lastDefaults.budgetPlanId;
+  let sharedCategoryId: string | null = categoryIdRaw || null;
+  if (sharedCategoryId) {
+    const cat = await prisma.category.findUnique({ where: { id: sharedCategoryId } });
+    if (!cat) sharedCategoryId = null;
+  }
   const splitGroupId = randomUUID();
   let sum = 0;
   const parsed: { amountCents: number; description: string }[] = [];
@@ -68,7 +77,27 @@ export async function createSplitExpensesAction(
       period.id,
       plans,
     );
-    sharedBudgetId = draft.budgetPlanId;
+    const classified = await classifyExpenseForWrite(p.description, period.id, {
+      categoryId: sharedCategoryId,
+      tagsJson: draft.tagsJson,
+      budgetPlanId: draft.budgetPlanId,
+    });
+    let finalBudget = classified.budgetPlanId ?? draft.budgetPlanId;
+    let finalTax = classified.taxCategory;
+    if (classified.categoryId) {
+      const patch = await fieldsFromCategoryId(
+        classified.categoryId,
+        period.id,
+        {
+          budgetPlanId: finalBudget,
+          taxCategory: finalTax,
+        },
+        { forceTaxDefault: true, forceBudgetLink: true },
+      );
+      finalBudget = patch.budgetPlanId;
+      finalTax = patch.taxCategory;
+    }
+    sharedBudgetId = finalBudget;
     await prisma.expense.create({
       data: {
         monthlyPeriodId: period.id,
@@ -77,13 +106,16 @@ export async function createSplitExpensesAction(
         description: p.description,
         spentAt: new Date(),
         splitGroupId,
-        budgetPlanId: draft.budgetPlanId,
-        tagsJson: draft.tagsJson,
         payee: draft.payee,
+        categoryId: classified.categoryId,
+        budgetPlanId: finalBudget,
+        taxCategory: finalTax,
+        tagsJson: classified.tagsJson,
         source: "manual",
       },
     });
   }
   revalidateLedgerPaths(yearMonth);
+  revalidatePath("/tax");
   return { ok: true, message: `Saved ${parsed.length} split lines (${splitGroupId.slice(0, 8)}…).` };
 }

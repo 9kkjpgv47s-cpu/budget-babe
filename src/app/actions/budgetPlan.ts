@@ -8,6 +8,7 @@ import { parseMoneyToCents } from "@/lib/money";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { parseYearMonth } from "@/lib/yearMonth";
 import { applySuggestedRolloversForYearMonth } from "@/app/actions/rollover";
+import { linkCategoriesToBudgetEnvelope } from "@/lib/categories";
 
 function rev(ym: string) {
   revalidatePath("/");
@@ -47,7 +48,9 @@ export async function updateBudgetPlanAction(formData: FormData): Promise<void> 
       note,
     },
   });
+  await linkCategoriesToBudgetEnvelope(name);
   rev(yearMonth);
+  revalidatePath("/import");
 }
 
 export async function deleteBudgetPlanAction(formData: FormData): Promise<void> {
@@ -96,6 +99,7 @@ export async function copyBudgetPlansFromPreviousMonthAction(
         note: p.note,
       },
     });
+    await linkCategoriesToBudgetEnvelope(p.name);
   }
   const withRollover = formData.get("withRollover") === "on";
   if (withRollover) {

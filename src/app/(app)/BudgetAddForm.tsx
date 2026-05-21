@@ -19,6 +19,9 @@ export function BudgetAddForm({
   return (
     <div>
       {heading ? <h3 className="text-sm font-medium">{heading}</h3> : null}
+      <p className="text-xs text-zinc-500">
+        Envelope name links to spending categories with the same name (e.g. Groceries).
+      </p>
       <form
         action={addBudget}
         className={`grid gap-2 sm:grid-cols-2 ${heading ? "mt-2" : ""}`}

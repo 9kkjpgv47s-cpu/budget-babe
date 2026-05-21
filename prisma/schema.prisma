@@ -51,6 +51,23 @@ model Paycheck {
   @@index([monthlyPeriodId, receivedOn])
 }
 
+/// Household-wide spending category (links to envelope name + tax defaults)
+model Category {
+  id                 String         @id @default(cuid())
+  name               String
+  slug               String         @unique
+  /// Optional substring match on expense description (in addition to slug/name)
+  matchText          String?
+  /// When set, expenses get budgetPlanId for a plan with this name in the expense month
+  budgetEnvelopeName String?
+  /// Default tax folder key — see src/lib/taxCategories.ts
+  defaultTaxCategory String?
+  sortOrder          Int            @default(0)
+  createdAt          DateTime       @default(now())
+  expenses           Expense[]
+  merchantRules      MerchantRule[]
+}
+
 model Expense {
   id              String        @id @default(cuid())
   monthlyPeriodId String
@@ -68,6 +85,8 @@ model Expense {
   tagsJson        String?
   /// Same id groups split lines for one purchase
   splitGroupId    String?
+  categoryId      String?
+  category        Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   budgetPlanId    String?
   budgetPlan      BudgetPlan?   @relation(fields: [budgetPlanId], references: [id], onDelete: SetNull)
   /// Optional link when this row was posted from a receipt (may share receipt with split lines)
@@ -87,6 +106,7 @@ model Expense {
 
   @@index([monthlyPeriodId, importHash])
   @@index([receiptId])
+  @@index([categoryId])
   @@index([taxApplicability, spentAt])
 }
 
@@ -132,11 +152,13 @@ model BudgetPlan {
 
 /// Global: if expense description contains pattern, add tag (for budget rollups & filters)
 model MerchantRule {
-  id        String   @id @default(cuid())
-  pattern   String
-  tag       String
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
+  id         String    @id @default(cuid())
+  pattern    String
+  tag        String
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  sortOrder  Int       @default(0)
+  createdAt  DateTime  @default(now())
 }
 
 /// Linked bank institution via Plaid Link (access token stored — encrypt in production)

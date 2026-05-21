@@ -8,12 +8,16 @@ import {
   spentForBudgetPlan,
   envelopeRemaining,
   type BudgetPlanForRollup,
-  type ExpenseForRollup,
 } from "@/lib/budgetRollup";
+import { loadExpenseRollupsForYearMonth } from "@/lib/expenseRollup";
 import { applySuggestedRolloversAction } from "@/app/actions/rollover";
+import { ensureDefaultCategories } from "@/lib/categories";
 import { BudgetAddForm } from "../BudgetAddForm";
 import { BudgetCopyHeader } from "../BudgetCopyHeader";
 import { BudgetPlanRow } from "../BudgetPlanRow";
+import { CategoryEnvelopePanel } from "./CategoryEnvelopePanel";
+import { CategorySection } from "./CategorySection";
+import { CategorySpendSummary } from "./CategorySpendSummary";
 
 function shiftYearMonth(ym: string, delta: number) {
   return format(addMonths(parseYearMonth(ym), delta), "yyyy-MM");
@@ -25,30 +29,46 @@ export default async function BudgetsPage({
   searchParams: Promise<{ ym?: string }>;
 }) {
   await requireUser();
+  await ensureDefaultCategories();
   const sp = await searchParams;
   const ym = sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
   const period = await getOrCreateMonthlyPeriod(ym);
   const prevYm = shiftYearMonth(ym, -1);
   const nextYm = shiftYearMonth(ym, 1);
 
-  const [budgetPlans, expenses, prevExists] = await Promise.all([
-    prisma.budgetPlan.findMany({
-      where: { monthlyPeriodId: period.id },
-      orderBy: { name: "asc" },
-    }),
-    prisma.expense.findMany({
-      where: { monthlyPeriodId: period.id },
-    }),
-    prisma.monthlyPeriod.findUnique({ where: { yearMonth: prevYm } }),
-  ]);
+  const [budgetPlans, expForRollup, prevExists, categories, expenses] =
+    await Promise.all([
+      prisma.budgetPlan.findMany({
+        where: { monthlyPeriodId: period.id },
+        orderBy: { name: "asc" },
+      }),
+      loadExpenseRollupsForYearMonth(ym),
+      prisma.monthlyPeriod.findUnique({ where: { yearMonth: prevYm } }),
+      prisma.category.findMany({
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        include: { _count: { select: { expenses: true } } },
+      }),
+      prisma.expense.findMany({
+        where: { monthlyPeriodId: period.id },
+        select: { id: true, categoryId: true, amountCents: true },
+      }),
+    ]);
 
-  const expForRollup: ExpenseForRollup[] = expenses.map((e) => ({
-    id: e.id,
-    description: e.description,
-    amountCents: e.amountCents,
-    budgetPlanId: e.budgetPlanId,
-    tagsJson: e.tagsJson,
-  }));
+  const categorySpendMap = new Map<string, { name: string; count: number; totalCents: number }>();
+  for (const e of expenses) {
+    if (!e.categoryId) continue;
+    const cat = categories.find((c) => c.id === e.categoryId);
+    if (!cat) continue;
+    const cur = categorySpendMap.get(cat.id) ?? {
+      name: cat.name,
+      count: 0,
+      totalCents: 0,
+    };
+    cur.count += 1;
+    cur.totalCents += e.amountCents;
+    categorySpendMap.set(cat.id, cur);
+  }
+  const categorySpendRows = [...categorySpendMap.values()];
 
   const budgetRows = budgetPlans.map((p) => {
     const planR: BudgetPlanForRollup = {
@@ -116,6 +136,18 @@ export default async function BudgetsPage({
         />
       </section>
 
+      <CategoryEnvelopePanel
+        yearMonth={ym}
+        categories={categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          budgetEnvelopeName: c.budgetEnvelopeName,
+        }))}
+        planNames={budgetPlans.map((p) => p.name)}
+      />
+
+      <CategorySpendSummary rows={categorySpendRows} />
+
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">This month ({budgetPlans.length})</h2>
         {budgetRows.length === 0 ? (
@@ -139,6 +171,18 @@ export default async function BudgetsPage({
         <h2 className="font-medium">Add budget line</h2>
         <BudgetAddForm yearMonth={ym} heading={null} />
       </section>
+
+      <CategorySection
+        categories={categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          matchText: c.matchText,
+          budgetEnvelopeName: c.budgetEnvelopeName,
+          defaultTaxCategory: c.defaultTaxCategory,
+          expenseCount: c._count.expenses,
+        }))}
+      />
     </div>
   );
 }

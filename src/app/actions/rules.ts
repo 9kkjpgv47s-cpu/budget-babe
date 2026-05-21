@@ -20,9 +20,34 @@ export async function addMerchantRuleAction(formData: FormData): Promise<void> {
   await requireUser();
   const pattern = String(formData.get("pattern") ?? "").trim().toLowerCase();
   const tag = String(formData.get("tag") ?? "").trim().toLowerCase();
+  const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
   if (!pattern || !tag) return;
+  let categoryId: string | null = categoryIdRaw || null;
+  if (categoryId) {
+    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (!cat) categoryId = null;
+  }
   await prisma.merchantRule.create({
-    data: { pattern, tag, sortOrder: 0 },
+    data: { pattern, tag, categoryId, sortOrder: 0 },
+  });
+  revalidatePath("/import");
+}
+
+export async function updateMerchantRuleAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const id = String(formData.get("id") ?? "");
+  const pattern = String(formData.get("pattern") ?? "").trim().toLowerCase();
+  const tag = String(formData.get("tag") ?? "").trim().toLowerCase();
+  const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
+  if (!id || !pattern || !tag) return;
+  let categoryId: string | null = categoryIdRaw || null;
+  if (categoryId) {
+    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (!cat) categoryId = null;
+  }
+  await prisma.merchantRule.update({
+    where: { id },
+    data: { pattern, tag, categoryId },
   });
   revalidatePath("/import");
 }

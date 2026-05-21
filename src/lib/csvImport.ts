@@ -59,6 +59,7 @@ export type ColumnMap = {
   credit?: number;
   description?: number;
   payee?: number;
+  category?: number;
 };
 
 const HEADER_SYNONYMS: Record<string, keyof ColumnMap> = {
@@ -75,6 +76,8 @@ const HEADER_SYNONYMS: Record<string, keyof ColumnMap> = {
   payee: "payee",
   merchant: "payee",
   name: "payee",
+  category: "category",
+  categories: "category",
 };
 
 export function detectColumns(headerRow: string[]): ColumnMap {
@@ -95,7 +98,13 @@ export function detectColumns(headerRow: string[]): ColumnMap {
 export function rowToExpenseParts(
   cells: string[],
   map: ColumnMap,
-): { date: Date; amountCents: number; description: string; payee: string | null } | null {
+): {
+  date: Date;
+  amountCents: number;
+  description: string;
+  payee: string | null;
+  categoryLabel: string | null;
+} | null {
   const get = (j?: number) => (j != null && j < cells.length ? cells[j].trim() : "");
   const dateStr = get(map.date);
   let amountStr = get(map.amount);
@@ -107,13 +116,20 @@ export function rowToExpenseParts(
   }
   const desc = get(map.description) || get(map.payee) || "Imported";
   const payee = get(map.payee) || null;
+  const categoryLabel = get(map.category) || null;
   if (!amountStr) return null;
   const n = Number.parseFloat(amountStr.replace(/[$,]/g, ""));
   if (Number.isNaN(n)) return null;
   const amountCents = Math.round(Math.abs(n) * 100);
   let date = dateStr ? new Date(dateStr) : new Date();
   if (Number.isNaN(date.getTime())) date = new Date();
-  return { date, amountCents, description: desc.slice(0, 500), payee };
+  return {
+    date,
+    amountCents,
+    description: desc.slice(0, 500),
+    payee,
+    categoryLabel: categoryLabel?.slice(0, 120) ?? null,
+  };
 }
 
 /** Merge auto-detected header map with manual JSON `{"date":0,"amount":1,...}` */
@@ -129,6 +145,7 @@ export function mergeColumnMaps(auto: ColumnMap, manualJson: string | null): Col
       "credit",
       "description",
       "payee",
+      "category",
     ];
     for (const k of keys) {
       const v = o[k];

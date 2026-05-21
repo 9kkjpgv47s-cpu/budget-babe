@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { unifiedQuickEntryAction } from "@/app/actions/monthly";
 import { initialFormState } from "@/lib/formActionState";
 import { tagsJsonToCommaList } from "@/lib/budgetRollup";
+import { CategorySuggestionHint } from "./expenses/CategorySuggestionHint";
 
 type ExpenseDefaults = {
   budgetPlanId: string | null;
@@ -23,15 +24,18 @@ const ENTRY_OPTIONS: { value: EntryKind; label: string }[] = [
 
 export function QuickForms({
   yearMonth,
-  budgetPlans,
+  categories = [],
+  budgetPlans = [],
   expenseDefaults,
 }: {
   yearMonth: string;
-  budgetPlans: { id: string; name: string }[];
+  categories?: { id: string; name: string }[];
+  budgetPlans?: { id: string; name: string }[];
   expenseDefaults: ExpenseDefaults;
 }) {
   const router = useRouter();
   const [kind, setKind] = useState<EntryKind>("expense");
+  const [expenseDescription, setExpenseDescription] = useState("");
   const [liveDefaults, setLiveDefaults] = useState(expenseDefaults);
   const [state, action, pending] = useActionState(
     unifiedQuickEntryAction,
@@ -94,7 +98,7 @@ export function QuickForms({
         </select>
         <p className="text-xs text-zinc-500">
           {kind === "expense"
-            ? "Logs a purchase for this month. Budget, tags, and payee carry from your last entry in this month."
+            ? "Logs a purchase for this month. Budget, tags, payee, and category carry from your last entry or auto-match."
             : kind === "bill"
               ? "Adds a bill with a due date for this month."
               : kind === "budget_line"
@@ -105,11 +109,19 @@ export function QuickForms({
 
       {kind === "expense" ? (
         <div className="grid gap-2 sm:grid-cols-2">
-          <input
-            name="description"
-            placeholder="What you bought (coffee, gas, …)"
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
-          />
+          <div className="space-y-1 sm:col-span-2">
+            <input
+              name="description"
+              value={expenseDescription}
+              onChange={(e) => setExpenseDescription(e.target.value)}
+              placeholder="What you bought (coffee, gas, …)"
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            />
+            <CategorySuggestionHint
+              yearMonth={yearMonth}
+              description={expenseDescription}
+            />
+          </div>
           <input
             name="amount"
             placeholder="Amount"
@@ -122,38 +134,53 @@ export function QuickForms({
             defaultValue={liveDefaults.payee ?? ""}
             className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
           />
-          <div className="sm:col-span-2">
-            <label
-              htmlFor="quickBudgetPlanId"
-              className="text-xs font-medium text-zinc-600 dark:text-zinc-400"
-            >
-              Budget envelope (optional)
-            </label>
+          {categories.length > 0 ? (
             <select
-              id="quickBudgetPlanId"
-              name="budgetPlanId"
-              defaultValue={defaultBudgetId}
-              key={`budget-${defaultBudgetId}-${state?.ok ? "ok" : "idle"}`}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              name="categoryId"
+              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              defaultValue=""
             >
-              <option value="">Auto-match by name/tags</option>
-              {budgetPlans.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
+              <option value="">Category (auto if blank)</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-zinc-500">
-              Links this row on Expenses and budget spent totals. Merchant rules
-              still add tags.
-            </p>
-          </div>
+          ) : null}
+          {budgetPlans.length > 0 ? (
+            <div className={categories.length > 0 ? "" : "sm:col-span-2"}>
+              <label
+                htmlFor="quickBudgetPlanId"
+                className="text-xs font-medium text-zinc-600 dark:text-zinc-400"
+              >
+                Budget envelope (optional)
+              </label>
+              <select
+                id="quickBudgetPlanId"
+                name="budgetPlanId"
+                defaultValue={defaultBudgetId}
+                key={`budget-${defaultBudgetId}-${state?.ok ? "ok" : "idle"}`}
+                className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              >
+                <option value="">Auto-match by name/tags</option>
+                {budgetPlans.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <input
             name="tags"
             placeholder="Tags (comma-separated, optional)"
             defaultValue={defaultTags}
             className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
           />
+          <p className="text-xs text-zinc-500 sm:col-span-2">
+            Leave category blank to auto-classify from merchant rules and match text.
+          </p>
         </div>
       ) : null}
 
@@ -183,8 +210,11 @@ export function QuickForms({
           <input
             name="name"
             placeholder="Envelope name (e.g. Groceries)"
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
           />
+          <p className="text-xs text-zinc-500 sm:col-span-2">
+            Matching spending categories (same name or slug) auto-link to this envelope.
+          </p>
           <input
             name="category"
             placeholder="Match text (optional)"

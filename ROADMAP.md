@@ -32,6 +32,7 @@ Living checklist for the household budget PWA. Update this file when major capab
 - [x] **Month workflow links** on analysis/import pages; Insights uncategorized → Expenses CTA
 - [x] **Debt / net worth cash-flow compare** panels vs overview income and cash left
 - [x] **Coach ↔ goals** recommendations (save target vs manual goal progress)
+- [x] **Spending categories**: canonical categories on `/budgets` and `/import`, auto-match from merchant rules, link to budget envelopes + tax folders, bulk classify on `/expenses`, CSV import/export `category` column
 
 ## Planned / backlog
 

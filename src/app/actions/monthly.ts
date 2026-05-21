@@ -19,6 +19,11 @@ import {
   finalizeExpenseDraftForPeriod,
   getBudgetPlansForYearMonth,
 } from "@/lib/entryDefaults";
+import {
+  fieldsFromCategoryId,
+  linkCategoriesToBudgetEnvelope,
+} from "@/lib/categories";
+import { classifyExpenseForWrite } from "@/lib/merchantRules";
 import { guessPaystubAmountFromBuffer } from "@/lib/paystubOcr";
 import { deletePaystubStored, savePaystubUpload } from "@/lib/uploads";
 
@@ -196,6 +201,12 @@ export async function addExpenseCore(
   const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
   const payee = String(formData.get("payee") ?? "").trim() || null;
   const manualTagsJson = commaListToTagsJson(String(formData.get("tags") ?? ""));
+  const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
+  let categoryId: string | null = categoryIdRaw || null;
+  if (categoryId) {
+    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (!cat) categoryId = null;
+  }
   const plans = await getBudgetPlansForYearMonth(yearMonth);
   const draft = await finalizeExpenseDraftForPeriod(
     {
@@ -207,6 +218,26 @@ export async function addExpenseCore(
     period.id,
     plans,
   );
+  const classified = await classifyExpenseForWrite(description, period.id, {
+    categoryId,
+    tagsJson: draft.tagsJson,
+    budgetPlanId: draft.budgetPlanId,
+  });
+  let finalTax = classified.taxCategory;
+  let finalBudget = classified.budgetPlanId ?? draft.budgetPlanId;
+  if (classified.categoryId) {
+    const patch = await fieldsFromCategoryId(
+      classified.categoryId,
+      period.id,
+      {
+        budgetPlanId: finalBudget,
+        taxCategory: finalTax,
+      },
+      { forceTaxDefault: true, forceBudgetLink: true },
+    );
+    finalTax = patch.taxCategory;
+    finalBudget = patch.budgetPlanId;
+  }
   const splitGroupId =
     String(formData.get("splitGroupId") ?? "").trim() || null;
 
@@ -216,15 +247,25 @@ export async function addExpenseCore(
       userId: user.userId,
       amountCents: amount,
       description,
-      budgetPlanId: draft.budgetPlanId,
-      tagsJson: draft.tagsJson,
       payee: draft.payee,
+      categoryId: classified.categoryId,
+      budgetPlanId: finalBudget,
+      taxCategory: finalTax,
+      tagsJson: classified.tagsJson,
       splitGroupId,
       source: "manual",
     },
   });
   revalidateLedgerPaths(yearMonth);
-  return { ok: true, entryDefaults: expenseDefaultsFromDraft(draft) };
+  revalidatePath("/tax");
+  return {
+    ok: true,
+    entryDefaults: expenseDefaultsFromDraft({
+      ...draft,
+      budgetPlanId: finalBudget,
+      tagsJson: classified.tagsJson,
+    }),
+  };
 }
 
 export async function addExpenseAction(
@@ -391,8 +432,10 @@ export async function addBudgetPlanCore(
       note,
     },
   });
+  await linkCategoriesToBudgetEnvelope(name);
   revalidatePath("/");
   revalidatePath("/budgets");
+  revalidatePath("/import");
   revalidatePath("/insights");
   revalidatePath("/flow");
   revalidatePath("/coach");

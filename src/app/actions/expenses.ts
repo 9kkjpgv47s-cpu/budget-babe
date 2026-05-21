@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
@@ -10,7 +11,11 @@ import {
   finalizeExpenseDraftForPeriod,
   getBudgetPlansForYearMonth,
 } from "@/lib/entryDefaults";
-import { applyMerchantRulesToTags } from "@/lib/merchantRules";
+import {
+  applyMerchantRulesToTags,
+  classifyExpenseForWrite,
+} from "@/lib/merchantRules";
+import { fieldsFromCategoryId } from "@/lib/categories";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 
 function revalidateAll(yearMonth: string) {
@@ -44,8 +49,21 @@ export async function bulkApplyTagsToExpensesAction(formData: FormData): Promise
       tagMode === "replace"
         ? mergeTagLists(tagsRaw)
         : mergeTagLists(parseTagsJson(exp.tagsJson), tagsRaw);
-    const tagsJson = await applyMerchantRulesToTags(exp.description, manual ?? exp.tagsJson);
-    await prisma.expense.update({ where: { id }, data: { tagsJson } });
+    const classified = await classifyExpenseForWrite(exp.description, period.id, {
+      categoryId: exp.categoryId,
+      tagsJson: manual,
+      budgetPlanId: exp.budgetPlanId,
+      taxCategory: exp.taxCategory,
+    });
+    await prisma.expense.update({
+      where: { id },
+      data: {
+        tagsJson: classified.tagsJson,
+        categoryId: classified.categoryId,
+        budgetPlanId: classified.budgetPlanId,
+        taxCategory: classified.taxCategory,
+      },
+    });
   }
   revalidateAll(yearMonth);
 }
@@ -77,6 +95,59 @@ export async function bulkSetBudgetForExpensesAction(formData: FormData): Promis
   revalidateAll(yearMonth);
 }
 
+export async function bulkSetCategoryForExpensesAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  const ids = parseExpenseIds(String(formData.get("expenseIds") ?? ""));
+  const raw = String(formData.get("bulkCategoryId") ?? "").trim();
+  if (!yearMonth || ids.length === 0) return;
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const categoryId: string | null = raw && raw !== "none" ? raw : null;
+  if (categoryId) {
+    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (!cat) return;
+  }
+  for (const id of ids) {
+    const exp = await prisma.expense.findFirst({
+      where: { id, monthlyPeriodId: period.id },
+    });
+    if (!exp) continue;
+    const applyTax =
+      String(formData.get("applyTaxFromCategory") ?? "on") === "on";
+    const patch = await fieldsFromCategoryId(
+      categoryId,
+      period.id,
+      {
+        budgetPlanId: exp.budgetPlanId,
+        taxCategory: exp.taxCategory,
+      },
+      categoryId
+        ? { forceTaxDefault: applyTax, forceBudgetLink: true }
+        : undefined,
+    );
+    let tagsJson = exp.tagsJson;
+    if (categoryId) {
+      const classified = await classifyExpenseForWrite(exp.description, period.id, {
+        categoryId,
+        tagsJson: exp.tagsJson,
+        autoSuggest: false,
+      });
+      tagsJson = classified.tagsJson;
+    }
+    await prisma.expense.update({
+      where: { id },
+      data: {
+        categoryId: patch.categoryId,
+        budgetPlanId: patch.budgetPlanId,
+        taxCategory: patch.taxCategory,
+        tagsJson,
+      },
+    });
+  }
+  revalidateAll(yearMonth);
+  revalidatePath("/tax");
+}
+
 export async function updateExpenseAction(formData: FormData): Promise<void> {
   await requireUser();
   const id = String(formData.get("id") ?? "");
@@ -86,6 +157,7 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
   const spentRaw = String(formData.get("spentAt") ?? "").trim();
   const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
   const payee = String(formData.get("payee") ?? "").trim() || null;
+  const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
   if (!id || !yearMonth || amount == null || !description) return;
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   const exp = await prisma.expense.findFirst({
@@ -93,6 +165,11 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
   });
   if (!exp) return;
 
+  let categoryId: string | null = categoryIdRaw || null;
+  if (categoryId) {
+    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (!cat) categoryId = null;
+  }
   const plans = await getBudgetPlansForYearMonth(yearMonth);
   const draft = await finalizeExpenseDraftForPeriod(
     {
@@ -104,6 +181,30 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
     period.id,
     plans,
   );
+  const classified = await classifyExpenseForWrite(description, period.id, {
+    categoryId,
+    tagsJson: draft.tagsJson,
+    budgetPlanId: draft.budgetPlanId ?? exp.budgetPlanId,
+    taxCategory: exp.taxCategory,
+    autoSuggest: false,
+  });
+  let finalCategoryId = classified.categoryId;
+  let finalBudgetPlanId = classified.budgetPlanId ?? draft.budgetPlanId;
+  let finalTaxCategory = classified.taxCategory;
+  if (categoryId) {
+    const patch = await fieldsFromCategoryId(
+      categoryId,
+      period.id,
+      {
+        budgetPlanId: finalBudgetPlanId,
+        taxCategory: finalTaxCategory,
+      },
+      { forceTaxDefault: true, forceBudgetLink: true },
+    );
+    finalCategoryId = patch.categoryId;
+    finalBudgetPlanId = patch.budgetPlanId;
+    finalTaxCategory = patch.taxCategory;
+  }
   const spentAt = spentRaw ? new Date(spentRaw) : exp.spentAt;
   if (Number.isNaN(spentAt.getTime())) return;
 
@@ -113,12 +214,83 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
       amountCents: amount,
       description,
       spentAt,
-      budgetPlanId: draft.budgetPlanId,
-      tagsJson: draft.tagsJson,
       payee: draft.payee,
+      categoryId: finalCategoryId,
+      budgetPlanId: finalBudgetPlanId,
+      taxCategory: finalTaxCategory,
+      tagsJson: classified.tagsJson,
     },
   });
   revalidateAll(yearMonth);
+  revalidatePath("/tax");
+}
+
+/** Re-apply merchant tag rules to every expense in the month (keeps explicit category). */
+export async function reapplyMerchantRulesAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  if (!yearMonth) return;
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const expenses = await prisma.expense.findMany({
+    where: { monthlyPeriodId: period.id },
+    select: {
+      id: true,
+      description: true,
+      tagsJson: true,
+      categoryId: true,
+      budgetPlanId: true,
+      taxCategory: true,
+    },
+  });
+  for (const exp of expenses) {
+    const tagsJson = await applyMerchantRulesToTags(exp.description, exp.tagsJson);
+    if (exp.categoryId) {
+      const patch = await fieldsFromCategoryId(exp.categoryId, period.id, {
+        budgetPlanId: exp.budgetPlanId,
+        taxCategory: exp.taxCategory,
+      }, { forceBudgetLink: true });
+      await prisma.expense.update({
+        where: { id: exp.id },
+        data: {
+          tagsJson,
+          budgetPlanId: patch.budgetPlanId,
+        },
+      });
+      continue;
+    }
+    const classified = await classifyExpenseForWrite(exp.description, period.id, {
+      tagsJson,
+      budgetPlanId: exp.budgetPlanId,
+      taxCategory: exp.taxCategory,
+    });
+    if (!classified.categoryId) {
+      await prisma.expense.update({
+        where: { id: exp.id },
+        data: { tagsJson },
+      });
+      continue;
+    }
+    const patch = await fieldsFromCategoryId(
+      classified.categoryId,
+      period.id,
+      {
+        budgetPlanId: classified.budgetPlanId,
+        taxCategory: classified.taxCategory,
+      },
+      { forceTaxDefault: true, forceBudgetLink: true },
+    );
+    await prisma.expense.update({
+      where: { id: exp.id },
+      data: {
+        categoryId: patch.categoryId,
+        budgetPlanId: patch.budgetPlanId,
+        taxCategory: patch.taxCategory,
+        tagsJson: classified.tagsJson,
+      },
+    });
+  }
+  revalidateAll(yearMonth);
+  revalidatePath("/tax");
 }
 
 export async function deleteExpenseAction(formData: FormData): Promise<void> {
