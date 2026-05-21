@@ -11,17 +11,27 @@ import { ReceiptBlobWarning } from "./ReceiptBlobWarning";
 import { ReceiptMonthHeader } from "./ReceiptMonthHeader";
 import { ReceiptFocusScroll } from "./ReceiptFocusScroll";
 import { ReceiptNeedsPostingQueue } from "./ReceiptNeedsPostingQueue";
+import { ReceiptFilterTabs } from "./ReceiptFilterTabs";
+import { ReceiptSearchForm } from "./ReceiptSearchForm";
+import {
+  countByFilter,
+  filterReceipts,
+  parseReceiptFilter,
+  type ReceiptListRow,
+} from "./receiptFilters";
 
 export default async function ReceiptsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ym?: string; focus?: string }>;
+  searchParams: Promise<{ ym?: string; focus?: string; filter?: string; q?: string }>;
 }) {
   await requireUser();
   const sp = await searchParams;
   const yearMonth =
     sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
   const focusId = sp.focus?.trim() || null;
+  const filter = parseReceiptFilter(sp.filter);
+  const query = (sp.q ?? "").trim();
 
   const period = await getOrCreateMonthlyPeriod(yearMonth);
 
@@ -44,6 +54,18 @@ export default async function ReceiptsPage({
       select: { id: true, name: true, category: true },
     }),
   ]);
+
+  const rows: ReceiptListRow[] = receipts.map((r) => ({
+    id: r.id,
+    filename: r.filename,
+    note: r.note,
+    ocrStatus: r.ocrStatus,
+    totalCents: r.totalCents,
+    expenseCount: r._count.expenses,
+  }));
+  const counts = countByFilter(rows);
+  const visible = filterReceipts(rows, filter, query);
+  const visibleIds = new Set(visible.map((v) => v.id));
 
   const ocrPending = receipts.some(
     (r) => r.ocrStatus === "pending" || r.ocrStatus === "processing",
@@ -98,26 +120,52 @@ export default async function ReceiptsPage({
         />
       </section>
 
-      <ReceiptNeedsPostingQueue receipts={needsPosting} yearMonth={yearMonth} />
+      {filter === "all" && !query ? (
+        <ReceiptNeedsPostingQueue receipts={needsPosting} yearMonth={yearMonth} />
+      ) : null}
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="font-medium">All receipts this month</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-medium">All receipts this month</h2>
+          <span className="text-xs text-zinc-500 tabular-nums">
+            {visible.length} shown
+            {visible.length !== receipts.length
+              ? ` · ${receipts.length} total`
+              : null}
+          </span>
+        </div>
+        <div className="mt-4 space-y-4">
+          <ReceiptFilterTabs
+            yearMonth={yearMonth}
+            active={filter}
+            counts={counts}
+            query={query}
+          />
+          <ReceiptSearchForm yearMonth={yearMonth} filter={filter} query={query} />
+        </div>
         <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
-          {receipts.map((r) => (
-            <ReceiptListItem
-              key={r.id}
-              receipt={{
-                ...r,
-                expenseCount: r._count.expenses,
-              }}
-              yearMonth={yearMonth}
-              budgetPlans={budgetPlans}
-              monthOptions={monthOptions}
-            />
-          ))}
+          {receipts
+            .filter((r) => visibleIds.has(r.id))
+            .map((r) => (
+              <ReceiptListItem
+                key={r.id}
+                receipt={{
+                  ...r,
+                  expenseCount: r._count.expenses,
+                }}
+                yearMonth={yearMonth}
+                budgetPlans={budgetPlans}
+                monthOptions={monthOptions}
+              />
+            ))}
         </ul>
         {receipts.length === 0 ? (
           <p className="mt-4 text-sm text-zinc-500">No receipts for this month.</p>
+        ) : visible.length === 0 ? (
+          <p className="mt-4 text-sm text-zinc-500">
+            No receipts match this filter
+            {query ? ` or “${query}”` : ""}.
+          </p>
         ) : null}
       </section>
     </div>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatCents } from "@/lib/money";
 import { displayFilename, ocrStatusBadgeClass, ocrStatusLabel } from "./receiptDisplay";
+import { ReceiptBatchPostButton } from "./ReceiptBatchPostButton";
 
 type QueueReceipt = {
   id: string;
@@ -58,6 +59,7 @@ export function ReceiptNeedsPostingQueue({
           </li>
         ))}
       </ul>
+      <ReceiptBatchPostButton yearMonth={yearMonth} readyCount={ready.length} />
     </section>
   );
 }

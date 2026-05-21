@@ -143,6 +143,7 @@ export function ReceiptOcrSection({
               yearMonth={yearMonth}
               totalCents={receipt.totalCents!}
               descriptionHint={defaultDescription}
+              ocrConfidence={receipt.ocrConfidence}
             />
           ) : null}
         </div>

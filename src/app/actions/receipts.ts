@@ -12,6 +12,7 @@ import { applyMerchantRulesToTags } from "@/lib/merchantRules";
 import type { ParsedReceiptLine } from "@/lib/receiptOcr";
 import { suggestBudgetPlanId } from "@/app/(app)/receipts/receiptBudgetSuggest";
 import { buildReceiptExpenseMeta } from "@/app/(app)/receipts/receiptExpenseMeta";
+import { postReceiptTotalCore } from "@/app/(app)/receipts/postReceiptTotalCore";
 import { deleteReceiptStored, saveReceiptUpload } from "@/lib/uploads";
 
 function revalidateMoneyFromReceipt(yearMonth: string) {
@@ -61,7 +62,23 @@ export async function uploadReceiptCore(
     void import("@/lib/receiptOcr").then((m) => m.processReceiptOcrFile(rec.id));
   });
   revalidateMoneyFromReceipt(yearMonth);
-  return { ok: true, receiptId: rec.id };
+  let message: string | undefined;
+  if (total != null && total > 0) {
+    const similar = await prisma.receipt.findFirst({
+      where: {
+        monthlyPeriodId: period.id,
+        id: { not: rec.id },
+        totalCents: total,
+        uploadedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+      },
+      select: { id: true },
+    });
+    if (similar) {
+      message =
+        "Uploaded. Note: another receipt with the same total was added in the last 7 days.";
+    }
+  }
+  return { ok: true, receiptId: rec.id, message };
 }
 
 export async function uploadReceiptAction(
@@ -152,59 +169,62 @@ export async function quickPostReceiptTotalAction(
   }
   const receipt = await prisma.receipt.findUnique({ where: { id: receiptId } });
   if (!receipt) return { error: "Receipt not found." };
-  if (receipt.ocrStatus !== "completed") {
-    return { error: "Wait until OCR finishes before quick post." };
-  }
-  const dup = await prisma.expense.findFirst({ where: { receiptId } });
-  if (dup) {
-    return {
-      error:
-        "This receipt already has linked expenses. Remove them in Expenses first.",
-    };
-  }
-  const amountCents =
-    receipt.totalCents != null && receipt.totalCents > 0
-      ? receipt.totalCents
-      : null;
-  if (amountCents == null) {
-    return {
-      error: "No total on this receipt. Enter an amount in the form below.",
-    };
-  }
-  let parsed: ParsedReceiptLine[] = [];
-  if (receipt.ocrParsedLines) {
-    try {
-      parsed = JSON.parse(receipt.ocrParsedLines) as ParsedReceiptLine[];
-      if (!Array.isArray(parsed)) parsed = [];
-    } catch {
-      parsed = [];
-    }
-  }
-  const period = await getOrCreateMonthlyPeriod(yearMonth);
-  const plans = await prisma.budgetPlan.findMany({
-    where: { monthlyPeriodId: period.id },
-    select: { id: true, name: true, category: true },
+  const result = await postReceiptTotalCore({
+    receipt,
+    userId: user.userId,
+    yearMonth,
   });
-  const meta = buildReceiptExpenseMeta(receipt, parsed);
-  const budgetPlanId = suggestBudgetPlanId(meta.description, plans);
-  const tagsJson = await applyMerchantRulesToTags(meta.description, null);
-
-  await prisma.expense.create({
-    data: {
-      monthlyPeriodId: period.id,
-      userId: user.userId,
-      amountCents,
-      description: meta.description,
-      payee: meta.payee,
-      spentAt: meta.spentAt,
-      source: "ocr",
-      receiptId,
-      budgetPlanId,
-      tagsJson,
-    },
-  });
+  if (!result.ok) return { error: result.error };
   revalidateMoneyFromReceipt(yearMonth);
   return { ok: true, message: "Expense posted from receipt total." };
+}
+
+export async function batchPostReadyReceiptsAction(
+  _prev: FormActionState | undefined,
+  formData: FormData,
+): Promise<FormActionState> {
+  const user = await requireUser();
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  if (!yearMonth.match(/^\d{4}-\d{2}$/)) {
+    return { error: "Missing month." };
+  }
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const candidates = await prisma.receipt.findMany({
+    where: {
+      monthlyPeriodId: period.id,
+      ocrStatus: "completed",
+      totalCents: { gt: 0 },
+      expenses: { none: {} },
+    },
+    orderBy: { uploadedAt: "asc" },
+  });
+  if (candidates.length === 0) {
+    return { error: "No receipts are ready to post for this month." };
+  }
+  let posted = 0;
+  const skipped: string[] = [];
+  for (const receipt of candidates) {
+    const result = await postReceiptTotalCore({
+      receipt,
+      userId: user.userId,
+      yearMonth,
+    });
+    if (result.ok) posted++;
+    else if (!result.skip) skipped.push(result.error);
+  }
+  revalidateMoneyFromReceipt(yearMonth);
+  if (posted === 0) {
+    return {
+      error:
+        skipped[0] ??
+        "Could not post any receipts. Check totals and OCR status.",
+    };
+  }
+  const suffix = skipped.length > 0 ? ` (${skipped.length} skipped)` : "";
+  return {
+    ok: true,
+    message: `Posted ${posted} receipt${posted === 1 ? "" : "s"} to spending${suffix}.`,
+  };
 }
 
 export async function createExpensesFromReceiptLinesAction(

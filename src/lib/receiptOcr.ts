@@ -125,15 +125,22 @@ export function parseMerchantFromOcrText(rawText: string): string | null {
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter((l) => l.length >= 3 && l.length <= 80);
-  for (const line of lines.slice(0, 12)) {
+  let best: { line: string; score: number } | null = null;
+  for (const line of lines.slice(0, 14)) {
     if (MERCHANT_SKIP.test(line)) continue;
     if (/^\d{1,2}[\/\-.]\d{1,2}/.test(line)) continue;
     if (/^[\d\s\-+().#]+$/.test(line)) continue;
     if (!/[a-zA-Z]/.test(line)) continue;
     const cleaned = line.replace(/\s{2,}/g, " ").slice(0, 120);
-    if (cleaned.length >= 3) return cleaned;
+    if (cleaned.length < 3) continue;
+    const letters = (cleaned.match(/[a-zA-Z]/g) ?? []).length;
+    const digits = (cleaned.match(/\d/g) ?? []).length;
+    let score = letters - digits * 2;
+    if (/^[A-Z0-9\s&'.-]+$/.test(cleaned) && letters >= 4) score += 4;
+    if (cleaned.length <= 40) score += 2;
+    if (!best || score > best.score) best = { line: cleaned, score };
   }
-  return null;
+  return best?.line ?? null;
 }
 
 export function defaultExpenseDescriptionFromReceipt(

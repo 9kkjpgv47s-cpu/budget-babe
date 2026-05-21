@@ -71,6 +71,9 @@ export function ReceiptUploadForm({
       {state?.error ? (
         <p className="text-sm text-red-600">{state.error}</p>
       ) : null}
+      {state?.ok && state.message ? (
+        <p className="text-sm text-amber-800 dark:text-amber-200">{state.message}</p>
+      ) : null}
       {state?.ok && !redirectAfterUpload ? (
         <p className="text-sm text-emerald-800 dark:text-emerald-200">
           Uploaded — OCR is running. Refresh this page in a few seconds.

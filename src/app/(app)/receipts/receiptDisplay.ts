@@ -9,6 +9,10 @@ const RASTER_EXT = new Set([
   "tiff",
 ]);
 
+export function isPdfReceiptFilename(storagePath: string): boolean {
+  return displayFilename(storagePath).toLowerCase().endsWith(".pdf");
+}
+
 export function isRasterReceiptFilename(storagePath: string): boolean {
   const name = displayFilename(storagePath).toLowerCase();
   const ext = name.includes(".") ? name.split(".").pop() : "";
