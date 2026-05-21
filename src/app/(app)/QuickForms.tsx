@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { unifiedQuickEntryAction } from "@/app/actions/monthly";
 import { initialFormState } from "@/lib/formActionState";
+import { CategorySuggestionHint } from "./expenses/CategorySuggestionHint";
 
 type EntryKind = "expense" | "bill" | "budget_line" | "paycheck";
 
@@ -23,6 +24,7 @@ export function QuickForms({
   budgetPlans?: { id: string; name: string }[];
 }) {
   const [kind, setKind] = useState<EntryKind>("expense");
+  const [expenseDescription, setExpenseDescription] = useState("");
   const [state, action, pending] = useActionState(
     unifiedQuickEntryAction,
     initialFormState,
@@ -71,11 +73,19 @@ export function QuickForms({
 
       {kind === "expense" ? (
         <div className="grid gap-2 sm:grid-cols-2">
-          <input
-            name="description"
-            placeholder="What you bought (coffee, gas, …)"
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
-          />
+          <div className="space-y-1 sm:col-span-2">
+            <input
+              name="description"
+              value={expenseDescription}
+              onChange={(e) => setExpenseDescription(e.target.value)}
+              placeholder="What you bought (coffee, gas, …)"
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            />
+            <CategorySuggestionHint
+              yearMonth={yearMonth}
+              description={expenseDescription}
+            />
+          </div>
           <input
             name="amount"
             placeholder="Amount"
@@ -142,8 +152,11 @@ export function QuickForms({
           <input
             name="name"
             placeholder="Envelope name (e.g. Groceries)"
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
           />
+          <p className="text-xs text-zinc-500 sm:col-span-2">
+            Matching spending categories (same name or slug) auto-link to this envelope.
+          </p>
           <input
             name="category"
             placeholder="Match text (optional)"

@@ -36,7 +36,7 @@ export function CategorySection({ categories }: { categories: CategoryRow[] }) {
         />
         <input
           name="budgetEnvelopeName"
-          placeholder="Budget envelope name to link"
+          placeholder="Budget envelope name (defaults to category name)"
           className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
         />
         <input

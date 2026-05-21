@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   bulkApplyCategoryRulesAction,
+  bulkSyncTaxFromCategoriesAction,
   syncCategoryEnvelopesAction,
 } from "@/app/actions/categories";
 import {
@@ -102,6 +103,15 @@ export function ExpensesInteractiveList({
               Re-run merchant rules (tags + categories)
             </button>
           </form>
+          <form action={bulkSyncTaxFromCategoriesAction}>
+            <input type="hidden" name="yearMonth" value={yearMonth} />
+            <button
+              type="submit"
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200"
+            >
+              Sync tax folders from categories
+            </button>
+          </form>
         </div>
         {taxErr ? (
           <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
@@ -189,6 +199,10 @@ export function ExpensesInteractiveList({
                 </option>
               ))}
             </select>
+            <label className="flex items-center gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+              <input type="checkbox" name="applyTaxFromCategory" defaultChecked />
+              Tax folder
+            </label>
             <button
               type="submit"
               className="rounded border border-zinc-400 px-3 py-1 text-xs font-medium dark:border-zinc-600"

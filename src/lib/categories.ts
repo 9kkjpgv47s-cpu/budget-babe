@@ -102,6 +102,13 @@ export type CategoryFieldPatch = {
   taxCategory: string | null;
 };
 
+export type CategoryFieldOptions = {
+  /** Set tax folder from category default even when expense already has one. */
+  forceTaxDefault?: boolean;
+  /** Resolve budget plan from envelope name even when expense already linked. */
+  forceBudgetLink?: boolean;
+};
+
 /** Apply category defaults onto expense fields for a given month. */
 export function categoriesMissingEnvelopes(
   categories: { id: string; name: string; budgetEnvelopeName: string | null }[],
@@ -118,10 +125,39 @@ export function categoriesMissingEnvelopes(
   return out;
 }
 
+/**
+ * When a budget envelope is created/renamed, link matching spending categories by name or slug.
+ */
+export async function linkCategoriesToBudgetEnvelope(
+  envelopeName: string,
+): Promise<number> {
+  const name = envelopeName.trim();
+  if (!name) return 0;
+  const slug = slugifyCategoryName(name);
+  const lower = name.toLowerCase();
+  const categories = await prisma.category.findMany();
+  let updated = 0;
+  for (const cat of categories) {
+    const matches =
+      cat.name.toLowerCase() === lower ||
+      cat.slug === slug ||
+      cat.budgetEnvelopeName?.toLowerCase() === lower;
+    if (!matches) continue;
+    if (cat.budgetEnvelopeName === name) continue;
+    await prisma.category.update({
+      where: { id: cat.id },
+      data: { budgetEnvelopeName: name },
+    });
+    updated += 1;
+  }
+  return updated;
+}
+
 export async function fieldsFromCategoryId(
   categoryId: string | null,
   monthlyPeriodId: string,
   existing?: { budgetPlanId?: string | null; taxCategory?: string | null },
+  opts?: CategoryFieldOptions,
 ): Promise<CategoryFieldPatch> {
   if (!categoryId) {
     return {
@@ -139,12 +175,51 @@ export async function fieldsFromCategoryId(
     };
   }
   let budgetPlanId = existing?.budgetPlanId ?? null;
-  if (!budgetPlanId && cat.budgetEnvelopeName) {
+  if (
+    cat.budgetEnvelopeName &&
+    (opts?.forceBudgetLink || !budgetPlanId)
+  ) {
     budgetPlanId = await resolveBudgetPlanIdForCategory(categoryId, monthlyPeriodId);
   }
   let taxCategory = existing?.taxCategory ?? null;
-  if (!taxCategory && cat.defaultTaxCategory && isValidTaxCategory(cat.defaultTaxCategory)) {
+  if (
+    cat.defaultTaxCategory &&
+    isValidTaxCategory(cat.defaultTaxCategory) &&
+    (opts?.forceTaxDefault || !taxCategory)
+  ) {
     taxCategory = cat.defaultTaxCategory;
   }
   return { categoryId, budgetPlanId, taxCategory };
+}
+
+/** Apply category defaults (budget + tax) to an expense row. */
+export async function applyCategoryDefaultsToExpense(
+  expenseId: string,
+  monthlyPeriodId: string,
+  categoryId: string | null,
+  opts?: CategoryFieldOptions,
+): Promise<void> {
+  const exp = await prisma.expense.findFirst({
+    where: { id: expenseId, monthlyPeriodId },
+    select: {
+      id: true,
+      budgetPlanId: true,
+      taxCategory: true,
+      tagsJson: true,
+      description: true,
+    },
+  });
+  if (!exp) return;
+  const patch = await fieldsFromCategoryId(categoryId, monthlyPeriodId, {
+    budgetPlanId: exp.budgetPlanId,
+    taxCategory: exp.taxCategory,
+  }, opts);
+  await prisma.expense.update({
+    where: { id: expenseId },
+    data: {
+      categoryId: patch.categoryId,
+      budgetPlanId: patch.budgetPlanId,
+      taxCategory: patch.taxCategory,
+    },
+  });
 }

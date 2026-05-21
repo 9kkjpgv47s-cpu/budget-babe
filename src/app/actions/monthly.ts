@@ -13,6 +13,10 @@ import {
 import { parseYearMonth } from "@/lib/yearMonth";
 import type { FormActionState } from "@/lib/formActionState";
 import { mergeTagLists } from "@/lib/budgetRollup";
+import {
+  fieldsFromCategoryId,
+  linkCategoriesToBudgetEnvelope,
+} from "@/lib/categories";
 import { classifyExpenseForWrite } from "@/lib/merchantRules";
 import { guessPaystubAmountFromBuffer } from "@/lib/paystubOcr";
 import { deletePaystubStored, savePaystubUpload } from "@/lib/uploads";
@@ -212,6 +216,21 @@ export async function addExpenseCore(
     tagsJson: manualTagsJson,
     budgetPlanId,
   });
+  let finalTax = classified.taxCategory;
+  let finalBudget = classified.budgetPlanId;
+  if (classified.categoryId) {
+    const patch = await fieldsFromCategoryId(
+      classified.categoryId,
+      period.id,
+      {
+        budgetPlanId: classified.budgetPlanId,
+        taxCategory: classified.taxCategory,
+      },
+      { forceTaxDefault: true, forceBudgetLink: true },
+    );
+    finalTax = patch.taxCategory;
+    finalBudget = patch.budgetPlanId;
+  }
   const splitGroupId =
     String(formData.get("splitGroupId") ?? "").trim() || null;
 
@@ -222,8 +241,8 @@ export async function addExpenseCore(
       amountCents: amount,
       description,
       categoryId: classified.categoryId,
-      budgetPlanId: classified.budgetPlanId,
-      taxCategory: classified.taxCategory,
+      budgetPlanId: finalBudget,
+      taxCategory: finalTax,
       tagsJson: classified.tagsJson,
       splitGroupId,
       source: "manual",
@@ -233,6 +252,7 @@ export async function addExpenseCore(
   revalidatePath("/budgets");
   revalidatePath("/insights");
   revalidatePath("/flow");
+  revalidatePath("/tax");
   return { ok: true };
 }
 
@@ -400,8 +420,10 @@ export async function addBudgetPlanCore(
       note,
     },
   });
+  await linkCategoriesToBudgetEnvelope(name);
   revalidatePath("/");
   revalidatePath("/budgets");
+  revalidatePath("/import");
   revalidatePath("/insights");
   revalidatePath("/flow");
   revalidatePath("/coach");
