@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createExpenseFromReceiptAction } from "@/app/actions/receipts";
 import { initialFormState } from "@/lib/formActionState";
 
@@ -23,10 +24,18 @@ export function ReceiptPostExpenseForm({
   spentAtHint?: string | null;
   payeeHint?: string | null;
 }) {
+  const router = useRouter();
   const [state, action, pending] = useActionState(
     createExpenseFromReceiptAction,
     initialFormState,
   );
+
+  useEffect(() => {
+    if (!state?.ok) return;
+    router.push(`/expenses?ym=${yearMonth}`);
+    router.refresh();
+  }, [state?.ok, yearMonth, router]);
+
   const defaultAmt =
     totalCents != null && totalCents > 0 ? (totalCents / 100).toFixed(2) : "";
   const defaultDesc = defaultDescription;
