@@ -115,7 +115,7 @@ export function inferSpentAtFromOcrText(
 }
 
 const MERCHANT_SKIP =
-  /^(?:welcome|thank\s*you|store|receipt|invoice|customer\s*copy|merchant\s*copy|tel|phone|www\.|http)/i;
+  /^(?:welcome|thank\s*you|thanks|store|receipt|invoice|customer\s*copy|merchant\s*copy|tel|phone|www\.|http|visa|mastercard|amex|discover|debit|credit|auth|approval|cashier|register|trans\s*#|transaction)/i;
 
 /**
  * Best-effort merchant / store name from the top of OCR text (for expense description).

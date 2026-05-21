@@ -2,6 +2,7 @@ import { formatCents } from "@/lib/money";
 import {
   defaultExpenseDescriptionFromReceipt,
   inferSpentAtFromOcrText,
+  parseMerchantFromOcrText,
   type ParsedReceiptLine,
 } from "@/lib/receiptOcr";
 import {
@@ -14,6 +15,7 @@ import { ReceiptBatchExpensesForm } from "./ReceiptBatchExpensesForm";
 import { ReceiptQuickPostButton } from "./ReceiptQuickPostButton";
 import { suggestBudgetPlanId, type BudgetPlanPick } from "./receiptBudgetSuggest";
 import { displayFilename, ocrStatusBadgeClass } from "./receiptDisplay";
+import { ReceiptThumbnail } from "./ReceiptThumbnail";
 
 type ReceiptRow = {
   id: string;
@@ -69,6 +71,7 @@ export function ReceiptOcrSection({
     parsed,
     label,
   );
+  const payeeHint = parseMerchantFromOcrText(receipt.ocrRawText ?? "");
   const suggestedBudgetId = suggestBudgetPlanId(defaultDescription, budgetPlans);
   const readyForReview = receipt.ocrStatus === "completed";
   const canQuickPost =
@@ -197,6 +200,7 @@ export function ReceiptOcrSection({
           budgetPlans={budgetPlans}
           suggestedBudgetPlanId={suggestedBudgetId}
           spentAtHint={spentAtHint}
+          payeeHint={payeeHint}
         />
       ) : (
         <p className="text-[11px] text-zinc-500">
@@ -228,6 +232,7 @@ export function ReceiptListItem({
       id={`receipt-${receipt.id}`}
       className="scroll-mt-24 flex flex-wrap items-start justify-between gap-3 py-4 text-sm"
     >
+      <ReceiptThumbnail receiptId={receipt.id} filename={receipt.filename} />
       <div className="min-w-0 flex-1">
         <a
           href={`/api/receipts/${receipt.id}`}

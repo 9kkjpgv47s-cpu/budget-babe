@@ -38,6 +38,11 @@ export function ReceiptsOverviewStrip({
       {receipts.map((r) => {
         const label = displayFilename(r.filename);
         const posted = r._count.expenses > 0;
+        const readyToPost =
+          !posted &&
+          r.ocrStatus === "completed" &&
+          r.totalCents != null &&
+          r.totalCents > 0;
         return (
           <li
             key={r.id}
@@ -65,15 +70,21 @@ export function ReceiptsOverviewStrip({
             <p className="mt-2 text-xs text-zinc-500">
               {posted
                 ? `${r._count.expenses} expense(s) linked`
-                : r.ocrStatus === "completed"
-                  ? "Ready to post"
-                  : "Open to finish OCR"}
+                : readyToPost
+                  ? "Ready — quick post on receipts page"
+                  : r.ocrStatus === "pending" || r.ocrStatus === "processing"
+                    ? "OCR in progress…"
+                    : "Open to finish OCR"}
             </p>
             <Link
               href={`/receipts?ym=${yearMonth}&focus=${r.id}`}
-              className="mt-1 inline-block text-xs font-semibold text-emerald-700 underline dark:text-emerald-400"
+              className={`mt-1 inline-block text-xs font-semibold underline ${
+                readyToPost
+                  ? "text-emerald-700 dark:text-emerald-400"
+                  : "text-zinc-600 dark:text-zinc-400"
+              }`}
             >
-              {posted ? "View on receipts" : "Post to spending →"}
+              {posted ? "View on receipts" : readyToPost ? "Post now →" : "Open receipt →"}
             </Link>
           </li>
         );

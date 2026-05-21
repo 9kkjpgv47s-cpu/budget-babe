@@ -1,3 +1,20 @@
+const RASTER_EXT = new Set([
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+  "gif",
+  "bmp",
+  "tif",
+  "tiff",
+]);
+
+export function isRasterReceiptFilename(storagePath: string): boolean {
+  const name = displayFilename(storagePath).toLowerCase();
+  const ext = name.includes(".") ? name.split(".").pop() : "";
+  return RASTER_EXT.has(ext ?? "");
+}
+
 export function displayFilename(storagePath: string): string {
   try {
     const u = new URL(storagePath);

@@ -11,11 +11,25 @@ export async function GET(req: Request) {
   const yearMonth =
     ymRaw?.match(/^\d{4}-\d{2}$/) ? ymRaw : currentYearMonth();
   const period = await getOrCreateMonthlyPeriod(yearMonth);
-  const count = await prisma.receipt.count({
-    where: {
-      monthlyPeriodId: period.id,
-      ocrStatus: { in: ["pending", "processing"] },
-    },
+  const [pendingCount, needsPostingCount] = await Promise.all([
+    prisma.receipt.count({
+      where: {
+        monthlyPeriodId: period.id,
+        ocrStatus: { in: ["pending", "processing"] },
+      },
+    }),
+    prisma.receipt.count({
+      where: {
+        monthlyPeriodId: period.id,
+        ocrStatus: "completed",
+        totalCents: { gt: 0 },
+        expenses: { none: {} },
+      },
+    }),
+  ]);
+  return NextResponse.json({
+    count: pendingCount,
+    needsPostingCount,
+    yearMonth,
   });
-  return NextResponse.json({ count, yearMonth });
 }

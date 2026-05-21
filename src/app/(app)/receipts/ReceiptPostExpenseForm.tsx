@@ -12,6 +12,7 @@ export function ReceiptPostExpenseForm({
   budgetPlans,
   suggestedBudgetPlanId,
   spentAtHint,
+  payeeHint,
 }: {
   receiptId: string;
   yearMonth: string;
@@ -20,6 +21,7 @@ export function ReceiptPostExpenseForm({
   budgetPlans: { id: string; name: string }[];
   suggestedBudgetPlanId?: string | null;
   spentAtHint?: string | null;
+  payeeHint?: string | null;
 }) {
   const [state, action, pending] = useActionState(
     createExpenseFromReceiptAction,
@@ -34,9 +36,20 @@ export function ReceiptPostExpenseForm({
       <p className="mb-2 text-[11px] font-medium text-emerald-900 dark:text-emerald-100">
         Post as one expense (receipt total)
       </p>
-      {spentAtHint ? (
+      {spentAtHint || payeeHint ? (
         <p className="mb-2 text-[10px] text-zinc-600 dark:text-zinc-400">
-          Purchase date from receipt: <strong>{spentAtHint}</strong> (used when you post)
+          {payeeHint ? (
+            <>
+              Payee: <strong>{payeeHint}</strong>
+              {spentAtHint ? " · " : null}
+            </>
+          ) : null}
+          {spentAtHint ? (
+            <>
+              Date: <strong>{spentAtHint}</strong>
+            </>
+          ) : null}{" "}
+          (applied when you post)
         </p>
       ) : null}
       <form action={action} className="grid gap-1.5 text-[11px] sm:grid-cols-2">

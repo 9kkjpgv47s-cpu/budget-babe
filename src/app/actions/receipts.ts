@@ -9,12 +9,9 @@ import { parseMoneyToCents } from "@/lib/money";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
 import { applyMerchantRulesToTags } from "@/lib/merchantRules";
-import {
-  defaultExpenseDescriptionFromReceipt,
-  inferSpentAtFromOcrText,
-  type ParsedReceiptLine,
-} from "@/lib/receiptOcr";
+import type { ParsedReceiptLine } from "@/lib/receiptOcr";
 import { suggestBudgetPlanId } from "@/app/(app)/receipts/receiptBudgetSuggest";
+import { buildReceiptExpenseMeta } from "@/app/(app)/receipts/receiptExpenseMeta";
 import { deleteReceiptStored, saveReceiptUpload } from "@/lib/uploads";
 
 function revalidateMoneyFromReceipt(yearMonth: string) {
@@ -82,7 +79,7 @@ export async function createExpenseFromReceiptAction(
   const receiptId = String(formData.get("receiptId") ?? "");
   const yearMonth = String(formData.get("yearMonth") ?? "").trim();
   const amountRaw = String(formData.get("amount") ?? "").trim();
-  let description = String(formData.get("description") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
   const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
   if (!receiptId || !yearMonth.match(/^\d{4}-\d{2}$/)) {
     return { error: "Missing receipt or month." };
@@ -105,7 +102,16 @@ export async function createExpenseFromReceiptAction(
       error: "Enter an amount in dollars, or wait for OCR to set a receipt total.",
     };
   }
-  if (!description) description = `Receipt: ${receipt.filename}`;
+  let parsed: ParsedReceiptLine[] = [];
+  if (receipt.ocrParsedLines) {
+    try {
+      parsed = JSON.parse(receipt.ocrParsedLines) as ParsedReceiptLine[];
+      if (!Array.isArray(parsed)) parsed = [];
+    } catch {
+      parsed = [];
+    }
+  }
+  const meta = buildReceiptExpenseMeta(receipt, parsed, description);
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   let budgetPlanId: string | null = budgetPlanIdRaw || null;
   if (budgetPlanId) {
@@ -114,15 +120,15 @@ export async function createExpenseFromReceiptAction(
     });
     if (!plan) budgetPlanId = null;
   }
-  const tagsJson = await applyMerchantRulesToTags(description, null);
-  const spentAt = inferSpentAtFromOcrText(receipt.ocrRawText ?? "", new Date());
+  const tagsJson = await applyMerchantRulesToTags(meta.description, null);
   await prisma.expense.create({
     data: {
       monthlyPeriodId: period.id,
       userId: user.userId,
       amountCents,
-      description,
-      spentAt,
+      description: meta.description,
+      payee: meta.payee,
+      spentAt: meta.spentAt,
       source: "ocr",
       receiptId,
       budgetPlanId,
@@ -179,23 +185,18 @@ export async function quickPostReceiptTotalAction(
     where: { monthlyPeriodId: period.id },
     select: { id: true, name: true, category: true },
   });
-  const label = receipt.filename.split("/").pop() || receipt.filename;
-  const description = defaultExpenseDescriptionFromReceipt(
-    receipt.ocrRawText ?? "",
-    parsed,
-    label,
-  );
-  const budgetPlanId = suggestBudgetPlanId(description, plans);
-  const tagsJson = await applyMerchantRulesToTags(description, null);
-  const spentAt = inferSpentAtFromOcrText(receipt.ocrRawText ?? "", new Date());
+  const meta = buildReceiptExpenseMeta(receipt, parsed);
+  const budgetPlanId = suggestBudgetPlanId(meta.description, plans);
+  const tagsJson = await applyMerchantRulesToTags(meta.description, null);
 
   await prisma.expense.create({
     data: {
       monthlyPeriodId: period.id,
       userId: user.userId,
       amountCents,
-      description,
-      spentAt,
+      description: meta.description,
+      payee: meta.payee,
+      spentAt: meta.spentAt,
       source: "ocr",
       receiptId,
       budgetPlanId,
@@ -243,7 +244,7 @@ export async function createExpensesFromReceiptLinesAction(
   } catch {
     return { error: "Could not read parsed lines." };
   }
-  const spentAt = inferSpentAtFromOcrText(receipt.ocrRawText ?? "", new Date());
+  const { payee, spentAt } = buildReceiptExpenseMeta(receipt, parsed);
   const splitGroupId = randomUUID();
   let created = 0;
   for (const line of parsed) {
@@ -262,6 +263,7 @@ export async function createExpensesFromReceiptLinesAction(
         userId: user.userId,
         amountCents: cents,
         description: desc,
+        payee,
         spentAt,
         source: "ocr",
         receiptId,

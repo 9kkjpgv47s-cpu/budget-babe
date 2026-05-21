@@ -10,6 +10,7 @@ import { OcrStatusPoller } from "./OcrStatusPoller";
 import { ReceiptBlobWarning } from "./ReceiptBlobWarning";
 import { ReceiptMonthHeader } from "./ReceiptMonthHeader";
 import { ReceiptFocusScroll } from "./ReceiptFocusScroll";
+import { ReceiptNeedsPostingQueue } from "./ReceiptNeedsPostingQueue";
 
 export default async function ReceiptsPage({
   searchParams,
@@ -46,6 +47,13 @@ export default async function ReceiptsPage({
 
   const ocrPending = receipts.some(
     (r) => r.ocrStatus === "pending" || r.ocrStatus === "processing",
+  );
+  const needsPosting = receipts.filter(
+    (r) =>
+      r._count.expenses === 0 &&
+      r.ocrStatus === "completed" &&
+      r.totalCents != null &&
+      r.totalCents > 0,
   );
 
   return (
@@ -90,8 +98,10 @@ export default async function ReceiptsPage({
         />
       </section>
 
+      <ReceiptNeedsPostingQueue receipts={needsPosting} yearMonth={yearMonth} />
+
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="font-medium">This month</h2>
+        <h2 className="font-medium">All receipts this month</h2>
         <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
           {receipts.map((r) => (
             <ReceiptListItem
