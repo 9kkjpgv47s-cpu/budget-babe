@@ -27,6 +27,9 @@ Living checklist for the household budget PWA. Update this file when major capab
 - [x] **Header nav groups** + preserve `?ym=` on desktop links when month is in URL
 - [x] **Shopping → expense bridge**: log trip total as monthly spending (deduped per trip/month)
 - [x] **Cash-flow silo callouts** on Shopping, Debt, Net worth, Goals
+- [x] **Import next steps** after CSV/OFX/QIF (merchant rules anchor + budget assign link)
+- [x] **Goals cash-flow context** (income, coach save target, spent vs manual goal totals)
+- [x] **Month workflow links** on analysis/import pages; Insights uncategorized → Expenses CTA
 
 ## Planned / backlog
 

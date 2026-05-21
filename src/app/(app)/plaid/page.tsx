@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { currentYearMonth } from "@/lib/yearMonth";
 import { PlaidConnectSection } from "./PlaidConnectSection";
 import { PlaidItemRow } from "./PlaidItemRow";
+import { PlaidMonthNote } from "./PlaidMonthNote";
 
 export default async function PlaidPage({
   searchParams,
@@ -37,6 +38,8 @@ export default async function PlaidPage({
           post.
         </p>
       </div>
+
+      <PlaidMonthNote yearMonth={yearMonth} />
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Connect</h2>

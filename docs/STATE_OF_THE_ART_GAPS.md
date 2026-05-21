@@ -71,6 +71,8 @@ These modules **do not** change overview income, spent, or coach math unless you
 - Plaid sync: CTA to Expenses after import
 - Header nav: grouped links + month context when `?ym=` present
 - Shopping → expense bridge + silo callouts on tracking-only pages
+- Import post-success next steps (rules + budgets); goals cash-flow context panel
+- Month workflow links on Import, Plaid, Flow, Insights, Goals
 
 ## Recommended next epics (post four-agent plan)
 

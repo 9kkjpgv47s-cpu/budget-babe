@@ -5,11 +5,20 @@ import { formatCents } from "@/lib/money";
 import { currentYearMonth } from "@/lib/yearMonth";
 import { CashFlowSiloCallout } from "@/components/CashFlowSiloCallout";
 import { deleteGoalAction, deleteSpendingAdjustmentAction } from "@/app/actions/goals";
+import { MonthWorkflowLinks } from "@/components/MonthWorkflowLinks";
 import { GoalForms, UpdateSavedForm } from "./GoalForms";
 import { UpdateGoalForm } from "./UpdateGoalForm";
+import { GoalsHouseholdContext } from "./GoalsHouseholdContext";
 
-export default async function GoalsPage() {
+export default async function GoalsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ym?: string }>;
+}) {
   await requireUser();
+  const sp = await searchParams;
+  const yearMonth =
+    sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
   const goals = await prisma.savingsGoal.findMany({
     orderBy: { title: "asc" },
     include: { adjustments: { orderBy: { startsOn: "desc" } } },
@@ -28,14 +37,14 @@ export default async function GoalsPage() {
           Track targets, update balances as you move money, and list spending
           adjustments that help you get there.
         </p>
-        <p className="mt-2 text-sm">
-          <Link href={`/?ym=${currentYearMonth()}`} className="text-emerald-600 underline">
-            ← Overview
-          </Link>
-        </p>
+        <div className="mt-2">
+          <MonthWorkflowLinks yearMonth={yearMonth} />
+        </div>
       </div>
 
-      <CashFlowSiloCallout variant="goals" yearMonth={currentYearMonth()} />
+      <CashFlowSiloCallout variant="goals" yearMonth={yearMonth} />
+
+      <GoalsHouseholdContext yearMonth={yearMonth} />
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <GoalForms goals={goals.map((g) => ({ id: g.id, title: g.title }))} />

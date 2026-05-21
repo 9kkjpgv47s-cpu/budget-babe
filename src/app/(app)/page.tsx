@@ -480,7 +480,7 @@ export default async function HomePage({
               </ul>
             </div>
             <Link
-              href="/goals"
+              href={`/goals?ym=${yearMonth}`}
               className="shrink-0 rounded-lg bg-violet-700 px-4 py-2 text-sm font-medium text-white hover:bg-violet-600 dark:bg-violet-500 dark:hover:bg-violet-400"
             >
               View goals

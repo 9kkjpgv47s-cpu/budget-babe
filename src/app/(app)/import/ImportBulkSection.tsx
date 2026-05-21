@@ -8,6 +8,7 @@ import {
 } from "@/app/actions/import";
 import { createSplitExpensesAction } from "@/app/actions/splitExpenses";
 import { initialFormState } from "@/lib/formActionState";
+import { ImportSuccessNextSteps } from "./ImportSuccessNextSteps";
 
 export function ImportBulkSection({
   yearMonth,
@@ -97,6 +98,7 @@ export function ImportBulkSection({
               {csvState.message}
             </p>
           ) : null}
+          <ImportSuccessNextSteps state={csvState} yearMonth={yearMonth} />
           <textarea
             name="csvText"
             rows={8}
@@ -123,6 +125,7 @@ export function ImportBulkSection({
           {ofxState?.message ? (
             <p className="text-sm text-emerald-700">{ofxState.message}</p>
           ) : null}
+          <ImportSuccessNextSteps state={ofxState} yearMonth={yearMonth} />
           <textarea
             name="ofxText"
             rows={8}
@@ -144,6 +147,7 @@ export function ImportBulkSection({
           {qifState?.message ? (
             <p className="text-sm text-emerald-700">{qifState.message}</p>
           ) : null}
+          <ImportSuccessNextSteps state={qifState} yearMonth={yearMonth} />
           <textarea
             name="qifText"
             rows={8}
