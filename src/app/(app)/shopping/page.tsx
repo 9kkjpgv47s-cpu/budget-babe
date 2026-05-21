@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { formatCents } from "@/lib/money";
 import { currentYearMonth } from "@/lib/yearMonth";
+import { CashFlowSiloCallout } from "@/components/CashFlowSiloCallout";
 import {
   buildLastTripPrefill,
   buildShoppingSuggestions,
@@ -10,28 +13,38 @@ import {
   estimateTripCostCents,
 } from "@/lib/shoppingSuggest";
 import { deleteTripAction, duplicateTripAction } from "@/app/actions/shopping";
+import { shoppingTripImportHash } from "@/lib/shoppingExpense";
 import { TripForm } from "./TripForm";
 import { TripEditForm } from "./TripEditForm";
+import { LogTripAsExpenseForm } from "./LogTripAsExpenseForm";
 
 export default async function ShoppingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; ym?: string }>;
 }) {
   await requireUser();
   const sp = await searchParams;
   const startFromLast = sp.from === "last";
-  const ym = currentYearMonth();
-  const period = await prisma.monthlyPeriod.findUnique({
-    where: { yearMonth: ym },
-    include: { budgetPlans: true },
+  const ym =
+    sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
+  const period = await getOrCreateMonthlyPeriod(ym);
+  const budgetPlans = await prisma.budgetPlan.findMany({
+    where: { monthlyPeriodId: period.id },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
   });
-  const groceryPlan =
-    period?.budgetPlans.find(
-      (p) =>
-        p.name.toLowerCase().includes("grocer") ||
-        (p.category?.toLowerCase().includes("grocer") ?? false),
-    ) ?? null;
+  const groceryPlanFull = await prisma.budgetPlan.findFirst({
+    where: {
+      monthlyPeriodId: period.id,
+      OR: [
+        { name: { contains: "grocer", mode: "insensitive" } },
+        { category: { contains: "grocer", mode: "insensitive" } },
+      ],
+    },
+    select: { id: true, name: true, limitCents: true },
+  });
+  const groceryPlan = groceryPlanFull;
 
   const trips = await prisma.shoppingTrip.findMany({
     orderBy: { shoppedAt: "desc" },
@@ -51,6 +64,31 @@ export default async function ShoppingPage({
     })),
   );
 
+  const tripHashes = trips.map((t) => shoppingTripImportHash(t.id));
+  const linkedExpenses =
+    tripHashes.length > 0
+      ? await prisma.expense.findMany({
+          where: {
+            monthlyPeriodId: period.id,
+            importHash: { in: tripHashes },
+          },
+          select: {
+            id: true,
+            importHash: true,
+            monthlyPeriod: { select: { yearMonth: true } },
+          },
+        })
+      : [];
+  const linkedByTripId = new Map(
+    linkedExpenses.map((e) => {
+      const tripId = e.importHash?.replace(/^shopping-trip:/, "") ?? "";
+      return [
+        tripId,
+        { id: e.id, yearMonth: e.monthlyPeriod.yearMonth },
+      ] as const;
+    }),
+  );
+
   return (
     <div className="space-y-10">
       <div>
@@ -62,11 +100,13 @@ export default async function ShoppingPage({
           edit and save.
         </p>
         <p className="mt-2 text-sm">
-          <Link href="/" className="text-emerald-600 underline">
-            ← Overview
+          <Link href={`/?ym=${ym}`} className="text-emerald-600 underline">
+            ← Overview ({ym})
           </Link>
         </p>
       </div>
+
+      <CashFlowSiloCallout variant="shopping" yearMonth={ym} />
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">Suggested next list</h2>
@@ -214,6 +254,14 @@ export default async function ShoppingPage({
                     </li>
                   ))}
                 </ul>
+                <LogTripAsExpenseForm
+                  tripId={t.id}
+                  totalCents={t.totalCents}
+                  yearMonth={format(t.shoppedAt, "yyyy-MM")}
+                  budgetPlans={budgetPlans}
+                  defaultBudgetPlanId={groceryPlan?.id ?? null}
+                  existingExpense={linkedByTripId.get(t.id) ?? null}
+                />
                 <TripEditForm trip={t} />
             </li>
           ))}

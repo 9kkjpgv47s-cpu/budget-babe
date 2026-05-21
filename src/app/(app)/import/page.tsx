@@ -4,7 +4,9 @@ import { requireUser } from "@/lib/auth";
 import { currentYearMonth } from "@/lib/yearMonth";
 import { deleteMerchantRuleAction, addMerchantRuleAction } from "@/app/actions/rules";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
+import { MonthWorkflowLinks } from "@/components/MonthWorkflowLinks";
 import { ImportBulkSection } from "./ImportBulkSection";
+import { ApplyMerchantRulesButton } from "./ApplyMerchantRulesButton";
 
 export default async function ImportPage({
   searchParams,
@@ -35,11 +37,10 @@ export default async function ImportPage({
           Rules add tags when a description contains your pattern — tags help
           match budget lines.
         </p>
+        <div className="mt-2">
+          <MonthWorkflowLinks yearMonth={yearMonth} />
+        </div>
         <p className="mt-2 text-sm">
-          <Link href={`/?ym=${yearMonth}`} className="text-emerald-600 underline">
-            ← Overview ({yearMonth})
-          </Link>
-          {" · "}
           <a
             href={`/api/export/expenses?ym=${yearMonth}`}
             className="text-emerald-600 underline"
@@ -65,7 +66,10 @@ export default async function ImportPage({
 
       <ImportBulkSection yearMonth={yearMonth} budgetPlans={budgetPlans} />
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section
+        id="merchant-rules"
+        className="rounded-xl border border-zinc-200 bg-white p-5 scroll-mt-24 dark:border-zinc-800 dark:bg-zinc-900"
+      >
         <h2 className="font-medium">Merchant rules</h2>
         <p className="mt-1 text-xs text-zinc-500">
           If description contains <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">pattern</code>, add{" "}
@@ -115,7 +119,9 @@ export default async function ImportPage({
         </ul>
         {rules.length === 0 ? (
           <p className="mt-2 text-sm text-zinc-500">No rules yet.</p>
-        ) : null}
+        ) : (
+          <ApplyMerchantRulesButton yearMonth={yearMonth} />
+        )}
       </section>
     </div>
   );

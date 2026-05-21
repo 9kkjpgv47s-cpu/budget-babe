@@ -1,28 +1,12 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { logoutAction } from "@/app/actions/auth";
 import { requireUser } from "@/lib/auth";
+import { AppHeaderNav } from "./AppHeaderNav";
 import { MobileBottomNav } from "./MobileBottomNav";
 
 /** Prisma requires Node.js; keep authenticated routes off Edge by default. */
 export const runtime = "nodejs";
-
-const links = [
-  { href: "/", label: "Overview" },
-  { href: "/coach", label: "Coach" },
-  { href: "/expenses", label: "Expenses" },
-  { href: "/bills", label: "Bills" },
-  { href: "/budgets", label: "Budgets" },
-  { href: "/import", label: "Import" },
-  { href: "/plaid", label: "Plaid" },
-  { href: "/tax", label: "Tax" },
-  { href: "/flow", label: "Flow" },
-  { href: "/insights", label: "Insights" },
-  { href: "/debt", label: "Debt" },
-  { href: "/net-worth", label: "Net worth" },
-  { href: "/receipts", label: "Receipts" },
-  { href: "/shopping", label: "Shopping" },
-  { href: "/goals", label: "Goals" },
-];
 
 export default async function AppLayout({
   children,
@@ -38,17 +22,9 @@ export default async function AppLayout({
             <Link href="/" className="font-semibold tracking-tight text-emerald-700 dark:text-emerald-400">
               Household Budget
             </Link>
-            <nav className="hidden flex-wrap gap-3 text-sm md:flex">
-              {links.map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                >
-                  {l.label}
-                </Link>
-              ))}
-            </nav>
+            <Suspense fallback={null}>
+              <AppHeaderNav />
+            </Suspense>
           </div>
           <div className="flex items-center gap-3 text-sm">
             <span className="text-zinc-500">{user.name}</span>

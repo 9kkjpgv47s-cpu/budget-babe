@@ -1,11 +1,20 @@
 import { getPlaidApi } from "@/lib/plaidClient";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { currentYearMonth } from "@/lib/yearMonth";
 import { PlaidConnectSection } from "./PlaidConnectSection";
 import { PlaidItemRow } from "./PlaidItemRow";
+import { PlaidMonthNote } from "./PlaidMonthNote";
 
-export default async function PlaidPage() {
+export default async function PlaidPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ym?: string }>;
+}) {
   const user = await requireUser();
+  const sp = await searchParams;
+  const yearMonth =
+    sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
   const configured = getPlaidApi() !== null;
   const items = await prisma.plaidItem.findMany({
     where: { userId: user.userId },
@@ -30,6 +39,8 @@ export default async function PlaidPage() {
         </p>
       </div>
 
+      <PlaidMonthNote yearMonth={yearMonth} />
+
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Connect</h2>
         <PlaidConnectSection configured={configured} />
@@ -44,6 +55,7 @@ export default async function PlaidPage() {
             {items.map((it) => (
               <PlaidItemRow
                 key={it.id}
+                yearMonth={yearMonth}
                 item={{
                   id: it.id,
                   institutionName: it.institutionName,

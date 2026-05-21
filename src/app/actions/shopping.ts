@@ -1,10 +1,25 @@
 "use server";
 
+import { format } from "date-fns";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-import { parseMoneyToCents } from "@/lib/money";
+import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
+import { mergeTagLists } from "@/lib/budgetRollup";
+import { applyMerchantRulesToTags } from "@/lib/merchantRules";
+import { parseMoneyToCents, formatCents } from "@/lib/money";
+import { shoppingTripImportHash } from "@/lib/shoppingExpense";
 import type { FormActionState } from "@/lib/formActionState";
+
+function revalidateShoppingExpenseTargets(yearMonth: string) {
+  revalidatePath("/shopping");
+  revalidatePath("/");
+  revalidatePath("/expenses");
+  revalidatePath("/budgets");
+  revalidatePath("/insights");
+  revalidatePath("/flow");
+  revalidatePath(`/expenses?ym=${yearMonth}`);
+}
 
 export async function createFullTripCore(
   formData: FormData,
@@ -184,4 +199,87 @@ export async function deleteTripAction(formData: FormData): Promise<void> {
   if (!tripId) return;
   await prisma.shoppingTrip.delete({ where: { id: tripId } });
   revalidatePath("/shopping");
+}
+
+export async function createExpenseFromShoppingTripAction(
+  _prev: FormActionState | undefined,
+  formData: FormData,
+): Promise<FormActionState> {
+  const user = await requireUser();
+  const tripId = String(formData.get("tripId") ?? "").trim();
+  let yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
+
+  if (!tripId) return { error: "Missing trip." };
+
+  const trip = await prisma.shoppingTrip.findUnique({
+    where: { id: tripId },
+    include: { items: true },
+  });
+  if (!trip) return { error: "Trip not found." };
+
+  if (!yearMonth.match(/^\d{4}-\d{2}$/)) {
+    yearMonth = format(trip.shoppedAt, "yyyy-MM");
+  }
+
+  let amountCents = trip.totalCents;
+  if (amountCents <= 0) {
+    amountCents = trip.items.reduce((s, it) => {
+      if (it.priceCents == null) return s;
+      return s + it.priceCents * it.quantity;
+    }, 0);
+  }
+  if (amountCents <= 0) {
+    return {
+      error:
+        "Add prices to line items (or save a non-zero trip total) before logging as spending.",
+    };
+  }
+
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const importHash = shoppingTripImportHash(tripId);
+  const dup = await prisma.expense.findFirst({
+    where: { monthlyPeriodId: period.id, importHash },
+    select: { id: true, description: true },
+  });
+  if (dup) {
+    return {
+      error: `Already logged for ${yearMonth} (“${dup.description}”).`,
+    };
+  }
+
+  let budgetPlanId: string | null = budgetPlanIdRaw || null;
+  if (budgetPlanId) {
+    const plan = await prisma.budgetPlan.findFirst({
+      where: { id: budgetPlanId, monthlyPeriodId: period.id },
+    });
+    if (!plan) budgetPlanId = null;
+  }
+
+  const store = trip.storeName?.trim() || "Grocery trip";
+  const description = `Shopping: ${store}`;
+  const tagsJson = await applyMerchantRulesToTags(
+    description,
+    mergeTagLists(["grocery"]),
+  );
+
+  await prisma.expense.create({
+    data: {
+      monthlyPeriodId: period.id,
+      userId: user.userId,
+      amountCents,
+      description,
+      spentAt: trip.shoppedAt,
+      source: "shopping",
+      importHash,
+      budgetPlanId,
+      tagsJson,
+    },
+  });
+
+  revalidateShoppingExpenseTargets(yearMonth);
+  return {
+    ok: true,
+    message: `Logged ${formatCents(amountCents)} to ${yearMonth} spending.`,
+  };
 }

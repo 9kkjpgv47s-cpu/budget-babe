@@ -108,19 +108,32 @@ export function QuickForms({
             defaultValue={expenseDefaults.payee ?? ""}
             className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
           />
-          <select
-            name="budgetPlanId"
-            defaultValue={defaultBudgetId}
-            key={`budget-${defaultBudgetId}-${state?.ok ? "ok" : "idle"}`}
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
-          >
-            <option value="">Budget envelope (optional)</option>
-            {budgetPlans.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          <div className="sm:col-span-2">
+            <label
+              htmlFor="quickBudgetPlanId"
+              className="text-xs font-medium text-zinc-600 dark:text-zinc-400"
+            >
+              Budget envelope (optional)
+            </label>
+            <select
+              id="quickBudgetPlanId"
+              name="budgetPlanId"
+              defaultValue={defaultBudgetId}
+              key={`budget-${defaultBudgetId}-${state?.ok ? "ok" : "idle"}`}
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            >
+              <option value="">Auto-match by name/tags</option>
+              {budgetPlans.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-zinc-500">
+              Links this row on Expenses and budget spent totals. Merchant rules
+              still add tags.
+            </p>
+          </div>
           <input
             name="tags"
             placeholder="Tags (comma-separated, optional)"

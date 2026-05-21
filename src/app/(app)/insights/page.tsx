@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MonthWorkflowLinks } from "@/components/MonthWorkflowLinks";
 import { requireUser } from "@/lib/auth";
 import { getDashboardData } from "@/lib/dashboardData";
 import { currentYearMonth } from "@/lib/yearMonth";
@@ -96,12 +97,26 @@ export default async function InsightsPage({
           Budget lines, uncategorized spend, and merchants that show up often
           (possible subscriptions).
         </p>
-        <p className="mt-2 text-sm">
-          <Link href={`/?ym=${ym}`} className="text-emerald-600 underline">
-            ← Overview ({ym})
-          </Link>
-        </p>
+        <div className="mt-2">
+          <MonthWorkflowLinks yearMonth={ym} />
+        </div>
       </div>
+
+      {uncategorized.length > 0 ? (
+        <p className="rounded-lg border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+          {uncategorized.length} expense
+          {uncategorized.length === 1 ? "" : "s"} ({formatCents(uncSum)}) not
+          matched to a budget line —{" "}
+          <Link
+            href={`/expenses?ym=${ym}`}
+            className="font-medium text-emerald-800 underline dark:text-emerald-300"
+          >
+            assign envelopes on Expenses
+          </Link>
+          {" "}
+          or add merchant rules on Import.
+        </p>
+      ) : null}
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">By budget line</h2>

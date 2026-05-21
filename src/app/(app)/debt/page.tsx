@@ -1,11 +1,21 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { formatCents } from "@/lib/money";
+import { currentYearMonth } from "@/lib/yearMonth";
+import { CashFlowSiloCallout } from "@/components/CashFlowSiloCallout";
+import { DebtCashFlowCompare } from "@/components/DebtCashFlowCompare";
+import { MonthWorkflowLinks } from "@/components/MonthWorkflowLinks";
 import { addDebtAccountAction, deleteDebtAccountAction, updateDebtAccountAction } from "@/app/actions/debt";
 
-export default async function DebtPage() {
+export default async function DebtPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ym?: string }>;
+}) {
   await requireUser();
+  const sp = await searchParams;
+  const yearMonth =
+    sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
   const accounts = await prisma.debtAccount.findMany({
     orderBy: { balanceCents: "desc" },
   });
@@ -20,12 +30,14 @@ export default async function DebtPage() {
         <p className="mt-1 text-sm text-zinc-500">
           Track balances and minimums — edit in place or remove.
         </p>
-        <p className="mt-2 text-sm">
-          <Link href="/" className="text-emerald-600 underline">
-            ← Overview
-          </Link>
-        </p>
+        <div className="mt-2">
+          <MonthWorkflowLinks yearMonth={yearMonth} />
+        </div>
       </div>
+
+      <CashFlowSiloCallout variant="debt" yearMonth={yearMonth} />
+
+      <DebtCashFlowCompare yearMonth={yearMonth} />
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">Totals</h2>

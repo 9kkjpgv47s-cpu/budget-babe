@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import {
   updateNextPaycheckAction,
@@ -35,7 +36,13 @@ export function DashboardPanel({
       <p className="text-xs text-zinc-500">
         Log take-home deposits under <strong>Paychecks this month</strong> below
         (or <strong>Quick add</strong> → Paycheck). Coach and overview use their
-        sum as monthly income.
+        sum as monthly income.{" "}
+        <Link
+          href={`/coach?ym=${yearMonth}`}
+          className="font-medium text-emerald-700 underline dark:text-emerald-400"
+        >
+          Paycheck coach settings →
+        </Link>
       </p>
 
       <form action={savePay} className="space-y-2">

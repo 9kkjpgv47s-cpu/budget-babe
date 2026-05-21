@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { startOfMonth } from "date-fns";
+import { MonthWorkflowLinks } from "@/components/MonthWorkflowLinks";
 import { requireUser } from "@/lib/auth";
 import { getDashboardData, ensureHouseholdSettings } from "@/lib/dashboardData";
 import { prisma } from "@/lib/prisma";
@@ -94,11 +94,9 @@ export default async function FlowPage({
           Income rows are individual paychecks (plus legacy planned income if you have not added paychecks yet).{" "}
           (chronological).
         </p>
-        <p className="mt-2 text-sm">
-          <Link href={`/?ym=${ym}`} className="text-emerald-600 underline">
-            ← Overview
-          </Link>
-        </p>
+        <div className="mt-2">
+          <MonthWorkflowLinks yearMonth={ym} />
+        </div>
       </div>
       <ul className="space-y-2 rounded-xl border border-zinc-200 bg-white p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900">
         {rows.map((r, i) => (
