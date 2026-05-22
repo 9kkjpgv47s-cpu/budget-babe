@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
+import { resolveCategoryIdFromLabel } from "@/lib/categories";
 import { getLastExpenseDefaultsForYearMonth } from "@/lib/entryDefaults";
 import { finalizeClassifiedExpenseWrite } from "@/lib/expenseWrite";
 
@@ -40,19 +41,7 @@ export async function bulkInsertExpenses(
       skipped++;
       continue;
     }
-    let categoryId: string | null = null;
-    if (parts.categoryLabel?.trim()) {
-      const label = parts.categoryLabel.trim().toLowerCase();
-      const cat = await prisma.category.findFirst({
-        where: {
-          OR: [
-            { slug: label },
-            { name: { equals: parts.categoryLabel.trim(), mode: "insensitive" } },
-          ],
-        },
-      });
-      categoryId = cat?.id ?? null;
-    }
+    const categoryId = await resolveCategoryIdFromLabel(parts.categoryLabel);
     const write = await finalizeClassifiedExpenseWrite(
       {
         description: parts.description,

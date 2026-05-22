@@ -7,9 +7,9 @@ import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
 import { mergeTagLists, parseTagsJson } from "@/lib/budgetRollup";
 import { commaListToTagsJson } from "@/lib/entryDefaults";
-import { classifyExpenseForWrite } from "@/lib/merchantRules";
-import { fieldsFromCategoryId } from "@/lib/categories";
+import { coerceCategoryId } from "@/lib/categories";
 import {
+  assignCategoryToExpense,
   finalizeClassifiedExpenseWrite,
   reapplyExpenseClassificationForPeriod,
 } from "@/lib/expenseWrite";
@@ -129,46 +129,12 @@ export async function bulkSetCategoryForExpensesAction(formData: FormData): Prom
   const raw = String(formData.get("bulkCategoryId") ?? "").trim();
   if (!yearMonth || ids.length === 0) return;
   const period = await getOrCreateMonthlyPeriod(yearMonth);
-  const categoryId: string | null = raw && raw !== "none" ? raw : null;
-  if (categoryId) {
-    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
-    if (!cat) return;
-  }
+  const categoryId = await coerceCategoryId(raw && raw !== "none" ? raw : null);
+  if (raw && raw !== "none" && !categoryId) return;
+  const applyTax = String(formData.get("applyTaxFromCategory") ?? "on") === "on";
   for (const id of ids) {
-    const exp = await prisma.expense.findFirst({
-      where: { id, monthlyPeriodId: period.id },
-    });
-    if (!exp) continue;
-    const applyTax =
-      String(formData.get("applyTaxFromCategory") ?? "on") === "on";
-    const patch = await fieldsFromCategoryId(
-      categoryId,
-      period.id,
-      {
-        budgetPlanId: exp.budgetPlanId,
-        taxCategory: exp.taxCategory,
-      },
-      categoryId
-        ? { forceTaxDefault: applyTax, forceBudgetLink: true }
-        : undefined,
-    );
-    let tagsJson = exp.tagsJson;
-    if (categoryId) {
-      const classified = await classifyExpenseForWrite(exp.description, period.id, {
-        categoryId,
-        tagsJson: exp.tagsJson,
-        autoSuggest: false,
-      });
-      tagsJson = classified.tagsJson;
-    }
-    await prisma.expense.update({
-      where: { id },
-      data: {
-        categoryId: patch.categoryId,
-        budgetPlanId: patch.budgetPlanId,
-        taxCategory: patch.taxCategory,
-        tagsJson,
-      },
+    await assignCategoryToExpense(id, period.id, categoryId, {
+      applyTaxFromCategory: applyTax,
     });
   }
   revalidateAll(yearMonth);
@@ -184,7 +150,6 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
   const spentRaw = String(formData.get("spentAt") ?? "").trim();
   const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
   const payee = String(formData.get("payee") ?? "").trim() || null;
-  const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
   if (!id || !yearMonth || amount == null || !description) return;
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   const exp = await prisma.expense.findFirst({
@@ -192,11 +157,9 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
   });
   if (!exp) return;
 
-  let categoryId: string | null = categoryIdRaw || null;
-  if (categoryId) {
-    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
-    if (!cat) categoryId = null;
-  }
+  const categoryId = await coerceCategoryId(
+    String(formData.get("categoryId") ?? "").trim(),
+  );
   const write = await finalizeClassifiedExpenseWrite(
     {
       description,

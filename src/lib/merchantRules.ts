@@ -1,6 +1,11 @@
 /**
- * Category classification for expenses. Agent 2 (receipts) should call
- * `classifyExpenseForWrite` when posting from OCR — do not duplicate logic in receipts.ts.
+ * Category classification for expenses.
+ *
+ * Agent 2 (receipts): call `finalizeClassifiedExpenseWrite` from `@/lib/expenseWrite`
+ * or `classifyExpenseForWrite` when posting from OCR — do not duplicate logic in receipts.ts.
+ *
+ * Agent 1 (move month): call `remapExpenseCategoryFieldsToPeriod` from `@/lib/categories`
+ * when linked expenses change `monthlyPeriodId`.
  */
 import { prisma } from "@/lib/prisma";
 import {

@@ -6,6 +6,7 @@ import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
+import { coerceCategoryId } from "@/lib/categories";
 import { getLastExpenseDefaultsForYearMonth } from "@/lib/entryDefaults";
 import { finalizeClassifiedExpenseWrite } from "@/lib/expenseWrite";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
@@ -38,11 +39,7 @@ export async function createSplitExpensesAction(
   const lastDefaults = await getLastExpenseDefaultsForYearMonth(yearMonth);
   let sharedBudgetId: string | null =
     budgetPlanIdRaw || lastDefaults.budgetPlanId;
-  let sharedCategoryId: string | null = categoryIdRaw || null;
-  if (sharedCategoryId) {
-    const cat = await prisma.category.findUnique({ where: { id: sharedCategoryId } });
-    if (!cat) sharedCategoryId = null;
-  }
+  const sharedCategoryId = await coerceCategoryId(categoryIdRaw);
   const splitGroupId = randomUUID();
   let sum = 0;
   const parsed: { amountCents: number; description: string }[] = [];

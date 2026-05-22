@@ -13,7 +13,7 @@ import {
 } from "@/lib/categories";
 import { isValidTaxCategory } from "@/lib/taxCategories";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
-import { classifyExpenseForWrite } from "@/lib/merchantRules";
+import { classifyUncategorizedForPeriod } from "@/lib/expenseWrite";
 
 function revalidateCategoryPaths(yearMonth?: string) {
   revalidatePath("/budgets");
@@ -210,45 +210,7 @@ export async function bulkApplyCategoryRulesAction(
   if (!yearMonth) return;
   const period = await getOrCreateMonthlyPeriod(yearMonth);
 
-  const expenses = await prisma.expense.findMany({
-    where: { monthlyPeriodId: period.id, categoryId: null },
-    select: {
-      id: true,
-      description: true,
-      tagsJson: true,
-      budgetPlanId: true,
-      taxCategory: true,
-    },
-  });
-
-  for (const exp of expenses) {
-    const classified = await classifyExpenseForWrite(exp.description, period.id, {
-      tagsJson: exp.tagsJson,
-      budgetPlanId: exp.budgetPlanId,
-      taxCategory: exp.taxCategory,
-    });
-    if (!classified.categoryId) continue;
-    let budgetPlanId = classified.budgetPlanId;
-    if (!budgetPlanId && classified.categoryId) {
-      budgetPlanId = await resolveBudgetPlanIdForCategory(
-        classified.categoryId,
-        period.id,
-      );
-    }
-    const patch = await fieldsFromCategoryId(classified.categoryId, period.id, {
-      budgetPlanId,
-      taxCategory: classified.taxCategory,
-    }, { forceTaxDefault: true, forceBudgetLink: true });
-    await prisma.expense.update({
-      where: { id: exp.id },
-      data: {
-        categoryId: patch.categoryId,
-        budgetPlanId: patch.budgetPlanId,
-        taxCategory: patch.taxCategory,
-        tagsJson: classified.tagsJson,
-      },
-    });
-  }
+  await classifyUncategorizedForPeriod(period.id);
   revalidateCategoryPaths(yearMonth);
   revalidatePath("/tax");
 }

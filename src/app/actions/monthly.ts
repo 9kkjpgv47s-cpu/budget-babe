@@ -17,7 +17,7 @@ import {
   commaListToTagsJson,
   expenseDefaultsFromDraft,
 } from "@/lib/entryDefaults";
-import { linkCategoriesToBudgetEnvelope } from "@/lib/categories";
+import { coerceCategoryId, linkCategoriesToBudgetEnvelope } from "@/lib/categories";
 import { finalizeClassifiedExpenseWrite } from "@/lib/expenseWrite";
 import { guessPaystubAmountFromBuffer } from "@/lib/paystubOcr";
 import { deletePaystubStored, savePaystubUpload } from "@/lib/uploads";
@@ -196,12 +196,9 @@ export async function addExpenseCore(
   const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
   const payee = String(formData.get("payee") ?? "").trim() || null;
   const manualTagsJson = commaListToTagsJson(String(formData.get("tags") ?? ""));
-  const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
-  let categoryId: string | null = categoryIdRaw || null;
-  if (categoryId) {
-    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
-    if (!cat) categoryId = null;
-  }
+  const categoryId = await coerceCategoryId(
+    String(formData.get("categoryId") ?? "").trim(),
+  );
   const write = await finalizeClassifiedExpenseWrite(
     {
       description,
