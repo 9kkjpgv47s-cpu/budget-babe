@@ -51,14 +51,15 @@ function parseReceiptLines(raw) {
 
 function parseLikelyTotalCents(raw) {
   const upper = raw.toUpperCase();
+  const amountChunk = String.raw`([\d\s.,€£$]+)`;
   const patterns = [
-    /TOTAL[:\s]+[\$€£]?\s*([\d,]+\.\d{2})/i,
-    /AMOUNT\s+DUE[:\s]+[\$€£]?\s*([\d,]+\.\d{2})/i,
+    new RegExp(`TOTAL[:\\s]+[$€£]?\\s*${amountChunk}`, "i"),
+    new RegExp(`AMOUNT\\s+DUE[:\\s]+[$€£]?\\s*${amountChunk}`, "i"),
   ];
   for (const re of patterns) {
     const m = upper.match(re) ?? raw.match(re);
     if (m?.[1]) {
-      const cents = parseMoneyToCents(m[1].replace(/,/g, ""));
+      const cents = parseReceiptLineAmountCents(m[1]);
       if (cents != null && cents > 0) return cents;
     }
   }
@@ -93,6 +94,7 @@ assert.ok(!lines.some((l) => /subtotal/i.test(l.description)));
 
 const total = parseLikelyTotalCents("TOTAL: $42.18\n");
 assert.equal(total, 4218);
+assert.equal(parseLikelyTotalCents("TOTAL: 42,18\n"), 4218);
 
 const merchant = parseMerchantFromOcrText("WHOLE FOODS MARKET\n123 Main St\n");
 assert.equal(merchant, "WHOLE FOODS MARKET");

@@ -11,6 +11,10 @@ export function ReceiptHelpTips() {
           <strong>Post all ready</strong> posts every receipt with a detected total — review on Spending
           afterward.
         </li>
+        <li>
+          <strong>Auto-post on upload</strong> only runs when OCR confidence, amount, and recent
+          duplicates look safe (see checkbox hint).
+        </li>
         <li>Line-item post lets you edit amounts before creating split expenses.</li>
         <li>Linked spending on Expenses includes links back to the original scan for tax records.</li>
       </ul>

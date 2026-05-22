@@ -27,5 +27,8 @@ if (db.trim() && !db.startsWith("file:")) {
 console.log("[vercel-build] prisma generate…");
 run("npx prisma generate");
 
+console.log("[vercel-build] receipt parse smoke test…");
+run("node scripts/test-receipt-parse.mjs");
+
 console.log("[vercel-build] next build…");
 run("npx next build");

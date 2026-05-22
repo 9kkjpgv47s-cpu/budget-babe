@@ -95,18 +95,19 @@ export function defaultExpenseDescriptionFromReceipt(
 
 export function parseLikelyTotalCents(raw: string): number | null {
   const upper = raw.toUpperCase();
+  const amountChunk = String.raw`([\d\s.,€£$]+)`;
   const patterns = [
-    /TOTAL[:\s]+[\$€£]?\s*([\d,]+\.\d{2})/i,
-    /AMOUNT\s+DUE[:\s]+[\$€£]?\s*([\d,]+\.\d{2})/i,
-    /BALANCE[:\s]+[\$€£]?\s*([\d,]+\.\d{2})/i,
-    /GRAND\s*TOTAL[:\s]+[\$€£]?\s*([\d,]+\.\d{2})/i,
-    /([\d,]+\.\d{2})\s+TOTAL\b/i,
-    /^[\$€£]?\s*([\d,]+\.\d{2})\s*$/m,
+    new RegExp(`TOTAL[:\\s]+[$€£]?\\s*${amountChunk}`, "i"),
+    new RegExp(`AMOUNT\\s+DUE[:\\s]+[$€£]?\\s*${amountChunk}`, "i"),
+    new RegExp(`BALANCE[:\\s]+[$€£]?\\s*${amountChunk}`, "i"),
+    new RegExp(`GRAND\\s*TOTAL[:\\s]+[$€£]?\\s*${amountChunk}`, "i"),
+    new RegExp(`${amountChunk}\\s+TOTAL\\b`, "i"),
+    new RegExp(`^[$€£]?\\s*${amountChunk}\\s*$`, "m"),
   ];
   for (const re of patterns) {
     const m = upper.match(re) ?? raw.match(re);
     if (m?.[1]) {
-      const cents = parseMoneyToCents(m[1].replace(/,/g, ""));
+      const cents = parseReceiptLineAmountCents(m[1]);
       if (cents != null && cents > 0 && cents < 1_000_000_00) return cents;
     }
   }

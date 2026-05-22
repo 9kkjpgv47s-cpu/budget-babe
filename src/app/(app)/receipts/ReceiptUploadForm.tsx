@@ -188,7 +188,8 @@ export function ReceiptUploadForm({
           <strong className="text-zinc-800 dark:text-zinc-200">
             Auto-post total when OCR finishes
           </strong>{" "}
-          — uses detected amount and store name (you can undo in Expenses).
+          — only when confidence is OK, total is under $5,000, and no matching
+          expense was posted in the last 7 days.
         </span>
       </label>
       <button

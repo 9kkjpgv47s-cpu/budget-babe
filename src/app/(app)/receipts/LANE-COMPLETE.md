@@ -33,7 +33,15 @@ Receipt capture, OCR, discoverability, and posting to spending. All items below 
 - `GET /api/receipts/ocr-pending` — nav badge counts
 - `GET /api/receipts/export` — month metadata CSV
 
-## Polish (phase 7)
+## Polish (phase 9)
+
+- Scan FAB links to `#upload`; hash scroll + file focus on receipts page
+- EU totals in `parseLikelyTotalCents` (e.g. `TOTAL: 42,18`)
+- Auto-post guardrails: min OCR confidence, max $5k, skip duplicate amount (7 days)
+- Status API: `autoPostSafe` + `autoPostBlockedReason`
+- `test:receipt-parse` runs in `vercel-build` before Next build
+
+## Polish (phase 8)
 
 - Mobile **Scan** FAB on Home, Expenses, Receipts
 - Receipt tips collapsible; stricter upload file types

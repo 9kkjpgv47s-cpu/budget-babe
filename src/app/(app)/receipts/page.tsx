@@ -122,7 +122,10 @@ export default async function ReceiptsPage({
 
       <ReceiptHelpTips />
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section
+        id="upload"
+        className="scroll-mt-20 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"
+      >
         <h2 className="font-medium">Upload for {yearMonth}</h2>
         <p className="mt-1 text-xs text-zinc-500">
           Month: <strong>{yearMonth}</strong>. Change from overview arrows or{" "}

@@ -51,6 +51,8 @@ export function ReceiptAutoPostWatcher({ yearMonth }: { yearMonth: string }) {
         }
         const data = (await res.json()) as {
           readyToPost?: boolean;
+          autoPostSafe?: boolean;
+          autoPostBlockedReason?: string | null;
           ocrStatus?: string;
         };
         if (cancelled) return;
@@ -59,6 +61,16 @@ export function ReceiptAutoPostWatcher({ yearMonth }: { yearMonth: string }) {
           return;
         }
         if (!data.readyToPost) return;
+        if (!data.autoPostSafe) {
+          if (
+            data.autoPostBlockedReason === "duplicate_amount" ||
+            data.autoPostBlockedReason === "amount_too_large" ||
+            data.autoPostBlockedReason === "low_confidence"
+          ) {
+            clearAutoPostReceiptId();
+          }
+          return;
+        }
 
         running.current = true;
         const fd = new FormData();
