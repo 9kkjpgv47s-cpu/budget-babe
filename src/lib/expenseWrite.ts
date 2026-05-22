@@ -6,8 +6,9 @@ import {
   type FinalizeExpenseInput,
   type MerchantRuleDraft,
 } from "@/lib/entryDefaults";
+import { prisma } from "@/lib/prisma";
+import { fieldsFromCategoryId, type CategoryFieldPatch } from "@/lib/categories";
 import { classifyExpenseForWrite } from "@/lib/merchantRules";
-import type { CategoryFieldPatch } from "@/lib/categories";
 
 export type ClassifiedExpenseWrite = CategoryFieldPatch & {
   tagsJson: string | null;
@@ -107,4 +108,113 @@ export async function reapplyExpenseClassificationForPeriod(
     updated: result.updated,
     categoriesSet: result.categorySet,
   };
+}
+
+export type ClassifyUncategorizedResult = {
+  scanned: number;
+  categorized: number;
+};
+
+/** Auto-classify expenses in a month that have no category yet. */
+export async function classifyUncategorizedForPeriod(
+  monthlyPeriodId: string,
+): Promise<ClassifyUncategorizedResult> {
+  const expenses = await prisma.expense.findMany({
+    where: { monthlyPeriodId, categoryId: null },
+    select: {
+      id: true,
+      description: true,
+      tagsJson: true,
+      budgetPlanId: true,
+      taxCategory: true,
+    },
+  });
+
+  let categorized = 0;
+  for (const exp of expenses) {
+    const classified = await classifyExpenseForWrite(exp.description, monthlyPeriodId, {
+      tagsJson: exp.tagsJson,
+      budgetPlanId: exp.budgetPlanId,
+      taxCategory: exp.taxCategory,
+    });
+    if (!classified.categoryId) continue;
+
+    const patch = await fieldsFromCategoryId(
+      classified.categoryId,
+      monthlyPeriodId,
+      {
+        budgetPlanId: classified.budgetPlanId,
+        taxCategory: classified.taxCategory,
+      },
+      { forceTaxDefault: true, forceBudgetLink: true },
+    );
+
+    await prisma.expense.update({
+      where: { id: exp.id },
+      data: {
+        categoryId: patch.categoryId,
+        budgetPlanId: patch.budgetPlanId,
+        taxCategory: patch.taxCategory,
+        tagsJson: classified.tagsJson,
+      },
+    });
+    categorized += 1;
+  }
+
+  return { scanned: expenses.length, categorized };
+}
+
+/** Assign or clear category on one expense (bulk row editor). */
+export async function assignCategoryToExpense(
+  expenseId: string,
+  monthlyPeriodId: string,
+  categoryId: string | null,
+  opts?: { applyTaxFromCategory?: boolean },
+): Promise<void> {
+  const exp = await prisma.expense.findFirst({
+    where: { id: expenseId, monthlyPeriodId },
+    select: {
+      id: true,
+      description: true,
+      tagsJson: true,
+      budgetPlanId: true,
+      taxCategory: true,
+    },
+  });
+  if (!exp) return;
+
+  const patch = await fieldsFromCategoryId(
+    categoryId,
+    monthlyPeriodId,
+    {
+      budgetPlanId: exp.budgetPlanId,
+      taxCategory: exp.taxCategory,
+    },
+    categoryId
+      ? {
+          forceTaxDefault: opts?.applyTaxFromCategory ?? true,
+          forceBudgetLink: true,
+        }
+      : undefined,
+  );
+
+  let tagsJson = exp.tagsJson;
+  if (categoryId) {
+    const classified = await classifyExpenseForWrite(exp.description, monthlyPeriodId, {
+      categoryId,
+      tagsJson: exp.tagsJson,
+      autoSuggest: false,
+    });
+    tagsJson = classified.tagsJson;
+  }
+
+  await prisma.expense.update({
+    where: { id: expenseId },
+    data: {
+      categoryId: patch.categoryId,
+      budgetPlanId: patch.budgetPlanId,
+      taxCategory: patch.taxCategory,
+      tagsJson,
+    },
+  });
 }

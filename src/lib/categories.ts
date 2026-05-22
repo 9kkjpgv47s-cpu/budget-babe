@@ -82,6 +82,65 @@ export async function ensureDefaultCategories(): Promise<void> {
   }
 }
 
+/** Resolve category id from CSV/import label (slug or name, case-insensitive). */
+export async function resolveCategoryIdFromLabel(
+  label: string | null | undefined,
+): Promise<string | null> {
+  const raw = label?.trim();
+  if (!raw) return null;
+  const slug = raw.toLowerCase();
+  const cat = await prisma.category.findFirst({
+    where: {
+      OR: [
+        { slug },
+        { name: { equals: raw, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true },
+  });
+  return cat?.id ?? null;
+}
+
+/** Validate optional category id from form data. */
+export async function coerceCategoryId(
+  raw: string | null | undefined,
+): Promise<string | null> {
+  const id = raw?.trim() || null;
+  if (!id) return null;
+  const cat = await prisma.category.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+  return cat?.id ?? null;
+}
+
+/**
+ * When an expense moves to another month, re-link budget (and tax) from its category
+ * in the target period. Category id is global; envelope names map per month.
+ */
+export async function remapExpenseCategoryFieldsToPeriod(
+  categoryId: string | null,
+  targetMonthlyPeriodId: string,
+  existing?: { budgetPlanId?: string | null; taxCategory?: string | null },
+): Promise<CategoryFieldPatch> {
+  if (!categoryId) {
+    return {
+      categoryId: null,
+      budgetPlanId: existing?.budgetPlanId ?? null,
+      taxCategory: existing?.taxCategory ?? null,
+    };
+  }
+  return fieldsFromCategoryId(
+    categoryId,
+    targetMonthlyPeriodId,
+    {
+      budgetPlanId: existing?.budgetPlanId ?? null,
+      taxCategory: existing?.taxCategory ?? null,
+    },
+    { forceBudgetLink: true },
+  );
+}
+
 export async function resolveBudgetPlanIdForCategory(
   categoryId: string,
   monthlyPeriodId: string,

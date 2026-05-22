@@ -5,6 +5,7 @@ import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
+import { coerceCategoryId } from "@/lib/categories";
 import { applyMerchantRulesToExistingExpenses } from "@/lib/merchantRules";
 import type { FormActionState } from "@/lib/formActionState";
 
@@ -19,11 +20,7 @@ export async function addMerchantRuleAction(formData: FormData): Promise<void> {
   const tag = String(formData.get("tag") ?? "").trim().toLowerCase();
   const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
   if (!pattern || !tag) return;
-  let categoryId: string | null = categoryIdRaw || null;
-  if (categoryId) {
-    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
-    if (!cat) categoryId = null;
-  }
+  const categoryId = await coerceCategoryId(categoryIdRaw);
   await prisma.merchantRule.create({
     data: { pattern, tag, categoryId, sortOrder: 0 },
   });
@@ -37,11 +34,7 @@ export async function updateMerchantRuleAction(formData: FormData): Promise<void
   const tag = String(formData.get("tag") ?? "").trim().toLowerCase();
   const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
   if (!id || !pattern || !tag) return;
-  let categoryId: string | null = categoryIdRaw || null;
-  if (categoryId) {
-    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
-    if (!cat) categoryId = null;
-  }
+  const categoryId = await coerceCategoryId(categoryIdRaw);
   await prisma.merchantRule.update({
     where: { id },
     data: { pattern, tag, categoryId },

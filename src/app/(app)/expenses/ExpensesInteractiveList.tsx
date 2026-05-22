@@ -50,7 +50,7 @@ export function ExpensesInteractiveList({
   expenses: ExpenseRowDTO[];
   allExpenseCount: number;
   plans: { id: string; name: string }[];
-  categories: { id: string; name: string }[];
+  categories: { id: string; name: string; slug?: string }[];
   uncategorizedCount: number;
   taxErr?: string | null;
 }) {

@@ -18,7 +18,12 @@ import {
   expenseDefaultsFromWrite,
   finalizeExpenseForWrite,
 } from "@/lib/entryDefaults";
+<<<<<<< HEAD
 import { linkCategoriesToBudgetEnvelope } from "@/lib/categories";
+=======
+import { coerceCategoryId, linkCategoriesToBudgetEnvelope } from "@/lib/categories";
+import { finalizeClassifiedExpenseWrite } from "@/lib/expenseWrite";
+>>>>>>> 16f0210 (feat(agent-3): category helpers, expense filters, spend drill-down)
 import { guessPaystubAmountFromBuffer } from "@/lib/paystubOcr";
 import { deletePaystubStored, savePaystubUpload } from "@/lib/uploads";
 
@@ -196,6 +201,7 @@ export async function addExpenseCore(
   const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
   const payee = String(formData.get("payee") ?? "").trim() || null;
   const manualTagsJson = commaListToTagsJson(String(formData.get("tags") ?? ""));
+<<<<<<< HEAD
   const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
   let categoryId: string | null = categoryIdRaw || null;
   if (categoryId) {
@@ -203,6 +209,12 @@ export async function addExpenseCore(
     if (!cat) categoryId = null;
   }
   const fields = await finalizeExpenseForWrite(
+=======
+  const categoryId = await coerceCategoryId(
+    String(formData.get("categoryId") ?? "").trim(),
+  );
+  const write = await finalizeClassifiedExpenseWrite(
+>>>>>>> 16f0210 (feat(agent-3): category helpers, expense filters, spend drill-down)
     {
       description,
       tagsJson: manualTagsJson,

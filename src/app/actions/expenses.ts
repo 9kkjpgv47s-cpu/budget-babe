@@ -10,10 +10,8 @@ import {
   commaListToTagsJson,
   finalizeExpenseForWrite,
 } from "@/lib/entryDefaults";
-import {
-  finalizeClassifiedExpenseWrite,
-  reapplyExpenseClassificationForPeriod,
-} from "@/lib/expenseWrite";
+import { coerceCategoryId } from "@/lib/categories";
+import { reapplyExpenseClassificationForPeriod } from "@/lib/expenseWrite";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 
 function revalidateAll(yearMonth: string) {
@@ -47,25 +45,26 @@ export async function bulkApplyTagsToExpensesAction(formData: FormData): Promise
       tagMode === "replace"
         ? mergeTagLists(tagsRaw)
         : mergeTagLists(parseTagsJson(exp.tagsJson), tagsRaw);
-    const write = await finalizeClassifiedExpenseWrite(
+    const fields = await finalizeExpenseForWrite(
       {
         description: exp.description,
         tagsJson: manual ?? exp.tagsJson,
         budgetPlanId: exp.budgetPlanId,
         payee: exp.payee,
+        categoryId: exp.categoryId,
+        taxCategory: exp.taxCategory,
+        autoSuggestCategory: false,
       },
-      period.id,
       yearMonth,
-      { categoryId: exp.categoryId, taxCategory: exp.taxCategory },
     );
     await prisma.expense.update({
       where: { id },
       data: {
-        tagsJson: write.tagsJson,
-        categoryId: write.categoryId,
-        budgetPlanId: write.budgetPlanId,
-        taxCategory: write.taxCategory,
-        payee: write.payee,
+        tagsJson: fields.tagsJson,
+        categoryId: fields.categoryId,
+        budgetPlanId: fields.budgetPlanId,
+        taxCategory: fields.taxCategory,
+        payee: fields.payee,
       },
     });
   }
@@ -130,12 +129,11 @@ export async function bulkSetCategoryForExpensesAction(formData: FormData): Prom
   const raw = String(formData.get("bulkCategoryId") ?? "").trim();
   if (!yearMonth || ids.length === 0) return;
   const period = await getOrCreateMonthlyPeriod(yearMonth);
-  const categoryId: string | null = raw && raw !== "none" ? raw : null;
-  if (categoryId) {
-    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
-    if (!cat) return;
-  }
+  const categoryId = await coerceCategoryId(raw && raw !== "none" ? raw : null);
+  if (raw && raw !== "none" && !categoryId) return;
+  const applyTax = String(formData.get("applyTaxFromCategory") ?? "on") === "on";
   for (const id of ids) {
+<<<<<<< HEAD
     const exp = await prisma.expense.findFirst({
       where: { id, monthlyPeriodId: period.id },
     });
@@ -164,6 +162,10 @@ export async function bulkSetCategoryForExpensesAction(formData: FormData): Prom
         tagsJson: fields.tagsJson,
         payee: fields.payee,
       },
+=======
+    await assignCategoryToExpense(id, period.id, categoryId, {
+      applyTaxFromCategory: applyTax,
+>>>>>>> dc92bcd (feat(agent-3): category helpers, expense filters, spend drill-down)
     });
   }
   revalidateAll(yearMonth);
@@ -179,7 +181,6 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
   const spentRaw = String(formData.get("spentAt") ?? "").trim();
   const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
   const payee = String(formData.get("payee") ?? "").trim() || null;
-  const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
   if (!id || !yearMonth || amount == null || !description) return;
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   const exp = await prisma.expense.findFirst({
@@ -187,21 +188,21 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
   });
   if (!exp) return;
 
-  let categoryId: string | null = categoryIdRaw || null;
-  if (categoryId) {
-    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
-    if (!cat) categoryId = null;
-  }
-  const write = await finalizeClassifiedExpenseWrite(
+  const categoryId = await coerceCategoryId(
+    String(formData.get("categoryId") ?? "").trim(),
+  );
+  const fields = await finalizeExpenseForWrite(
     {
       description,
       tagsJson: commaListToTagsJson(String(formData.get("tags") ?? "")),
       budgetPlanId: budgetPlanIdRaw || null,
       payee,
+      categoryId,
+      taxCategory: exp.taxCategory,
+      autoSuggestCategory: false,
+      forceCategoryTaxDefault: true,
     },
-    period.id,
     yearMonth,
-    { categoryId, taxCategory: exp.taxCategory, autoSuggest: false },
   );
   const spentAt = spentRaw ? new Date(spentRaw) : exp.spentAt;
   if (Number.isNaN(spentAt.getTime())) return;
@@ -212,11 +213,11 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
       amountCents: amount,
       description,
       spentAt,
-      payee: write.payee,
-      categoryId: write.categoryId,
-      budgetPlanId: write.budgetPlanId,
-      taxCategory: write.taxCategory,
-      tagsJson: write.tagsJson,
+      payee: fields.payee,
+      categoryId: fields.categoryId,
+      budgetPlanId: fields.budgetPlanId,
+      taxCategory: fields.taxCategory,
+      tagsJson: fields.tagsJson,
     },
   });
   revalidateAll(yearMonth);
