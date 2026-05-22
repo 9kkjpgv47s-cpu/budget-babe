@@ -3,7 +3,6 @@
  */
 import {
   finalizeExpenseForWrite,
-  getBudgetPlansForYearMonth,
   type FinalizeExpenseInput,
   type MerchantRuleDraft,
 } from "@/lib/entryDefaults";
@@ -40,7 +39,6 @@ export async function finalizeClassifiedExpenseWrite(
     autoSuggestCategory: opts?.autoSuggest,
   };
   if (opts?.forceCategoryDefaults === false && input.categoryId) {
-    const plans = await getBudgetPlansForYearMonth(yearMonth);
     const withRules = await finalizeExpenseForWrite(
       { ...input, autoSuggestCategory: false },
       yearMonth,
@@ -94,7 +92,7 @@ type ExpenseRow = {
 export async function reapplyExpenseClassificationForPeriod(
   monthlyPeriodId: string,
   yearMonth: string,
-  expenses: ExpenseRow[],
+  _expenses: ExpenseRow[],
 ): Promise<ReapplyClassificationResult> {
   void monthlyPeriodId;
   const { applyEntryDefaultsToExistingExpenses } = await import(
