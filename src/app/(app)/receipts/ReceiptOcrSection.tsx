@@ -43,16 +43,20 @@ function statusBadge(status: string) {
 export function ReceiptOcrSection({
   receipt,
   yearMonth,
+  categories,
   budgetPlans,
   defaultBudgetPlanId,
+  defaultCategoryId,
   defaultPayee,
   postingYearMonth,
   suggestedDescription,
 }: {
   receipt: ReceiptRow;
   yearMonth: string;
+  categories: { id: string; name: string }[];
   budgetPlans: { id: string; name: string }[];
   defaultBudgetPlanId?: string | null;
+  defaultCategoryId?: string | null;
   defaultPayee?: string | null;
   postingYearMonth: string;
   suggestedDescription: string;
@@ -134,8 +138,10 @@ export function ReceiptOcrSection({
           receiptId={receipt.id}
           yearMonth={yearMonth}
           lineCount={linesWithAmount.length}
+          categories={categories}
           budgetPlans={budgetPlans}
           defaultBudgetPlanId={defaultBudgetPlanId}
+          defaultCategoryId={defaultCategoryId}
           postingYearMonth={postingYearMonth}
         />
       ) : null}
@@ -144,8 +150,10 @@ export function ReceiptOcrSection({
         yearMonth={yearMonth}
         filename={receipt.filename}
         totalCents={receipt.totalCents}
+        categories={categories}
         budgetPlans={budgetPlans}
         defaultBudgetPlanId={defaultBudgetPlanId}
+        defaultCategoryId={defaultCategoryId}
         defaultPayee={defaultPayee}
         postingYearMonth={postingYearMonth}
         suggestedDescription={suggestedDescription}
@@ -157,18 +165,22 @@ export function ReceiptOcrSection({
 export function ReceiptListItem({
   receipt,
   yearMonth,
+  categories,
   budgetPlans,
   monthOptions,
   defaultBudgetPlanId,
+  defaultCategoryId,
   defaultPayee,
   postingYearMonth,
   suggestedDescription,
 }: {
   receipt: ReceiptRow;
   yearMonth: string;
+  categories: { id: string; name: string }[];
   budgetPlans: { id: string; name: string }[];
   monthOptions: string[];
   defaultBudgetPlanId?: string | null;
+  defaultCategoryId?: string | null;
   defaultPayee?: string | null;
   postingYearMonth: string;
   suggestedDescription: string;
@@ -197,8 +209,10 @@ export function ReceiptListItem({
         <ReceiptOcrSection
           receipt={receipt}
           yearMonth={yearMonth}
+          categories={categories}
           budgetPlans={budgetPlans}
           defaultBudgetPlanId={defaultBudgetPlanId}
+          defaultCategoryId={defaultCategoryId}
           defaultPayee={defaultPayee}
           postingYearMonth={postingYearMonth}
           suggestedDescription={suggestedDescription}

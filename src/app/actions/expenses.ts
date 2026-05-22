@@ -6,9 +6,10 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
 import { mergeTagLists, parseTagsJson } from "@/lib/budgetRollup";
-import { commaListToTagsJson } from "@/lib/entryDefaults";
-import { classifyExpenseForWrite } from "@/lib/merchantRules";
-import { fieldsFromCategoryId } from "@/lib/categories";
+import {
+  commaListToTagsJson,
+  finalizeExpenseForWrite,
+} from "@/lib/entryDefaults";
 import {
   finalizeClassifiedExpenseWrite,
   reapplyExpenseClassificationForPeriod,
@@ -141,33 +142,27 @@ export async function bulkSetCategoryForExpensesAction(formData: FormData): Prom
     if (!exp) continue;
     const applyTax =
       String(formData.get("applyTaxFromCategory") ?? "on") === "on";
-    const patch = await fieldsFromCategoryId(
-      categoryId,
-      period.id,
+    const fields = await finalizeExpenseForWrite(
       {
-        budgetPlanId: exp.budgetPlanId,
-        taxCategory: exp.taxCategory,
-      },
-      categoryId
-        ? { forceTaxDefault: applyTax, forceBudgetLink: true }
-        : undefined,
-    );
-    let tagsJson = exp.tagsJson;
-    if (categoryId) {
-      const classified = await classifyExpenseForWrite(exp.description, period.id, {
-        categoryId,
+        description: exp.description,
         tagsJson: exp.tagsJson,
-        autoSuggest: false,
-      });
-      tagsJson = classified.tagsJson;
-    }
+        budgetPlanId: exp.budgetPlanId,
+        payee: exp.payee,
+        categoryId,
+        taxCategory: exp.taxCategory,
+        autoSuggestCategory: false,
+        forceCategoryTaxDefault: applyTax,
+      },
+      yearMonth,
+    );
     await prisma.expense.update({
       where: { id },
       data: {
-        categoryId: patch.categoryId,
-        budgetPlanId: patch.budgetPlanId,
-        taxCategory: patch.taxCategory,
-        tagsJson,
+        categoryId: fields.categoryId,
+        budgetPlanId: fields.budgetPlanId,
+        taxCategory: fields.taxCategory,
+        tagsJson: fields.tagsJson,
+        payee: fields.payee,
       },
     });
   }

@@ -72,10 +72,14 @@ export async function applyMerchantRulesToMonthAction(
   }
 
   const period = await getOrCreateMonthlyPeriod(yearMonth);
-  const { updated, scanned, categoriesSet } =
-    await applyMerchantRulesToExistingExpenses(period.id, yearMonth);
+  const result = await applyMerchantRulesToExistingExpenses(
+    period.id,
+    yearMonth,
+  );
   revalidateMerchantRuleTargets(yearMonth);
   revalidatePath("/tax");
+  const { updated, scanned, tagsChanged, budgetLinked, payeeSet, categorySet } =
+    result;
   if (updated === 0) {
     return {
       ok: true,
@@ -83,11 +87,20 @@ export async function applyMerchantRulesToMonthAction(
     };
   }
   const parts: string[] = [`${updated} row${updated === 1 ? "" : "s"} updated`];
-  if (categoriesSet > 0) {
-    parts.push(`${categoriesSet} newly categorized`);
+  if (tagsChanged > 0) {
+    parts.push(`${tagsChanged} tag${tagsChanged === 1 ? "" : "s"}`);
+  }
+  if (budgetLinked > 0) {
+    parts.push(`${budgetLinked} budget link${budgetLinked === 1 ? "" : "s"}`);
+  }
+  if (categorySet > 0) {
+    parts.push(`${categorySet} categor${categorySet === 1 ? "y" : "ies"}`);
+  }
+  if (payeeSet > 0) {
+    parts.push(`${payeeSet} payee${payeeSet === 1 ? "" : "s"}`);
   }
   return {
     ok: true,
-    message: `${parts.join(" · ")} for ${yearMonth} (tags, payee, budget, categories).`,
+    message: `${parts.join(" · ")} for ${yearMonth}.`,
   };
 }

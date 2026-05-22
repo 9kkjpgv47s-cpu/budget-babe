@@ -4,9 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { requireUser } from "@/lib/auth";
 import { currentYearMonth, parseYearMonth } from "@/lib/yearMonth";
+import { ensureDefaultCategories } from "@/lib/categories";
 import {
   getLastExpenseDefaultsForYearMonth,
   resolveReceiptPostingContext,
+  sanitizeExpenseDefaultsForPlans,
   suggestReceiptExpenseDescription,
 } from "@/lib/entryDefaults";
 import { ReceiptUploadForm } from "./ReceiptUploadForm";
@@ -19,11 +21,17 @@ export default async function ReceiptsPage({
   searchParams: Promise<{ ym?: string }>;
 }) {
   await requireUser();
+  await ensureDefaultCategories();
   const sp = await searchParams;
   const yearMonth =
     sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
 
   const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const categories = await prisma.category.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true },
+  });
+  const categoryIds = categories.map((c) => c.id);
 
   const monthOptions = Array.from({ length: 13 }, (_, i) =>
     format(addMonths(parseYearMonth(yearMonth), i - 6), "yyyy-MM"),
@@ -38,12 +46,18 @@ export default async function ReceiptsPage({
   const receiptRows = await Promise.all(
     receipts.map(async (r) => {
       const ctx = await resolveReceiptPostingContext(r.id, yearMonth);
-      const defaults = await getLastExpenseDefaultsForYearMonth(ctx.yearMonth);
+      const rawDefaults = await getLastExpenseDefaultsForYearMonth(ctx.yearMonth);
+      const defaults = sanitizeExpenseDefaultsForPlans(
+        rawDefaults,
+        ctx.plans.map((p) => p.id),
+        categoryIds,
+      );
       return {
         receipt: r,
         postingYearMonth: ctx.yearMonth,
         postingBudgetPlans: ctx.plans.map((p) => ({ id: p.id, name: p.name })),
         defaultBudgetPlanId: defaults.budgetPlanId,
+        defaultCategoryId: defaults.categoryId,
         defaultPayee: defaults.payee,
         suggestedDescription: suggestReceiptExpenseDescription({
           filename: r.filename,
@@ -99,9 +113,11 @@ export default async function ReceiptsPage({
               key={row.receipt.id}
               receipt={row.receipt}
               yearMonth={yearMonth}
+              categories={categories}
               budgetPlans={row.postingBudgetPlans}
               monthOptions={monthOptions}
               defaultBudgetPlanId={row.defaultBudgetPlanId}
+              defaultCategoryId={row.defaultCategoryId}
               defaultPayee={row.defaultPayee}
               postingYearMonth={row.postingYearMonth}
               suggestedDescription={row.suggestedDescription}

@@ -9,7 +9,9 @@ export function ReceiptPostExpenseForm({
   yearMonth,
   totalCents,
   budgetPlans,
+  categories = [],
   defaultBudgetPlanId,
+  defaultCategoryId,
   defaultPayee,
   postingYearMonth,
   suggestedDescription,
@@ -19,7 +21,9 @@ export function ReceiptPostExpenseForm({
   filename: string;
   totalCents: number | null;
   budgetPlans: { id: string; name: string }[];
+  categories?: { id: string; name: string }[];
   defaultBudgetPlanId?: string | null;
+  defaultCategoryId?: string | null;
   defaultPayee?: string | null;
   /** Resolved ledger month (receipt month wins over page ?ym=). */
   postingYearMonth: string;
@@ -66,6 +70,20 @@ export function ReceiptPostExpenseForm({
           defaultValue={defaultPayee ?? ""}
           className="sm:col-span-2 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
         />
+        {categories.length > 0 ? (
+          <select
+            name="categoryId"
+            className="sm:col-span-2 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+            defaultValue={defaultCategoryId ?? ""}
+          >
+            <option value="">Category (optional)</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        ) : null}
         <select
           name="budgetPlanId"
           className="sm:col-span-2 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"

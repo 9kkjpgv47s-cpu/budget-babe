@@ -35,6 +35,8 @@ export type FinalizeExpenseInput = {
   taxCategory?: string | null;
   /** When false, only use explicit categoryId (edits). Default true for creates. */
   autoSuggestCategory?: boolean;
+  /** When category is set, apply category tax default (default true). */
+  forceCategoryTaxDefault?: boolean;
 };
 
 export type MerchantRuleDraft = {
@@ -281,6 +283,7 @@ export async function finalizeExpenseForWrite(
   let finalBudget = classified.budgetPlanId ?? draft.budgetPlanId;
   let finalTax = classified.taxCategory;
   if (classified.categoryId) {
+    const forceTax = input.forceCategoryTaxDefault !== false;
     const patch = await fieldsFromCategoryId(
       classified.categoryId,
       period.id,
@@ -288,7 +291,7 @@ export async function finalizeExpenseForWrite(
         budgetPlanId: finalBudget,
         taxCategory: finalTax,
       },
-      { forceTaxDefault: true, forceBudgetLink: true },
+      { forceTaxDefault: forceTax, forceBudgetLink: true },
     );
     finalBudget = patch.budgetPlanId;
     finalTax = patch.taxCategory;
@@ -324,6 +327,42 @@ export async function remapBudgetPlanToPeriod(
     select: { id: true },
   });
   return target?.id ?? null;
+}
+
+/**
+ * When a linked expense moves with its receipt, remap budget to the target month
+ * and re-run classification so category → budget/tax links match the new period.
+ */
+export async function propagateExpenseToTargetPeriod(
+  expense: {
+    description: string;
+    tagsJson: string | null;
+    budgetPlanId: string | null;
+    payee: string | null;
+    categoryId: string | null;
+    taxCategory: string | null;
+  },
+  sourceMonthlyPeriodId: string,
+  targetMonthlyPeriodId: string,
+  targetYearMonth: string,
+): Promise<ExpenseWriteFields> {
+  const remappedBudget = await remapBudgetPlanToPeriod(
+    expense.budgetPlanId,
+    sourceMonthlyPeriodId,
+    targetMonthlyPeriodId,
+  );
+  return finalizeExpenseForWrite(
+    {
+      description: expense.description,
+      tagsJson: expense.tagsJson,
+      budgetPlanId: remappedBudget,
+      payee: expense.payee,
+      categoryId: expense.categoryId,
+      taxCategory: expense.taxCategory,
+      autoSuggestCategory: false,
+    },
+    targetYearMonth,
+  );
 }
 
 /** Sanitize defaults when a budget line was deleted or month has no plans yet. */

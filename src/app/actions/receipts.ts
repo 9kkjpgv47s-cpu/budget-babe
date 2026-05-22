@@ -13,7 +13,7 @@ import {
   expenseDefaultsFromWrite,
   finalizeExpenseForWrite,
   getLastExpenseDefaultsForYearMonth,
-  remapBudgetPlanToPeriod,
+  propagateExpenseToTargetPeriod,
   resolveReceiptPostingContext,
   suggestReceiptExpenseDescription,
 } from "@/lib/entryDefaults";
@@ -79,6 +79,7 @@ export async function createExpenseFromReceiptAction(
   const amountRaw = String(formData.get("amount") ?? "").trim();
   let description = String(formData.get("description") ?? "").trim();
   const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
+  const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
   const payee = String(formData.get("payee") ?? "").trim() || null;
   if (!receiptId || !pageYearMonth.match(/^\d{4}-\d{2}$/)) {
     return { error: "Missing receipt or month." };
@@ -116,13 +117,18 @@ export async function createExpenseFromReceiptAction(
   );
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   const lastDefaults = await getLastExpenseDefaultsForYearMonth(yearMonth);
+  let categoryId: string | null = categoryIdRaw || lastDefaults.categoryId;
+  if (categoryId) {
+    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (!cat) categoryId = null;
+  }
   const fields = await finalizeExpenseForWrite(
     {
       description,
       tagsJson: lastDefaults.tagsJson,
       budgetPlanId: budgetPlanIdRaw || lastDefaults.budgetPlanId,
       payee: payee ?? lastDefaults.payee,
-      categoryId: lastDefaults.categoryId,
+      categoryId,
     },
     yearMonth,
   );
@@ -161,6 +167,7 @@ export async function createExpensesFromReceiptLinesAction(
   const pageYearMonth = String(formData.get("yearMonth") ?? "").trim();
   const postingHint = String(formData.get("postingYearMonth") ?? "").trim();
   const budgetPlanIdRaw = String(formData.get("budgetPlanId") ?? "").trim();
+  const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
   if (!receiptId || !pageYearMonth.match(/^\d{4}-\d{2}$/)) {
     return { error: "Missing receipt or month." };
   }
@@ -191,6 +198,13 @@ export async function createExpensesFromReceiptLinesAction(
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   const lastDefaults = await getLastExpenseDefaultsForYearMonth(yearMonth);
   let sharedBudgetId: string | null = budgetPlanIdRaw || lastDefaults.budgetPlanId;
+  let sharedCategoryId: string | null = categoryIdRaw || lastDefaults.categoryId;
+  if (sharedCategoryId) {
+    const cat = await prisma.category.findUnique({
+      where: { id: sharedCategoryId },
+    });
+    if (!cat) sharedCategoryId = null;
+  }
   const splitGroupId = randomUUID();
   let created = 0;
   for (const line of parsed) {
@@ -208,11 +222,12 @@ export async function createExpensesFromReceiptLinesAction(
         tagsJson: lastDefaults.tagsJson,
         budgetPlanId: sharedBudgetId,
         payee: lastDefaults.payee,
-        categoryId: lastDefaults.categoryId,
+        categoryId: sharedCategoryId,
       },
       yearMonth,
     );
     sharedBudgetId = fields.budgetPlanId;
+    sharedCategoryId = fields.categoryId;
     await prisma.expense.create({
       data: {
         monthlyPeriodId: period.id,
@@ -269,21 +284,39 @@ export async function moveReceiptToMonthAction(formData: FormData): Promise<void
     data: { monthlyPeriodId: period.id },
   });
   if (moveLinkedExpenses) {
+    const sourcePeriodId = rec.monthlyPeriodId ?? period.id;
     const linked = await prisma.expense.findMany({
       where: { receiptId },
-      select: { id: true, budgetPlanId: true },
+      select: {
+        id: true,
+        description: true,
+        tagsJson: true,
+        budgetPlanId: true,
+        payee: true,
+        categoryId: true,
+        taxCategory: true,
+      },
     });
     for (const exp of linked) {
-      const budgetPlanId = await remapBudgetPlanToPeriod(
-        exp.budgetPlanId,
-        rec.monthlyPeriodId ?? period.id,
+      const fields = await propagateExpenseToTargetPeriod(
+        exp,
+        sourcePeriodId,
         period.id,
+        targetYm,
       );
       await prisma.expense.update({
         where: { id: exp.id },
-        data: { monthlyPeriodId: period.id, budgetPlanId },
+        data: {
+          monthlyPeriodId: period.id,
+          budgetPlanId: fields.budgetPlanId,
+          categoryId: fields.categoryId,
+          taxCategory: fields.taxCategory,
+          tagsJson: fields.tagsJson,
+          payee: fields.payee,
+        },
       });
     }
+    revalidatePath("/tax");
   }
   revalidatePath("/receipts");
   revalidateMoneyFromReceipt(targetYm);

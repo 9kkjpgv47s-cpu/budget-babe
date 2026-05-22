@@ -9,14 +9,18 @@ export function ReceiptBatchExpensesForm({
   yearMonth,
   lineCount,
   budgetPlans,
+  categories = [],
   defaultBudgetPlanId,
+  defaultCategoryId,
   postingYearMonth,
 }: {
   receiptId: string;
   yearMonth: string;
   lineCount: number;
   budgetPlans: { id: string; name: string }[];
+  categories?: { id: string; name: string }[];
   defaultBudgetPlanId?: string | null;
+  defaultCategoryId?: string | null;
   postingYearMonth: string;
 }) {
   const [state, action, pending] = useActionState(
@@ -29,6 +33,20 @@ export function ReceiptBatchExpensesForm({
       <input type="hidden" name="receiptId" value={receiptId} />
       <input type="hidden" name="yearMonth" value={yearMonth} />
       <input type="hidden" name="postingYearMonth" value={postingYearMonth} />
+      {categories.length > 0 ? (
+        <select
+          name="categoryId"
+          defaultValue={defaultCategoryId ?? ""}
+          className="w-full rounded border border-zinc-200 px-2 py-1 text-[11px] dark:border-zinc-700 dark:bg-zinc-950"
+        >
+          <option value="">Category for all lines (optional)</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      ) : null}
       {budgetPlans.length > 0 ? (
         <select
           name="budgetPlanId"
