@@ -84,9 +84,7 @@ export async function applyMerchantRulesToMonthAction(
   }
   const parts: string[] = [`${updated} row${updated === 1 ? "" : "s"} updated`];
   if (categoriesSet > 0) {
-    parts.push(
-      `${categoriesSet} newly categorized`,
-    );
+    parts.push(`${categoriesSet} newly categorized`);
   }
   return {
     ok: true,

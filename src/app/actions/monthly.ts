@@ -15,10 +15,10 @@ import { parseYearMonth } from "@/lib/yearMonth";
 import type { FormActionState } from "@/lib/formActionState";
 import {
   commaListToTagsJson,
-  expenseDefaultsFromDraft,
+  expenseDefaultsFromWrite,
+  finalizeExpenseForWrite,
 } from "@/lib/entryDefaults";
 import { linkCategoriesToBudgetEnvelope } from "@/lib/categories";
-import { finalizeClassifiedExpenseWrite } from "@/lib/expenseWrite";
 import { guessPaystubAmountFromBuffer } from "@/lib/paystubOcr";
 import { deletePaystubStored, savePaystubUpload } from "@/lib/uploads";
 
@@ -202,16 +202,15 @@ export async function addExpenseCore(
     const cat = await prisma.category.findUnique({ where: { id: categoryId } });
     if (!cat) categoryId = null;
   }
-  const write = await finalizeClassifiedExpenseWrite(
+  const fields = await finalizeExpenseForWrite(
     {
       description,
       tagsJson: manualTagsJson,
       budgetPlanId: budgetPlanIdRaw || null,
       payee,
+      categoryId,
     },
-    period.id,
     yearMonth,
-    { categoryId },
   );
   const splitGroupId =
     String(formData.get("splitGroupId") ?? "").trim() || null;
@@ -222,11 +221,11 @@ export async function addExpenseCore(
       userId: user.userId,
       amountCents: amount,
       description,
-      payee: write.payee,
-      categoryId: write.categoryId,
-      budgetPlanId: write.budgetPlanId,
-      taxCategory: write.taxCategory,
-      tagsJson: write.tagsJson,
+      payee: fields.payee,
+      categoryId: fields.categoryId,
+      budgetPlanId: fields.budgetPlanId,
+      taxCategory: fields.taxCategory,
+      tagsJson: fields.tagsJson,
       splitGroupId,
       source: "manual",
     },
@@ -235,12 +234,7 @@ export async function addExpenseCore(
   revalidatePath("/tax");
   return {
     ok: true,
-    entryDefaults: expenseDefaultsFromDraft({
-      description,
-      payee: write.payee,
-      budgetPlanId: write.budgetPlanId,
-      tagsJson: write.tagsJson,
-    }),
+    entryDefaults: expenseDefaultsFromWrite(fields),
   };
 }
 

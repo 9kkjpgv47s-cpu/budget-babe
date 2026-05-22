@@ -6,8 +6,10 @@ import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
-import { getLastExpenseDefaultsForYearMonth } from "@/lib/entryDefaults";
-import { finalizeClassifiedExpenseWrite } from "@/lib/expenseWrite";
+import {
+  finalizeExpenseForWrite,
+  getLastExpenseDefaultsForYearMonth,
+} from "@/lib/entryDefaults";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
 
@@ -38,7 +40,8 @@ export async function createSplitExpensesAction(
   const lastDefaults = await getLastExpenseDefaultsForYearMonth(yearMonth);
   let sharedBudgetId: string | null =
     budgetPlanIdRaw || lastDefaults.budgetPlanId;
-  let sharedCategoryId: string | null = categoryIdRaw || null;
+  let sharedCategoryId: string | null =
+    categoryIdRaw || lastDefaults.categoryId;
   if (sharedCategoryId) {
     const cat = await prisma.category.findUnique({ where: { id: sharedCategoryId } });
     if (!cat) sharedCategoryId = null;
@@ -59,18 +62,17 @@ export async function createSplitExpensesAction(
     return { error: "Total must be positive." };
   }
   for (const p of parsed) {
-    const write = await finalizeClassifiedExpenseWrite(
+    const fields = await finalizeExpenseForWrite(
       {
         description: p.description,
         tagsJson: lastDefaults.tagsJson,
         budgetPlanId: sharedBudgetId,
         payee: lastDefaults.payee,
+        categoryId: sharedCategoryId,
       },
-      period.id,
       yearMonth,
-      { categoryId: sharedCategoryId },
     );
-    sharedBudgetId = write.budgetPlanId;
+    sharedBudgetId = fields.budgetPlanId;
     await prisma.expense.create({
       data: {
         monthlyPeriodId: period.id,
@@ -79,11 +81,11 @@ export async function createSplitExpensesAction(
         description: p.description,
         spentAt: new Date(),
         splitGroupId,
-        payee: write.payee,
-        categoryId: write.categoryId,
-        budgetPlanId: write.budgetPlanId,
-        taxCategory: write.taxCategory,
-        tagsJson: write.tagsJson,
+        payee: fields.payee,
+        categoryId: fields.categoryId,
+        budgetPlanId: fields.budgetPlanId,
+        taxCategory: fields.taxCategory,
+        tagsJson: fields.tagsJson,
         source: "manual",
       },
     });

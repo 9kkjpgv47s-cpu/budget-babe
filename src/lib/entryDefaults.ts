@@ -4,13 +4,37 @@
  */
 import { prisma } from "@/lib/prisma";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
-import { applyMerchantRulesToTags } from "@/lib/merchantRules";
+import { fieldsFromCategoryId } from "@/lib/categories";
+import {
+  applyMerchantRulesToTags,
+  classifyExpenseForWrite,
+} from "@/lib/merchantRules";
 import { mergeTagLists } from "@/lib/budgetRollup";
 
 export type ExpenseEntryDefaults = {
   budgetPlanId: string | null;
   tagsJson: string | null;
   payee: string | null;
+  categoryId: string | null;
+};
+
+export type ExpenseWriteFields = {
+  payee: string | null;
+  categoryId: string | null;
+  budgetPlanId: string | null;
+  taxCategory: string | null;
+  tagsJson: string | null;
+};
+
+export type FinalizeExpenseInput = {
+  description: string;
+  tagsJson?: string | null;
+  budgetPlanId?: string | null;
+  payee?: string | null;
+  categoryId?: string | null;
+  taxCategory?: string | null;
+  /** When false, only use explicit categoryId (edits). Default true for creates. */
+  autoSuggestCategory?: boolean;
 };
 
 export type MerchantRuleDraft = {
@@ -30,12 +54,18 @@ export type BudgetPlanOption = {
 export async function getLastExpenseDefaults(): Promise<ExpenseEntryDefaults> {
   const last = await prisma.expense.findFirst({
     orderBy: { spentAt: "desc" },
-    select: { budgetPlanId: true, tagsJson: true, payee: true },
+    select: {
+      budgetPlanId: true,
+      tagsJson: true,
+      payee: true,
+      categoryId: true,
+    },
   });
   return {
     budgetPlanId: last?.budgetPlanId ?? null,
     tagsJson: last?.tagsJson ?? null,
     payee: last?.payee ?? null,
+    categoryId: last?.categoryId ?? null,
   };
 }
 
@@ -51,12 +81,18 @@ export async function getLastExpenseDefaultsForYearMonth(
   const last = await prisma.expense.findFirst({
     where: { monthlyPeriodId: period.id },
     orderBy: { spentAt: "desc" },
-    select: { budgetPlanId: true, tagsJson: true, payee: true },
+    select: {
+      budgetPlanId: true,
+      tagsJson: true,
+      payee: true,
+      categoryId: true,
+    },
   });
   return {
     budgetPlanId: last?.budgetPlanId ?? null,
     tagsJson: last?.tagsJson ?? null,
     payee: last?.payee ?? null,
+    categoryId: last?.categoryId ?? null,
   };
 }
 
@@ -192,13 +228,77 @@ export async function finalizeExpenseDraftForPeriod(
   return { ...withRules, budgetPlanId, payee: payee ?? null };
 }
 
+export function expenseDefaultsFromWrite(
+  fields: ExpenseWriteFields,
+): ExpenseEntryDefaults {
+  return {
+    budgetPlanId: fields.budgetPlanId,
+    tagsJson: fields.tagsJson,
+    payee: fields.payee,
+    categoryId: fields.categoryId,
+  };
+}
+
 export function expenseDefaultsFromDraft(
   draft: MerchantRuleDraft,
+  categoryId?: string | null,
 ): ExpenseEntryDefaults {
   return {
     budgetPlanId: draft.budgetPlanId,
     tagsJson: draft.tagsJson,
     payee: draft.payee,
+    categoryId: categoryId ?? null,
+  };
+}
+
+/**
+ * Full propagation: merchant rules, budget suggestion, payee, and category classification.
+ */
+export async function finalizeExpenseForWrite(
+  input: FinalizeExpenseInput,
+  yearMonth: string,
+): Promise<ExpenseWriteFields> {
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const plans = await getBudgetPlansForYearMonth(yearMonth);
+  const description = input.description.trim();
+  const draft = await finalizeExpenseDraftForPeriod(
+    {
+      description,
+      tagsJson: input.tagsJson ?? null,
+      budgetPlanId: input.budgetPlanId ?? null,
+      payee: input.payee ?? null,
+    },
+    period.id,
+    plans,
+  );
+  const classified = await classifyExpenseForWrite(description, period.id, {
+    categoryId: input.categoryId ?? null,
+    tagsJson: draft.tagsJson,
+    budgetPlanId: draft.budgetPlanId,
+    taxCategory: input.taxCategory ?? null,
+    autoSuggest: input.autoSuggestCategory,
+  });
+  let finalBudget = classified.budgetPlanId ?? draft.budgetPlanId;
+  let finalTax = classified.taxCategory;
+  if (classified.categoryId) {
+    const patch = await fieldsFromCategoryId(
+      classified.categoryId,
+      period.id,
+      {
+        budgetPlanId: finalBudget,
+        taxCategory: finalTax,
+      },
+      { forceTaxDefault: true, forceBudgetLink: true },
+    );
+    finalBudget = patch.budgetPlanId;
+    finalTax = patch.taxCategory;
+  }
+  return {
+    payee: draft.payee,
+    categoryId: classified.categoryId,
+    budgetPlanId: finalBudget,
+    taxCategory: finalTax,
+    tagsJson: classified.tagsJson,
   };
 }
 
@@ -230,14 +330,24 @@ export async function remapBudgetPlanToPeriod(
 export function sanitizeExpenseDefaultsForPlans(
   defaults: ExpenseEntryDefaults,
   planIds: Set<string> | string[],
+  categoryIds?: Set<string> | string[],
 ): ExpenseEntryDefaults {
   const ids = planIds instanceof Set ? planIds : new Set(planIds);
+  const catIds = categoryIds
+    ? categoryIds instanceof Set
+      ? categoryIds
+      : new Set(categoryIds)
+    : null;
   return {
     ...defaults,
     budgetPlanId:
       defaults.budgetPlanId && ids.has(defaults.budgetPlanId)
         ? defaults.budgetPlanId
         : null,
+    categoryId:
+      defaults.categoryId && catIds && !catIds.has(defaults.categoryId)
+        ? null
+        : defaults.categoryId,
   };
 }
 
@@ -272,6 +382,7 @@ export type ApplyDefaultsResult = {
   tagsChanged: number;
   budgetLinked: number;
   payeeSet: number;
+  categorySet: number;
 };
 
 /**
@@ -281,7 +392,6 @@ export async function applyEntryDefaultsToExistingExpenses(
   monthlyPeriodId: string,
   yearMonth: string,
 ): Promise<ApplyDefaultsResult> {
-  const plans = await getBudgetPlansForYearMonth(yearMonth);
   const expenses = await prisma.expense.findMany({
     where: { monthlyPeriodId },
     select: {
@@ -290,6 +400,8 @@ export async function applyEntryDefaultsToExistingExpenses(
       tagsJson: true,
       budgetPlanId: true,
       payee: true,
+      categoryId: true,
+      taxCategory: true,
     },
   });
 
@@ -297,35 +409,43 @@ export async function applyEntryDefaultsToExistingExpenses(
   let tagsChanged = 0;
   let budgetLinked = 0;
   let payeeSet = 0;
+  let categorySet = 0;
 
   for (const exp of expenses) {
-    const draft = await finalizeExpenseDraftForPeriod(
+    const fields = await finalizeExpenseForWrite(
       {
         description: exp.description,
         tagsJson: exp.tagsJson,
         budgetPlanId: exp.budgetPlanId,
         payee: exp.payee,
+        categoryId: exp.categoryId,
+        taxCategory: exp.taxCategory,
+        autoSuggestCategory: !exp.categoryId,
       },
-      monthlyPeriodId,
-      plans,
+      yearMonth,
     );
-    const tagsSame = (draft.tagsJson ?? null) === (exp.tagsJson ?? null);
-    const budgetSame = (draft.budgetPlanId ?? null) === (exp.budgetPlanId ?? null);
-    const payeeSame = (draft.payee ?? null) === (exp.payee ?? null);
-    if (tagsSame && budgetSame && payeeSame) continue;
+    const tagsSame = (fields.tagsJson ?? null) === (exp.tagsJson ?? null);
+    const budgetSame = (fields.budgetPlanId ?? null) === (exp.budgetPlanId ?? null);
+    const payeeSame = (fields.payee ?? null) === (exp.payee ?? null);
+    const catSame = (fields.categoryId ?? null) === (exp.categoryId ?? null);
+    const taxSame = (fields.taxCategory ?? null) === (exp.taxCategory ?? null);
+    if (tagsSame && budgetSame && payeeSame && catSame && taxSame) continue;
 
     await prisma.expense.update({
       where: { id: exp.id },
       data: {
-        tagsJson: draft.tagsJson,
-        budgetPlanId: draft.budgetPlanId,
-        payee: draft.payee,
+        tagsJson: fields.tagsJson,
+        budgetPlanId: fields.budgetPlanId,
+        payee: fields.payee,
+        categoryId: fields.categoryId,
+        taxCategory: fields.taxCategory,
       },
     });
     updated += 1;
     if (!tagsSame) tagsChanged += 1;
-    if (!budgetSame && draft.budgetPlanId) budgetLinked += 1;
-    if (!payeeSame && draft.payee) payeeSet += 1;
+    if (!budgetSame && fields.budgetPlanId) budgetLinked += 1;
+    if (!payeeSame && fields.payee) payeeSet += 1;
+    if (!catSame && fields.categoryId) categorySet += 1;
   }
 
   return {
@@ -334,5 +454,6 @@ export async function applyEntryDefaultsToExistingExpenses(
     tagsChanged,
     budgetLinked,
     payeeSet,
+    categorySet,
   };
 }

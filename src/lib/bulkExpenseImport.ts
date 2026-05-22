@@ -1,8 +1,10 @@
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
-import { getLastExpenseDefaultsForYearMonth } from "@/lib/entryDefaults";
-import { finalizeClassifiedExpenseWrite } from "@/lib/expenseWrite";
+import {
+  finalizeExpenseForWrite,
+  getLastExpenseDefaultsForYearMonth,
+} from "@/lib/entryDefaults";
 
 export type BulkImportRow = {
   date: Date;
@@ -53,16 +55,15 @@ export async function bulkInsertExpenses(
       });
       categoryId = cat?.id ?? null;
     }
-    const write = await finalizeClassifiedExpenseWrite(
+    const fields = await finalizeExpenseForWrite(
       {
         description: parts.description,
         tagsJson: lastDefaults.tagsJson,
         budgetPlanId: lastDefaults.budgetPlanId,
         payee: parts.payee ?? lastDefaults.payee,
+        categoryId,
       },
-      period.id,
       yearMonth,
-      { categoryId },
     );
     await prisma.expense.create({
       data: {
@@ -73,11 +74,11 @@ export async function bulkInsertExpenses(
         spentAt: parts.date,
         source,
         importHash: fp,
-        payee: write.payee,
-        categoryId: write.categoryId,
-        budgetPlanId: write.budgetPlanId,
-        taxCategory: write.taxCategory,
-        tagsJson: write.tagsJson,
+        payee: fields.payee,
+        categoryId: fields.categoryId,
+        budgetPlanId: fields.budgetPlanId,
+        taxCategory: fields.taxCategory,
+        tagsJson: fields.tagsJson,
       },
     });
     created++;

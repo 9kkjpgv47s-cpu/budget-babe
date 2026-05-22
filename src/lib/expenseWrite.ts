@@ -1,17 +1,14 @@
 /**
- * Expense write pipeline — entry defaults (Agent 1) then category classification (Agent 3).
+ * Expense write pipeline — delegates to Agent 1 `finalizeExpenseForWrite` in entryDefaults.
  */
-import { prisma } from "@/lib/prisma";
 import {
-  finalizeExpenseDraftForPeriod,
+  finalizeExpenseForWrite,
   getBudgetPlansForYearMonth,
+  type FinalizeExpenseInput,
   type MerchantRuleDraft,
 } from "@/lib/entryDefaults";
-import {
-  fieldsFromCategoryId,
-  type CategoryFieldPatch,
-} from "@/lib/categories";
 import { classifyExpenseForWrite } from "@/lib/merchantRules";
+import type { CategoryFieldPatch } from "@/lib/categories";
 
 export type ClassifiedExpenseWrite = CategoryFieldPatch & {
   tagsJson: string | null;
@@ -21,9 +18,7 @@ export type ClassifiedExpenseWrite = CategoryFieldPatch & {
 export type FinalizeClassifiedOpts = {
   categoryId?: string | null;
   taxCategory?: string | null;
-  /** When false, do not infer category from rules (edits with explicit clear). */
   autoSuggest?: boolean;
-  /** Apply category tax folder + envelope link when categoryId is set. */
   forceCategoryDefaults?: boolean;
 };
 
@@ -34,42 +29,48 @@ export async function finalizeClassifiedExpenseWrite(
   yearMonth: string,
   opts?: FinalizeClassifiedOpts,
 ): Promise<ClassifiedExpenseWrite> {
-  const plans = await getBudgetPlansForYearMonth(yearMonth);
-  const finalized = await finalizeExpenseDraftForPeriod(draft, monthlyPeriodId, plans);
-  const classified = await classifyExpenseForWrite(
-    finalized.description,
-    monthlyPeriodId,
-    {
-      categoryId: opts?.categoryId ?? null,
-      tagsJson: finalized.tagsJson,
-      budgetPlanId: finalized.budgetPlanId,
-      taxCategory: opts?.taxCategory,
-      autoSuggest: opts?.autoSuggest,
-    },
-  );
-
-  let categoryId = classified.categoryId;
-  let budgetPlanId = classified.budgetPlanId ?? finalized.budgetPlanId;
-  let taxCategory = classified.taxCategory;
-
-  if (categoryId && opts?.forceCategoryDefaults !== false) {
-    const patch = await fieldsFromCategoryId(
-      categoryId,
-      monthlyPeriodId,
-      { budgetPlanId, taxCategory },
-      { forceTaxDefault: true, forceBudgetLink: true },
+  void monthlyPeriodId;
+  const input: FinalizeExpenseInput = {
+    description: draft.description,
+    tagsJson: draft.tagsJson,
+    budgetPlanId: draft.budgetPlanId,
+    payee: draft.payee,
+    categoryId: opts?.categoryId ?? null,
+    taxCategory: opts?.taxCategory ?? null,
+    autoSuggestCategory: opts?.autoSuggest,
+  };
+  if (opts?.forceCategoryDefaults === false && input.categoryId) {
+    const plans = await getBudgetPlansForYearMonth(yearMonth);
+    const withRules = await finalizeExpenseForWrite(
+      { ...input, autoSuggestCategory: false },
+      yearMonth,
     );
-    categoryId = patch.categoryId;
-    budgetPlanId = patch.budgetPlanId;
-    taxCategory = patch.taxCategory;
+    const classified = await classifyExpenseForWrite(
+      draft.description,
+      monthlyPeriodId,
+      {
+        categoryId: input.categoryId,
+        tagsJson: withRules.tagsJson,
+        budgetPlanId: withRules.budgetPlanId,
+        taxCategory: input.taxCategory,
+        autoSuggest: false,
+      },
+    );
+    return {
+      categoryId: classified.categoryId,
+      budgetPlanId: classified.budgetPlanId ?? withRules.budgetPlanId,
+      taxCategory: classified.taxCategory,
+      tagsJson: classified.tagsJson,
+      payee: withRules.payee,
+    };
   }
-
+  const fields = await finalizeExpenseForWrite(input, yearMonth);
   return {
-    categoryId,
-    budgetPlanId,
-    taxCategory,
-    tagsJson: classified.tagsJson,
-    payee: finalized.payee,
+    categoryId: fields.categoryId,
+    budgetPlanId: fields.budgetPlanId,
+    taxCategory: fields.taxCategory,
+    tagsJson: fields.tagsJson,
+    payee: fields.payee,
   };
 }
 
@@ -89,77 +90,23 @@ type ExpenseRow = {
   payee: string | null;
 };
 
-/** Re-run entry defaults + tags + category rules for all expenses in a month. */
+/** Re-run entry defaults + classification for all expenses in a month. */
 export async function reapplyExpenseClassificationForPeriod(
   monthlyPeriodId: string,
   yearMonth: string,
   expenses: ExpenseRow[],
 ): Promise<ReapplyClassificationResult> {
-  const plans = await getBudgetPlansForYearMonth(yearMonth);
-  let updated = 0;
-  let categoriesSet = 0;
-
-  for (const exp of expenses) {
-    const finalized = await finalizeExpenseDraftForPeriod(
-      {
-        description: exp.description,
-        tagsJson: exp.tagsJson,
-        budgetPlanId: exp.budgetPlanId,
-        payee: exp.payee,
-      },
-      monthlyPeriodId,
-      plans,
-    );
-
-    const classified = await classifyExpenseForWrite(exp.description, monthlyPeriodId, {
-      categoryId: exp.categoryId,
-      tagsJson: finalized.tagsJson,
-      budgetPlanId: finalized.budgetPlanId,
-      taxCategory: exp.taxCategory,
-      autoSuggest: !exp.categoryId,
-    });
-
-    let categoryId = exp.categoryId ?? classified.categoryId;
-    let budgetPlanId = classified.budgetPlanId ?? finalized.budgetPlanId;
-    let taxCategory = classified.taxCategory;
-    const tagsJson = classified.tagsJson;
-
-    if (categoryId) {
-      const patch = await fieldsFromCategoryId(
-        categoryId,
-        monthlyPeriodId,
-        { budgetPlanId, taxCategory },
-        exp.categoryId
-          ? { forceBudgetLink: true }
-          : { forceTaxDefault: true, forceBudgetLink: true },
-      );
-      categoryId = patch.categoryId;
-      budgetPlanId = patch.budgetPlanId;
-      taxCategory = patch.taxCategory;
-    }
-
-    const same =
-      (tagsJson ?? null) === (exp.tagsJson ?? null) &&
-      (budgetPlanId ?? null) === (exp.budgetPlanId ?? null) &&
-      (taxCategory ?? null) === (exp.taxCategory ?? null) &&
-      (categoryId ?? null) === (exp.categoryId ?? null) &&
-      (finalized.payee ?? null) === (exp.payee ?? null);
-
-    if (same) continue;
-
-    await prisma.expense.update({
-      where: { id: exp.id },
-      data: {
-        tagsJson,
-        payee: finalized.payee,
-        categoryId,
-        budgetPlanId,
-        taxCategory,
-      },
-    });
-    updated += 1;
-    if (!exp.categoryId && categoryId) categoriesSet += 1;
-  }
-
-  return { scanned: expenses.length, updated, categoriesSet };
+  void monthlyPeriodId;
+  const { applyEntryDefaultsToExistingExpenses } = await import(
+    "@/lib/entryDefaults"
+  );
+  const result = await applyEntryDefaultsToExistingExpenses(
+    monthlyPeriodId,
+    yearMonth,
+  );
+  return {
+    scanned: result.scanned,
+    updated: result.updated,
+    categoriesSet: result.categorySet,
+  };
 }
