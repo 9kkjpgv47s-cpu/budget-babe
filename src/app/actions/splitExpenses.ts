@@ -6,16 +6,11 @@ import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
-<<<<<<< HEAD
+import { coerceCategoryId } from "@/lib/categories";
 import {
   finalizeExpenseForWrite,
   getLastExpenseDefaultsForYearMonth,
 } from "@/lib/entryDefaults";
-=======
-import { coerceCategoryId } from "@/lib/categories";
-import { getLastExpenseDefaultsForYearMonth } from "@/lib/entryDefaults";
-import { finalizeClassifiedExpenseWrite } from "@/lib/expenseWrite";
->>>>>>> 16f0210 (feat(agent-3): category helpers, expense filters, spend drill-down)
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
 
@@ -46,16 +41,9 @@ export async function createSplitExpensesAction(
   const lastDefaults = await getLastExpenseDefaultsForYearMonth(yearMonth);
   let sharedBudgetId: string | null =
     budgetPlanIdRaw || lastDefaults.budgetPlanId;
-<<<<<<< HEAD
-  let sharedCategoryId: string | null =
-    categoryIdRaw || lastDefaults.categoryId;
-  if (sharedCategoryId) {
-    const cat = await prisma.category.findUnique({ where: { id: sharedCategoryId } });
-    if (!cat) sharedCategoryId = null;
-  }
-=======
-  const sharedCategoryId = await coerceCategoryId(categoryIdRaw);
->>>>>>> 16f0210 (feat(agent-3): category helpers, expense filters, spend drill-down)
+  const sharedCategoryId = await coerceCategoryId(
+    categoryIdRaw || lastDefaults.categoryId,
+  );
   const splitGroupId = randomUUID();
   let sum = 0;
   const parsed: { amountCents: number; description: string }[] = [];

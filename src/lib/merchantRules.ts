@@ -1,16 +1,10 @@
 /**
-<<<<<<< HEAD
  * Category classification for expenses. Prefer `finalizeExpenseForWrite` from
  * `@/lib/entryDefaults` for creates — it wraps draft + classification in one call.
-=======
- * Category classification for expenses.
  *
- * Agent 2 (receipts): call `finalizeClassifiedExpenseWrite` from `@/lib/expenseWrite`
- * or `classifyExpenseForWrite` when posting from OCR — do not duplicate logic in receipts.ts.
- *
+ * Agent 2 (receipts): use `finalizeExpenseForWrite` when posting from OCR.
  * Agent 1 (move month): call `remapExpenseCategoryFieldsToPeriod` from `@/lib/categories`
  * when linked expenses change `monthlyPeriodId`.
->>>>>>> 16f0210 (feat(agent-3): category helpers, expense filters, spend drill-down)
  */
 import { prisma } from "@/lib/prisma";
 import {
