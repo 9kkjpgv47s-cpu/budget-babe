@@ -52,7 +52,6 @@ export async function updateBudgetPlanAction(formData: FormData): Promise<void> 
   });
   await linkCategoriesToBudgetEnvelope(name);
   rev(yearMonth);
-  revalidatePath("/import");
 }
 
 export async function deleteBudgetPlanAction(formData: FormData): Promise<void> {

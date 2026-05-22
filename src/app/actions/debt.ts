@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
+import { currentYearMonth } from "@/lib/yearMonth";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
 
@@ -23,7 +24,7 @@ export async function addDebtAccountAction(formData: FormData): Promise<void> {
       note,
     },
   });
-  revalidatePath("/debt");
+  revalidateLedgerPaths(currentYearMonth(), ["debt"]);
 }
 
 export async function deleteDebtAccountAction(formData: FormData): Promise<void> {
@@ -31,7 +32,7 @@ export async function deleteDebtAccountAction(formData: FormData): Promise<void>
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await prisma.debtAccount.delete({ where: { id } });
-  revalidatePath("/debt");
+  revalidateLedgerPaths(currentYearMonth(), ["debt"]);
 }
 
 export async function updateDebtAccountAction(formData: FormData): Promise<void> {
@@ -54,5 +55,5 @@ export async function updateDebtAccountAction(formData: FormData): Promise<void>
       note,
     },
   });
-  revalidatePath("/debt");
+  revalidateLedgerPaths(currentYearMonth(), ["debt"]);
 }

@@ -1,7 +1,6 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { revalidatePath } from "next/cache";
 import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
@@ -89,7 +88,15 @@ export async function createSplitExpensesAction(
       },
     });
   }
-  revalidateLedgerPaths(yearMonth);
-  revalidatePath("/tax");
+  revalidateLedgerPaths(yearMonth, [
+    "overview",
+    "expenses",
+    "bills",
+    "budgets",
+    "insights",
+    "flow",
+    "coach",
+    "tax",
+  ]);
   return { ok: true, message: `Saved ${parsed.length} split lines (${splitGroupId.slice(0, 8)}…).` };
 }

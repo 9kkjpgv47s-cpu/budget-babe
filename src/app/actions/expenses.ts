@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
@@ -15,7 +14,16 @@ import { coerceCategoryId } from "@/lib/categories";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 
 function revalidateAll(yearMonth: string) {
-  revalidateLedgerPaths(yearMonth);
+  revalidateLedgerPaths(yearMonth, [
+    "overview",
+    "expenses",
+    "bills",
+    "budgets",
+    "insights",
+    "flow",
+    "coach",
+    "tax",
+  ]);
 }
 
 function parseExpenseIds(raw: string): string[] {
@@ -159,7 +167,6 @@ export async function bulkSetCategoryForExpensesAction(formData: FormData): Prom
     });
   }
   revalidateAll(yearMonth);
-  revalidatePath("/tax");
 }
 
 export async function updateExpenseAction(formData: FormData): Promise<void> {
@@ -211,7 +218,6 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
     },
   });
   revalidateAll(yearMonth);
-  revalidatePath("/tax");
 }
 
 /** Re-apply merchant tag rules to every expense in the month (keeps explicit category). */
@@ -222,7 +228,6 @@ export async function reapplyMerchantRulesAction(formData: FormData): Promise<vo
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   await applyEntryDefaultsToExistingExpenses(period.id, yearMonth);
   revalidateAll(yearMonth);
-  revalidatePath("/tax");
 }
 
 export async function deleteExpenseAction(formData: FormData): Promise<void> {

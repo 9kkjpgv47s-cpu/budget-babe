@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
+import { currentYearMonth } from "@/lib/yearMonth";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
 import type { FormActionState } from "@/lib/formActionState";
@@ -26,8 +27,7 @@ export async function addSavingsGoalCore(
       deadline: deadline && !Number.isNaN(deadline.getTime()) ? deadline : null,
     },
   });
-  revalidatePath("/goals");
-  revalidatePath("/");
+  revalidateLedgerPaths(currentYearMonth(), ["goals", "overview"]);
   return { ok: true };
 }
 
@@ -49,8 +49,7 @@ export async function updateGoalSavedCore(
     where: { id },
     data: { savedAmountCents: saved },
   });
-  revalidatePath("/goals");
-  revalidatePath("/");
+  revalidateLedgerPaths(currentYearMonth(), ["goals", "overview"]);
   return { ok: true };
 }
 
@@ -78,8 +77,7 @@ export async function addSpendingAdjustmentCore(
       amountCents: amount,
     },
   });
-  revalidatePath("/goals");
-  revalidatePath("/");
+  revalidateLedgerPaths(currentYearMonth(), ["goals", "overview"]);
   return { ok: true };
 }
 
@@ -111,8 +109,7 @@ export async function updateSavingsGoalAction(
       deadline: deadline && !Number.isNaN(deadline.getTime()) ? deadline : null,
     },
   });
-  revalidatePath("/goals");
-  revalidatePath("/");
+  revalidateLedgerPaths(currentYearMonth(), ["goals", "overview"]);
   return { ok: true };
 }
 
@@ -123,8 +120,7 @@ export async function deleteSpendingAdjustmentAction(
   const id = String(formData.get("adjustmentId") ?? "");
   if (!id) return;
   await prisma.spendingAdjustment.deleteMany({ where: { id } });
-  revalidatePath("/goals");
-  revalidatePath("/");
+  revalidateLedgerPaths(currentYearMonth(), ["goals", "overview"]);
 }
 
 export async function deleteGoalAction(formData: FormData): Promise<void> {
@@ -132,6 +128,5 @@ export async function deleteGoalAction(formData: FormData): Promise<void> {
   const id = String(formData.get("goalId") ?? "");
   if (!id) return;
   await prisma.savingsGoal.delete({ where: { id } });
-  revalidatePath("/goals");
-  revalidatePath("/");
+  revalidateLedgerPaths(currentYearMonth(), ["goals", "overview"]);
 }

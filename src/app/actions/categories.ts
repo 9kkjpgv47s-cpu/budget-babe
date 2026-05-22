@@ -1,8 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import {
+  revalidateLedgerPaths,
+  type LedgerRevalidateScope,
+} from "@/lib/revalidateLedger";
+import { currentYearMonth } from "@/lib/yearMonth";
 import { requireUser } from "@/lib/auth";
 import {
   applyCategoryDefaultsToExpense,
@@ -16,13 +20,17 @@ import { isValidTaxCategory } from "@/lib/taxCategories";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { classifyUncategorizedForPeriod } from "@/lib/expenseWrite";
 
-function revalidateCategoryPaths(yearMonth?: string) {
-  revalidatePath("/budgets");
-  revalidatePath("/import");
-  revalidatePath("/expenses");
-  if (yearMonth) revalidatePath(`/expenses?ym=${yearMonth}`);
-  revalidatePath("/insights");
-  revalidatePath("/");
+function revalidateCategoryPaths(yearMonth?: string, opts?: { tax?: boolean }) {
+  const ym = yearMonth ?? currentYearMonth();
+  const scopes: LedgerRevalidateScope[] = [
+    "budgets",
+    "import",
+    "expenses",
+    "insights",
+    "overview",
+  ];
+  if (opts?.tax) scopes.push("tax");
+  revalidateLedgerPaths(ym, scopes);
 }
 
 export async function addCategoryAction(formData: FormData): Promise<void> {
@@ -96,8 +104,7 @@ export async function bulkSyncTaxFromCategoriesAction(
       forceBudgetLink: true,
     });
   }
-  revalidateCategoryPaths(yearMonth);
-  revalidatePath("/tax");
+  revalidateCategoryPaths(yearMonth, { tax: true });
 }
 
 export async function syncCategoryEnvelopesAction(formData: FormData): Promise<void> {
@@ -212,8 +219,7 @@ export async function bulkApplyCategoryRulesAction(
   const period = await getOrCreateMonthlyPeriod(yearMonth);
 
   const { categorized, scanned } = await classifyUncategorizedForPeriod(period.id);
-  revalidateCategoryPaths(yearMonth);
-  revalidatePath("/tax");
+  revalidateCategoryPaths(yearMonth, { tax: true });
   const params = new URLSearchParams({ ym: yearMonth });
   if (categorized > 0) {
     params.set("classified", String(categorized));

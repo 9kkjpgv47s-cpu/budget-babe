@@ -20,6 +20,7 @@ function revalidateShoppingExpenseTargets(yearMonth: string) {
     "budgets",
     "insights",
     "flow",
+    "tax",
   ]);
 }
 
@@ -298,7 +299,6 @@ export async function createExpenseFromShoppingTripAction(
   });
 
   revalidateShoppingExpenseTargets(yearMonth);
-  revalidatePath("/tax");
   return {
     ok: true,
     message: `Logged ${formatCents(amountCents)} to ${yearMonth} spending.`,

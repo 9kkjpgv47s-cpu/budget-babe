@@ -31,6 +31,7 @@ function revalidateMoneyFromReceipt(yearMonth: string) {
     "flow",
     "coach",
     "receipts",
+    "tax",
   ]);
 }
 
@@ -161,7 +162,6 @@ export async function createExpenseFromReceiptAction(
   });
   revalidateMoneyFromReceipt(yearMonth);
   if (pageYearMonth !== yearMonth) revalidateMoneyFromReceipt(pageYearMonth);
-  revalidatePath("/tax");
   const msg =
     yearMonth !== pageYearMonth
       ? `Expense added to ${yearMonth} (receipt month).`
@@ -269,7 +269,6 @@ export async function createExpensesFromReceiptLinesAction(
   }
   revalidateMoneyFromReceipt(yearMonth);
   if (pageYearMonth !== yearMonth) revalidateMoneyFromReceipt(pageYearMonth);
-  revalidatePath("/tax");
   const monthNote =
     yearMonth !== pageYearMonth ? ` to ${yearMonth}` : "";
   return {

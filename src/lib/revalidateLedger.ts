@@ -14,7 +14,8 @@ export type LedgerRevalidateScope =
   | "plaid"
   | "shopping"
   | "goals"
-  | "net-worth";
+  | "net-worth"
+  | "debt";
 
 const ALL_SCOPES: LedgerRevalidateScope[] = [
   "overview",
@@ -31,6 +32,7 @@ const ALL_SCOPES: LedgerRevalidateScope[] = [
   "shopping",
   "goals",
   "net-worth",
+  "debt",
 ];
 
 function pathsForScope(scope: LedgerRevalidateScope, yearMonth: string): string[] {

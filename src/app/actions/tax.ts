@@ -1,7 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { isValidTaxCategory } from "@/lib/taxCategories";
@@ -14,11 +14,9 @@ import {
 } from "@/lib/taxCodeGuidance";
 import { localCalendarYearBounds } from "@/lib/taxYear";
 
-function revalidateTax(year: string) {
-  revalidatePath("/tax");
-  revalidatePath(`/tax?year=${year}`);
-  revalidatePath("/expenses");
-  revalidatePath("/");
+function revalidateTax(taxYear: string, expenseYearMonth?: string) {
+  const ymAnchor = expenseYearMonth ?? `${taxYear}-01`;
+  revalidateLedgerPaths(ymAnchor, ["tax", "expenses", "overview"]);
 }
 
 type TaxSnapshot = {
@@ -175,9 +173,7 @@ export async function saveExpenseTaxAction(formData: FormData): Promise<void> {
     after,
   });
 
-  revalidateTax(redirectYear);
-  revalidatePath(`/expenses?ym=${exp.monthlyPeriod.yearMonth}`);
-  revalidatePath("/expenses");
+  revalidateTax(redirectYear, exp.monthlyPeriod.yearMonth);
 }
 
 export async function markExpenseTaxReviewedAction(formData: FormData): Promise<void> {
@@ -217,9 +213,7 @@ export async function markExpenseTaxReviewedAction(formData: FormData): Promise<
     after,
   });
 
-  revalidateTax(redirectYear);
-  revalidatePath(`/expenses?ym=${exp.monthlyPeriod.yearMonth}`);
-  revalidatePath("/expenses");
+  revalidateTax(redirectYear, exp.monthlyPeriod.yearMonth);
 }
 
 export async function clearExpenseTaxAction(formData: FormData): Promise<void> {
@@ -272,9 +266,7 @@ export async function clearExpenseTaxAction(formData: FormData): Promise<void> {
     after,
   });
 
-  revalidateTax(redirectYear);
-  revalidatePath(`/expenses?ym=${exp.monthlyPeriod.yearMonth}`);
-  revalidatePath("/expenses");
+  revalidateTax(redirectYear, exp.monthlyPeriod.yearMonth);
 }
 
 export async function bulkQualifyTaxExpensesAction(formData: FormData): Promise<void> {
@@ -335,5 +327,4 @@ export async function bulkQualifyTaxExpensesAction(formData: FormData): Promise<
   }
 
   revalidateTax(year);
-  revalidatePath("/expenses");
 }

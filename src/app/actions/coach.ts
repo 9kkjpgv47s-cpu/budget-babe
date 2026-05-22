@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
+import { currentYearMonth } from "@/lib/yearMonth";
 import { requireUser } from "@/lib/auth";
 import { ensureHouseholdSettings } from "@/lib/dashboardData";
 import { SAVINGS_RATE_OPTIONS } from "@/lib/paycheckCoach";
@@ -27,6 +28,5 @@ export async function updateCoachSettingsAction(formData: FormData): Promise<voi
       payPeriodsPerMonth: validPeriods,
     },
   });
-  revalidatePath("/");
-  revalidatePath("/coach");
+  revalidateLedgerPaths(currentYearMonth(), ["overview", "coach"]);
 }

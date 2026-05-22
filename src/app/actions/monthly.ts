@@ -272,8 +272,16 @@ export async function addExpenseCore(
       source: "manual",
     },
   });
-  revalidateLedgerPaths(yearMonth);
-  revalidatePath("/tax");
+  revalidateLedgerPaths(yearMonth, [
+    "overview",
+    "expenses",
+    "bills",
+    "budgets",
+    "insights",
+    "flow",
+    "coach",
+    "tax",
+  ]);
   return {
     ok: true,
     entryDefaults: expenseDefaultsFromWrite(fields),

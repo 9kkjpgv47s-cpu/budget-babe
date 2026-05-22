@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
+import { currentYearMonth } from "@/lib/yearMonth";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
 
@@ -16,7 +17,7 @@ export async function addNetWorthAccountAction(formData: FormData): Promise<void
   await prisma.netWorthAccount.create({
     data: { kind, name, balanceCents: bal, sortOrder },
   });
-  revalidatePath("/net-worth");
+  revalidateLedgerPaths(currentYearMonth(), ["net-worth"]);
 }
 
 export async function updateNetWorthAccountAction(formData: FormData): Promise<void> {
@@ -31,7 +32,7 @@ export async function updateNetWorthAccountAction(formData: FormData): Promise<v
     where: { id },
     data: { name, balanceCents: bal, kind },
   });
-  revalidatePath("/net-worth");
+  revalidateLedgerPaths(currentYearMonth(), ["net-worth"]);
 }
 
 export async function deleteNetWorthAccountAction(formData: FormData): Promise<void> {
@@ -39,7 +40,7 @@ export async function deleteNetWorthAccountAction(formData: FormData): Promise<v
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await prisma.netWorthAccount.delete({ where: { id } });
-  revalidatePath("/net-worth");
+  revalidateLedgerPaths(currentYearMonth(), ["net-worth"]);
 }
 
 export async function recordNetWorthSnapshotAction(formData: FormData): Promise<void> {
@@ -60,5 +61,5 @@ export async function recordNetWorthSnapshotAction(formData: FormData): Promise<
       note,
     },
   });
-  revalidatePath("/net-worth");
+  revalidateLedgerPaths(currentYearMonth(), ["net-worth"]);
 }
