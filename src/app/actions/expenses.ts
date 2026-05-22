@@ -93,29 +93,26 @@ export async function bulkSetBudgetForExpensesAction(formData: FormData): Promis
       where: { id, monthlyPeriodId: period.id },
     });
     if (!exp) continue;
-    const write = await finalizeClassifiedExpenseWrite(
+    const fields = await finalizeExpenseForWrite(
       {
         description: exp.description,
         tagsJson: exp.tagsJson,
         budgetPlanId,
         payee: exp.payee,
-      },
-      period.id,
-      yearMonth,
-      {
         categoryId: exp.categoryId,
         taxCategory: exp.taxCategory,
-        autoSuggest: false,
+        autoSuggestCategory: false,
       },
+      yearMonth,
     );
     await prisma.expense.update({
       where: { id },
       data: {
-        budgetPlanId: write.budgetPlanId,
-        tagsJson: write.tagsJson,
-        payee: write.payee,
-        categoryId: write.categoryId,
-        taxCategory: write.taxCategory,
+        budgetPlanId: fields.budgetPlanId,
+        tagsJson: fields.tagsJson,
+        payee: fields.payee,
+        categoryId: fields.categoryId,
+        taxCategory: fields.taxCategory,
       },
     });
   }
@@ -133,13 +130,10 @@ export async function bulkSetCategoryForExpensesAction(formData: FormData): Prom
   if (raw && raw !== "none" && !categoryId) return;
   const applyTax = String(formData.get("applyTaxFromCategory") ?? "on") === "on";
   for (const id of ids) {
-<<<<<<< HEAD
     const exp = await prisma.expense.findFirst({
       where: { id, monthlyPeriodId: period.id },
     });
     if (!exp) continue;
-    const applyTax =
-      String(formData.get("applyTaxFromCategory") ?? "on") === "on";
     const fields = await finalizeExpenseForWrite(
       {
         description: exp.description,
@@ -162,10 +156,6 @@ export async function bulkSetCategoryForExpensesAction(formData: FormData): Prom
         tagsJson: fields.tagsJson,
         payee: fields.payee,
       },
-=======
-    await assignCategoryToExpense(id, period.id, categoryId, {
-      applyTaxFromCategory: applyTax,
->>>>>>> dc92bcd (feat(agent-3): category helpers, expense filters, spend drill-down)
     });
   }
   revalidateAll(yearMonth);
