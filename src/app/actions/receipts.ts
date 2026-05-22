@@ -12,6 +12,7 @@ import { applyMerchantRulesToTags } from "@/lib/merchantRules";
 import type { ParsedReceiptLine } from "@/lib/receiptOcr";
 import { buildReceiptExpenseMeta } from "@/app/(app)/receipts/receiptExpenseMeta";
 import { postReceiptTotalCore } from "@/app/(app)/receipts/postReceiptTotalCore";
+import { evaluateReceiptPostSafety } from "@/app/(app)/receipts/receiptPostSafety";
 import {
   deleteReceiptStored,
   normalizeReceiptImageBuffer,
@@ -223,8 +224,20 @@ export async function batchPostReadyReceiptsAction(
     return { error: "No receipts are ready to post for this month." };
   }
   let posted = 0;
+  let safetySkipped = 0;
   const skipped: string[] = [];
   for (const receipt of candidates) {
+    const safety = await evaluateReceiptPostSafety({
+      ocrStatus: receipt.ocrStatus,
+      expenseCount: 0,
+      totalCents: receipt.totalCents,
+      ocrConfidence: receipt.ocrConfidence,
+      monthlyPeriodId: receipt.monthlyPeriodId,
+    });
+    if (!safety.autoPostSafe) {
+      safetySkipped++;
+      continue;
+    }
     const result = await postReceiptTotalCore({
       receipt,
       userId: user.userId,
@@ -237,11 +250,17 @@ export async function batchPostReadyReceiptsAction(
   if (posted === 0) {
     return {
       error:
-        skipped[0] ??
-        "Could not post any receipts. Check totals and OCR status.",
+        safetySkipped > 0
+          ? "No receipts passed safety checks (confidence, amount, or duplicate). Post individually from the list below."
+          : (skipped[0] ??
+            "Could not post any receipts. Check totals and OCR status."),
     };
   }
-  const suffix = skipped.length > 0 ? ` (${skipped.length} skipped)` : "";
+  const extra =
+    safetySkipped + skipped.length > 0
+      ? ` (${safetySkipped + skipped.length} skipped)`
+      : "";
+  const suffix = extra;
   return {
     ok: true,
     message: `Posted ${posted} receipt${posted === 1 ? "" : "s"} to spending${suffix}.`,

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatCents } from "@/lib/money";
 import { displayFilename, ocrStatusBadgeClass, ocrStatusLabel } from "./receiptDisplay";
 import { ReceiptBatchPostButton } from "./ReceiptBatchPostButton";
+import { ReceiptQuickPostButton } from "./ReceiptQuickPostButton";
 
 type QueueReceipt = {
   id: string;
@@ -9,6 +10,7 @@ type QueueReceipt = {
   totalCents: number | null;
   ocrStatus: string;
   ocrConfidence: number | null;
+  descriptionHint: string;
 };
 
 export function ReceiptNeedsPostingQueue({
@@ -29,7 +31,7 @@ export function ReceiptNeedsPostingQueue({
         Ready to post ({ready.length})
       </h2>
       <p className="mt-1 text-xs text-emerald-900/80 dark:text-emerald-100/80">
-        OCR finished — open a receipt and tap Quick post, or scroll to it below.
+        OCR finished — quick post here, open a receipt below, or use Post all.
       </p>
       <ul className="mt-3 space-y-2">
         {ready.map((r) => (
@@ -50,12 +52,23 @@ export function ReceiptNeedsPostingQueue({
                 {ocrStatusLabel(r.ocrStatus)}
               </span>
             </div>
-            <Link
-              href={`/receipts?ym=${yearMonth}&focus=${r.id}`}
-              className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
-            >
-              Post now →
-            </Link>
+            <div className="flex w-full min-w-[12rem] flex-col gap-2 sm:w-auto sm:min-w-[14rem]">
+              {r.totalCents != null && r.totalCents > 0 ? (
+                <ReceiptQuickPostButton
+                  receiptId={r.id}
+                  yearMonth={yearMonth}
+                  totalCents={r.totalCents}
+                  descriptionHint={r.descriptionHint}
+                  ocrConfidence={r.ocrConfidence}
+                />
+              ) : null}
+              <Link
+                href={`/receipts?ym=${yearMonth}&focus=${r.id}`}
+                className="text-center text-[10px] font-medium text-emerald-800 underline dark:text-emerald-300"
+              >
+                Review details →
+              </Link>
+            </div>
           </li>
         ))}
       </ul>

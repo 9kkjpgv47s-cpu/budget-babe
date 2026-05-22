@@ -12,12 +12,14 @@ export function ReceiptQuickPostButton({
   totalCents,
   descriptionHint,
   ocrConfidence,
+  warnings = [],
 }: {
   receiptId: string;
   yearMonth: string;
   totalCents: number;
   descriptionHint: string;
   ocrConfidence?: number | null;
+  warnings?: string[];
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState(
@@ -44,7 +46,13 @@ export function ReceiptQuickPostButton({
           ? "Posting…"
           : `Quick post ${formatCents(totalCents)} — ${descriptionHint.slice(0, 40)}${descriptionHint.length > 40 ? "…" : ""}`}
       </button>
-      {ocrConfidence != null && ocrConfidence >= 85 ? (
+      {warnings.length > 0 ? (
+        <ul className="mt-2 list-disc space-y-0.5 pl-4 text-[10px] text-amber-800 dark:text-amber-200">
+          {warnings.map((w) => (
+            <li key={w}>{w}</li>
+          ))}
+        </ul>
+      ) : ocrConfidence != null && ocrConfidence >= 85 ? (
         <p className="mt-1 text-[10px] text-zinc-500">
           OCR confidence ~{ocrConfidence}% — good candidate for quick post.
         </p>

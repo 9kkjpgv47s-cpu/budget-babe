@@ -33,6 +33,16 @@ Receipt capture, OCR, discoverability, and posting to spending. All items below 
 - `GET /api/receipts/ocr-pending` — nav badge counts
 - `GET /api/receipts/export` — month metadata CSV
 
+## Polish (phase 10)
+
+- Shared `receiptPostSafety` for status API, auto-post, and batch post
+- Batch **Post all** skips unsafe receipts (same rules as auto-post)
+- Quick post shows amber warnings (confidence, $5k, duplicate amount)
+- Ready queue: inline quick post per receipt
+- OCR infers total from sum of line items when no TOTAL keyword
+- `GET /api/receipts/manifest?ym=` JSON backup with download paths
+- Discoverability links use `#upload` (home, overview, quick capture)
+
 ## Polish (phase 9)
 
 - Scan FAB links to `#upload`; hash scroll + file focus on receipts page

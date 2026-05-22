@@ -26,7 +26,10 @@ export function ReceiptsOverviewStrip({
     return (
       <p className="mt-2 text-sm text-zinc-500">
         No receipts this month.{" "}
-        <Link href={`/receipts?ym=${yearMonth}`} className="text-emerald-600 underline">
+        <Link
+          href={`/receipts?ym=${yearMonth}#upload`}
+          className="text-emerald-600 underline"
+        >
           Scan your first receipt
         </Link>
       </p>

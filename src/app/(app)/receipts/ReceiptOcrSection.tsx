@@ -13,6 +13,7 @@ import { ReceiptPostExpenseForm } from "./ReceiptPostExpenseForm";
 import { ReceiptBatchExpensesForm } from "./ReceiptBatchExpensesForm";
 import { ReceiptQuickPostButton } from "./ReceiptQuickPostButton";
 import { suggestBudgetPlanId, type BudgetPlanPick } from "./receiptBudgetSuggest";
+import { evaluateReceiptPostSafety } from "./receiptPostSafety";
 import { displayFilename, ocrStatusBadgeClass } from "./receiptDisplay";
 import { ReceiptThumbnail } from "./ReceiptThumbnail";
 import { ReceiptDeleteButton } from "./ReceiptDeleteButton";
@@ -30,9 +31,10 @@ type ReceiptRow = {
   ocrParsedLines: string | null;
   ocrConfidence: number | null;
   expenseCount: number;
+  monthlyPeriodId: string | null;
 };
 
-export function ReceiptOcrSection({
+export async function ReceiptOcrSection({
   receipt,
   yearMonth,
   budgetPlans,
@@ -79,6 +81,18 @@ export function ReceiptOcrSection({
     receipt.expenseCount === 0 &&
     receipt.totalCents != null &&
     receipt.totalCents > 0;
+
+  const postWarnings = canQuickPost
+    ? (
+        await evaluateReceiptPostSafety({
+          ocrStatus: receipt.ocrStatus,
+          expenseCount: receipt.expenseCount,
+          totalCents: receipt.totalCents,
+          ocrConfidence: receipt.ocrConfidence,
+          monthlyPeriodId: receipt.monthlyPeriodId,
+        })
+      ).warnings
+    : [];
 
   return (
     <div className="mt-3 w-full space-y-2 border-t border-zinc-100 pt-3 text-xs dark:border-zinc-800">
@@ -144,6 +158,7 @@ export function ReceiptOcrSection({
               totalCents={receipt.totalCents!}
               descriptionHint={defaultDescription}
               ocrConfidence={receipt.ocrConfidence}
+              warnings={postWarnings}
             />
           ) : null}
         </div>
@@ -216,7 +231,7 @@ export function ReceiptOcrSection({
   );
 }
 
-export function ReceiptListItem({
+export async function ReceiptListItem({
   receipt,
   yearMonth,
   budgetPlans,

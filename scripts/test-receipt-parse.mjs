@@ -99,4 +99,19 @@ assert.equal(parseLikelyTotalCents("TOTAL: 42,18\n"), 4218);
 const merchant = parseMerchantFromOcrText("WHOLE FOODS MARKET\n123 Main St\n");
 assert.equal(merchant, "WHOLE FOODS MARKET");
 
+function inferTotalFromParsedLines(lines) {
+  const amounts = lines
+    .map((l) => l.amountCents)
+    .filter((c) => typeof c === "number" && c > 0);
+  if (amounts.length < 2) return null;
+  const sum = amounts.reduce((a, b) => a + b, 0);
+  return sum > 0 ? sum : null;
+}
+
+const sumTotal = inferTotalFromParsedLines([
+  { description: "A", amountCents: 450 },
+  { description: "B", amountCents: 325 },
+]);
+assert.equal(sumTotal, 775);
+
 console.log("receipt parse checks: ok");

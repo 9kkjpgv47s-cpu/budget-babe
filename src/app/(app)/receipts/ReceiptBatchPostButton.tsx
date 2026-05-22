@@ -39,7 +39,8 @@ export function ReceiptBatchPostButton({
           : `Post all ${readyCount} ready receipt${readyCount === 1 ? "" : "s"} to spending`}
       </button>
       <p className="mt-1 text-[10px] text-emerald-900/75 dark:text-emerald-100/75">
-        Uses each receipt total and store name from OCR. Skips receipts already linked.
+        Uses OCR total and store name. Skips low-confidence, over $5k, duplicate-amount,
+        and already-linked receipts (same rules as auto-post).
       </p>
       {state?.error ? (
         <p className="mt-1 text-xs text-red-600">{state.error}</p>

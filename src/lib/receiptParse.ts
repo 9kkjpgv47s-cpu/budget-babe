@@ -113,3 +113,16 @@ export function parseLikelyTotalCents(raw: string): number | null {
   }
   return null;
 }
+
+/** Sum parsed line amounts when no TOTAL line was found (2+ lines with amounts). */
+export function inferTotalFromParsedLines(
+  lines: ParsedReceiptLine[],
+): number | null {
+  const amounts = lines
+    .map((l) => l.amountCents)
+    .filter((c): c is number => typeof c === "number" && c > 0);
+  if (amounts.length < 2) return null;
+  const sum = amounts.reduce((a, b) => a + b, 0);
+  if (sum <= 0 || sum >= 1_000_000_00) return null;
+  return sum;
+}

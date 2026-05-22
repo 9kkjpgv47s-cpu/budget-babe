@@ -14,12 +14,14 @@ import {
 export type { ParsedReceiptLine } from "@/lib/receiptParse";
 export {
   defaultExpenseDescriptionFromReceipt,
+  inferTotalFromParsedLines,
   parseLikelyTotalCents,
   parseMerchantFromOcrText,
   parseReceiptLineAmountCents,
   parseReceiptLines,
 } from "@/lib/receiptParse";
 import {
+  inferTotalFromParsedLines,
   parseLikelyTotalCents,
   parseReceiptLines,
 } from "@/lib/receiptParse";
@@ -237,7 +239,8 @@ export async function processReceiptOcrFile(receiptId: string): Promise<void> {
     const confidence = extracted.confidence;
 
     const parsed = parseReceiptLines(rawText);
-    const likelyTotal = parseLikelyTotalCents(rawText);
+    const likelyTotal =
+      parseLikelyTotalCents(rawText) ?? inferTotalFromParsedLines(parsed);
 
     const update: Parameters<typeof prisma.receipt.update>[0]["data"] = {
       ocrStatus: "completed",

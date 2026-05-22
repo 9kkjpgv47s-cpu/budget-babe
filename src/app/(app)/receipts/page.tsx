@@ -24,6 +24,11 @@ import { ReceiptFailedBulkActions } from "./ReceiptFailedBulkActions";
 import { ReceiptMonthStats } from "./ReceiptMonthStats";
 import { ReceiptHelpTips } from "./ReceiptHelpTips";
 import { ReceiptScanFab } from "./ReceiptScanFab";
+import {
+  defaultExpenseDescriptionFromReceipt,
+  type ParsedReceiptLine,
+} from "@/lib/receiptOcr";
+import { displayFilename } from "./receiptDisplay";
 
 export default async function ReceiptsPage({
   searchParams,
@@ -75,13 +80,38 @@ export default async function ReceiptsPage({
   const ocrPending = receipts.some(
     (r) => r.ocrStatus === "pending" || r.ocrStatus === "processing",
   );
-  const needsPosting = receipts.filter(
-    (r) =>
-      r._count.expenses === 0 &&
-      r.ocrStatus === "completed" &&
-      r.totalCents != null &&
-      r.totalCents > 0,
-  );
+  const needsPosting = receipts
+    .filter(
+      (r) =>
+        r._count.expenses === 0 &&
+        r.ocrStatus === "completed" &&
+        r.totalCents != null &&
+        r.totalCents > 0,
+    )
+    .map((r) => {
+      let parsed: ParsedReceiptLine[] = [];
+      if (r.ocrParsedLines) {
+        try {
+          parsed = JSON.parse(r.ocrParsedLines) as ParsedReceiptLine[];
+          if (!Array.isArray(parsed)) parsed = [];
+        } catch {
+          parsed = [];
+        }
+      }
+      const label = displayFilename(r.filename);
+      return {
+        id: r.id,
+        filename: r.filename,
+        totalCents: r.totalCents,
+        ocrStatus: r.ocrStatus,
+        ocrConfidence: r.ocrConfidence,
+        descriptionHint: defaultExpenseDescriptionFromReceipt(
+          r.ocrRawText ?? "",
+          parsed,
+          label,
+        ),
+      };
+    });
 
   return (
     <div className="space-y-8">
@@ -193,12 +223,18 @@ export default async function ReceiptsPage({
           </p>
         ) : null}
         {receipts.length > 0 ? (
-          <p className="mt-4 text-xs text-zinc-500">
+          <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
             <a
               href={`/api/receipts/export?ym=${yearMonth}`}
               className="text-emerald-700 underline dark:text-emerald-400"
             >
-              Download receipts CSV for {yearMonth}
+              Download CSV for {yearMonth}
+            </a>
+            <a
+              href={`/api/receipts/manifest?ym=${yearMonth}`}
+              className="text-emerald-700 underline dark:text-emerald-400"
+            >
+              JSON manifest (tax backup links)
             </a>
           </p>
         ) : null}
