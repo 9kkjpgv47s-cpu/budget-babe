@@ -1,6 +1,6 @@
 /**
- * Category classification for expenses. Agent 2 (receipts) should call
- * `classifyExpenseForWrite` when posting from OCR — do not duplicate logic in receipts.ts.
+ * Category classification for expenses. Prefer `finalizeExpenseForWrite` from
+ * `@/lib/entryDefaults` for creates — it wraps draft + classification in one call.
  */
 import { prisma } from "@/lib/prisma";
 import {

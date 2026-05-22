@@ -10,7 +10,8 @@ import { parseMoneyToCents } from "@/lib/money";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
 import {
-  finalizeExpenseDraftForPeriod,
+  expenseDefaultsFromWrite,
+  finalizeExpenseForWrite,
   getLastExpenseDefaultsForYearMonth,
   remapBudgetPlanToPeriod,
   resolveReceiptPostingContext,
@@ -109,21 +110,21 @@ export async function createExpenseFromReceiptAction(
   }
   const pageYmForResolve =
     postingHint.match(/^\d{4}-\d{2}$/) ? postingHint : pageYearMonth;
-  const { yearMonth, plans } = await resolveReceiptPostingContext(
+  const { yearMonth } = await resolveReceiptPostingContext(
     receiptId,
     pageYmForResolve,
   );
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   const lastDefaults = await getLastExpenseDefaultsForYearMonth(yearMonth);
-  const draft = await finalizeExpenseDraftForPeriod(
+  const fields = await finalizeExpenseForWrite(
     {
       description,
       tagsJson: lastDefaults.tagsJson,
       budgetPlanId: budgetPlanIdRaw || lastDefaults.budgetPlanId,
       payee: payee ?? lastDefaults.payee,
+      categoryId: lastDefaults.categoryId,
     },
-    period.id,
-    plans,
+    yearMonth,
   );
   await prisma.expense.create({
     data: {
@@ -134,18 +135,21 @@ export async function createExpenseFromReceiptAction(
       spentAt: new Date(),
       source: "ocr",
       receiptId,
-      budgetPlanId: draft.budgetPlanId,
-      tagsJson: draft.tagsJson,
-      payee: draft.payee,
+      budgetPlanId: fields.budgetPlanId,
+      tagsJson: fields.tagsJson,
+      payee: fields.payee,
+      categoryId: fields.categoryId,
+      taxCategory: fields.taxCategory,
     },
   });
   revalidateMoneyFromReceipt(yearMonth);
   if (pageYearMonth !== yearMonth) revalidateMoneyFromReceipt(pageYearMonth);
+  revalidatePath("/tax");
   const msg =
     yearMonth !== pageYearMonth
       ? `Expense added to ${yearMonth} (receipt month).`
       : "Expense added — view on Overview or Expenses.";
-  return { ok: true, message: msg };
+  return { ok: true, message: msg, entryDefaults: expenseDefaultsFromWrite(fields) };
 }
 
 export async function createExpensesFromReceiptLinesAction(
@@ -180,7 +184,7 @@ export async function createExpensesFromReceiptLinesAction(
   }
   const pageYmForResolve =
     postingHint.match(/^\d{4}-\d{2}$/) ? postingHint : pageYearMonth;
-  const { yearMonth, plans } = await resolveReceiptPostingContext(
+  const { yearMonth } = await resolveReceiptPostingContext(
     receiptId,
     pageYmForResolve,
   );
@@ -198,17 +202,17 @@ export async function createExpensesFromReceiptLinesAction(
     const desc =
       String(line.description ?? "Receipt item").trim().slice(0, 500) ||
       "Receipt item";
-    const draft = await finalizeExpenseDraftForPeriod(
+    const fields = await finalizeExpenseForWrite(
       {
         description: desc,
         tagsJson: lastDefaults.tagsJson,
         budgetPlanId: sharedBudgetId,
         payee: lastDefaults.payee,
+        categoryId: lastDefaults.categoryId,
       },
-      period.id,
-      plans,
+      yearMonth,
     );
-    sharedBudgetId = draft.budgetPlanId;
+    sharedBudgetId = fields.budgetPlanId;
     await prisma.expense.create({
       data: {
         monthlyPeriodId: period.id,
@@ -219,9 +223,11 @@ export async function createExpensesFromReceiptLinesAction(
         source: "ocr",
         receiptId,
         splitGroupId,
-        budgetPlanId: draft.budgetPlanId,
-        tagsJson: draft.tagsJson,
-        payee: draft.payee,
+        budgetPlanId: fields.budgetPlanId,
+        tagsJson: fields.tagsJson,
+        payee: fields.payee,
+        categoryId: fields.categoryId,
+        taxCategory: fields.taxCategory,
       },
     });
     created++;
@@ -234,6 +240,7 @@ export async function createExpensesFromReceiptLinesAction(
   }
   revalidateMoneyFromReceipt(yearMonth);
   if (pageYearMonth !== yearMonth) revalidateMoneyFromReceipt(pageYearMonth);
+  revalidatePath("/tax");
   const monthNote =
     yearMonth !== pageYearMonth ? ` to ${yearMonth}` : "";
   return {

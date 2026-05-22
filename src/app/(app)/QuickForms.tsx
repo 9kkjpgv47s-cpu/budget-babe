@@ -11,6 +11,7 @@ type ExpenseDefaults = {
   budgetPlanId: string | null;
   tagsJson: string | null;
   payee: string | null;
+  categoryId: string | null;
 };
 
 type EntryKind = "expense" | "bill" | "budget_line" | "paycheck";
@@ -59,7 +60,14 @@ export function QuickForms({
     budgetPlans.some((p) => p.id === liveDefaults.budgetPlanId)
       ? liveDefaults.budgetPlanId
       : "";
-  const formKey = state?.ok ? `saved-${defaultBudgetId}-${defaultTags}` : "idle";
+  const defaultCategoryId =
+    liveDefaults.categoryId &&
+    categories.some((c) => c.id === liveDefaults.categoryId)
+      ? liveDefaults.categoryId
+      : "";
+  const formKey = state?.ok
+    ? `saved-${defaultBudgetId}-${defaultCategoryId}-${defaultTags}`
+    : "idle";
 
   const submitLabel =
     kind === "expense"
@@ -138,7 +146,8 @@ export function QuickForms({
             <select
               name="categoryId"
               className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-              defaultValue=""
+              defaultValue={defaultCategoryId}
+              key={`cat-${defaultCategoryId}-${state?.ok ? "ok" : "idle"}`}
             >
               <option value="">Category (auto if blank)</option>
               {categories.map((c) => (

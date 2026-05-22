@@ -15,15 +15,10 @@ import { parseYearMonth } from "@/lib/yearMonth";
 import type { FormActionState } from "@/lib/formActionState";
 import {
   commaListToTagsJson,
-  expenseDefaultsFromDraft,
-  finalizeExpenseDraftForPeriod,
-  getBudgetPlansForYearMonth,
+  expenseDefaultsFromWrite,
+  finalizeExpenseForWrite,
 } from "@/lib/entryDefaults";
-import {
-  fieldsFromCategoryId,
-  linkCategoriesToBudgetEnvelope,
-} from "@/lib/categories";
-import { classifyExpenseForWrite } from "@/lib/merchantRules";
+import { linkCategoriesToBudgetEnvelope } from "@/lib/categories";
 import { guessPaystubAmountFromBuffer } from "@/lib/paystubOcr";
 import { deletePaystubStored, savePaystubUpload } from "@/lib/uploads";
 
@@ -207,37 +202,16 @@ export async function addExpenseCore(
     const cat = await prisma.category.findUnique({ where: { id: categoryId } });
     if (!cat) categoryId = null;
   }
-  const plans = await getBudgetPlansForYearMonth(yearMonth);
-  const draft = await finalizeExpenseDraftForPeriod(
+  const fields = await finalizeExpenseForWrite(
     {
       description,
       tagsJson: manualTagsJson,
       budgetPlanId: budgetPlanIdRaw || null,
       payee,
+      categoryId,
     },
-    period.id,
-    plans,
+    yearMonth,
   );
-  const classified = await classifyExpenseForWrite(description, period.id, {
-    categoryId,
-    tagsJson: draft.tagsJson,
-    budgetPlanId: draft.budgetPlanId,
-  });
-  let finalTax = classified.taxCategory;
-  let finalBudget = classified.budgetPlanId ?? draft.budgetPlanId;
-  if (classified.categoryId) {
-    const patch = await fieldsFromCategoryId(
-      classified.categoryId,
-      period.id,
-      {
-        budgetPlanId: finalBudget,
-        taxCategory: finalTax,
-      },
-      { forceTaxDefault: true, forceBudgetLink: true },
-    );
-    finalTax = patch.taxCategory;
-    finalBudget = patch.budgetPlanId;
-  }
   const splitGroupId =
     String(formData.get("splitGroupId") ?? "").trim() || null;
 
@@ -247,11 +221,11 @@ export async function addExpenseCore(
       userId: user.userId,
       amountCents: amount,
       description,
-      payee: draft.payee,
-      categoryId: classified.categoryId,
-      budgetPlanId: finalBudget,
-      taxCategory: finalTax,
-      tagsJson: classified.tagsJson,
+      payee: fields.payee,
+      categoryId: fields.categoryId,
+      budgetPlanId: fields.budgetPlanId,
+      taxCategory: fields.taxCategory,
+      tagsJson: fields.tagsJson,
       splitGroupId,
       source: "manual",
     },
@@ -260,11 +234,7 @@ export async function addExpenseCore(
   revalidatePath("/tax");
   return {
     ok: true,
-    entryDefaults: expenseDefaultsFromDraft({
-      ...draft,
-      budgetPlanId: finalBudget,
-      tagsJson: classified.tagsJson,
-    }),
+    entryDefaults: expenseDefaultsFromWrite(fields),
   };
 }
 

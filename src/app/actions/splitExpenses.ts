@@ -7,12 +7,9 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
 import {
-  finalizeExpenseDraftForPeriod,
-  getBudgetPlansForYearMonth,
+  finalizeExpenseForWrite,
   getLastExpenseDefaultsForYearMonth,
 } from "@/lib/entryDefaults";
-import { fieldsFromCategoryId } from "@/lib/categories";
-import { classifyExpenseForWrite } from "@/lib/merchantRules";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
 
@@ -40,13 +37,11 @@ export async function createSplitExpensesAction(
     return { error: "Add at least two split lines." };
   }
   const period = await getOrCreateMonthlyPeriod(yearMonth);
-  const [plans, lastDefaults] = await Promise.all([
-    getBudgetPlansForYearMonth(yearMonth),
-    getLastExpenseDefaultsForYearMonth(yearMonth),
-  ]);
+  const lastDefaults = await getLastExpenseDefaultsForYearMonth(yearMonth);
   let sharedBudgetId: string | null =
     budgetPlanIdRaw || lastDefaults.budgetPlanId;
-  let sharedCategoryId: string | null = categoryIdRaw || null;
+  let sharedCategoryId: string | null =
+    categoryIdRaw || lastDefaults.categoryId;
   if (sharedCategoryId) {
     const cat = await prisma.category.findUnique({ where: { id: sharedCategoryId } });
     if (!cat) sharedCategoryId = null;
@@ -67,37 +62,17 @@ export async function createSplitExpensesAction(
     return { error: "Total must be positive." };
   }
   for (const p of parsed) {
-    const draft = await finalizeExpenseDraftForPeriod(
+    const fields = await finalizeExpenseForWrite(
       {
         description: p.description,
         tagsJson: lastDefaults.tagsJson,
         budgetPlanId: sharedBudgetId,
         payee: lastDefaults.payee,
+        categoryId: sharedCategoryId,
       },
-      period.id,
-      plans,
+      yearMonth,
     );
-    const classified = await classifyExpenseForWrite(p.description, period.id, {
-      categoryId: sharedCategoryId,
-      tagsJson: draft.tagsJson,
-      budgetPlanId: draft.budgetPlanId,
-    });
-    let finalBudget = classified.budgetPlanId ?? draft.budgetPlanId;
-    let finalTax = classified.taxCategory;
-    if (classified.categoryId) {
-      const patch = await fieldsFromCategoryId(
-        classified.categoryId,
-        period.id,
-        {
-          budgetPlanId: finalBudget,
-          taxCategory: finalTax,
-        },
-        { forceTaxDefault: true, forceBudgetLink: true },
-      );
-      finalBudget = patch.budgetPlanId;
-      finalTax = patch.taxCategory;
-    }
-    sharedBudgetId = finalBudget;
+    sharedBudgetId = fields.budgetPlanId;
     await prisma.expense.create({
       data: {
         monthlyPeriodId: period.id,
@@ -106,11 +81,11 @@ export async function createSplitExpensesAction(
         description: p.description,
         spentAt: new Date(),
         splitGroupId,
-        payee: draft.payee,
-        categoryId: classified.categoryId,
-        budgetPlanId: finalBudget,
-        taxCategory: finalTax,
-        tagsJson: classified.tagsJson,
+        payee: fields.payee,
+        categoryId: fields.categoryId,
+        budgetPlanId: fields.budgetPlanId,
+        taxCategory: fields.taxCategory,
+        tagsJson: fields.tagsJson,
         source: "manual",
       },
     });

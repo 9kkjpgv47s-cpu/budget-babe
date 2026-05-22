@@ -76,7 +76,8 @@ export async function applyMerchantRulesToMonthAction(
   );
   const result = await applyEntryDefaultsToExistingExpenses(period.id, yearMonth);
   revalidateMerchantRuleTargets(yearMonth);
-  const { updated, scanned, tagsChanged, budgetLinked, payeeSet } = result;
+  const { updated, scanned, tagsChanged, budgetLinked, payeeSet, categorySet } =
+    result;
   if (updated === 0) {
     return {
       ok: true,
@@ -86,6 +87,7 @@ export async function applyMerchantRulesToMonthAction(
   const parts: string[] = [];
   if (tagsChanged) parts.push(`${tagsChanged} tag${tagsChanged === 1 ? "" : "s"}`);
   if (budgetLinked) parts.push(`${budgetLinked} budget link${budgetLinked === 1 ? "" : "s"}`);
+  if (categorySet) parts.push(`${categorySet} categor${categorySet === 1 ? "y" : "ies"}`);
   if (payeeSet) parts.push(`${payeeSet} payee${payeeSet === 1 ? "" : "s"}`);
   return {
     ok: true,

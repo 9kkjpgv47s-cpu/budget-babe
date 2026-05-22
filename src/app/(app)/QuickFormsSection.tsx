@@ -25,6 +25,7 @@ export async function QuickFormsSection({ yearMonth }: { yearMonth: string }) {
   const expenseDefaults = sanitizeExpenseDefaultsForPlans(
     rawDefaults,
     budgetPlans.map((p) => p.id),
+    categories.map((c) => c.id),
   );
   return (
     <QuickForms
