@@ -127,6 +127,6 @@ export default async function ReceiptsPage({
           <p className="mt-4 text-sm text-zinc-500">No receipts for this month.</p>
         ) : null}
       </section>
-    </motion.div>
+    </div>
   );
 }

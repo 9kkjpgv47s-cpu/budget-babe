@@ -11,7 +11,10 @@ export type LedgerRevalidateScope =
   | "coach"
   | "tax"
   | "receipts"
-  | "plaid";
+  | "plaid"
+  | "shopping"
+  | "goals"
+  | "net-worth";
 
 const ALL_SCOPES: LedgerRevalidateScope[] = [
   "overview",
@@ -25,6 +28,9 @@ const ALL_SCOPES: LedgerRevalidateScope[] = [
   "tax",
   "receipts",
   "plaid",
+  "shopping",
+  "goals",
+  "net-worth",
 ];
 
 function pathsForScope(scope: LedgerRevalidateScope, yearMonth: string): string[] {
@@ -51,6 +57,14 @@ function pathsForScope(scope: LedgerRevalidateScope, yearMonth: string): string[
       return ["/receipts", `/receipts?ym=${yearMonth}`];
     case "plaid":
       return ["/plaid", `/plaid?ym=${yearMonth}`];
+    case "shopping":
+      return ["/shopping"];
+    case "goals":
+      return ["/goals"];
+    case "net-worth":
+      return ["/net-worth"];
+    case "debt":
+      return ["/debt"];
     default:
       return [];
   }

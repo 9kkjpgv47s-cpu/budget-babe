@@ -2,8 +2,8 @@
 
 import path from "path";
 import { after } from "next/server";
-import { revalidatePath } from "next/cache";
 import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
+import { currentYearMonth } from "@/lib/yearMonth";
 import { addMonths, endOfDay, format, startOfDay } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
@@ -137,10 +137,12 @@ export async function addPaycheckCore(
         imageFilename,
       },
     });
-    revalidatePath("/");
-    revalidatePath("/coach");
-    revalidatePath("/flow");
-    revalidatePath("/insights");
+    revalidateLedgerPaths(yearMonth, [
+      "overview",
+      "coach",
+      "flow",
+      "insights",
+    ]);
     return { ok: true };
   } catch (e) {
     if (imageFilename) {
@@ -174,10 +176,12 @@ export async function deletePaycheckAction(formData: FormData): Promise<void> {
   if (row.imageFilename) {
     await deletePaystubStored(row.imageFilename);
   }
-  revalidatePath("/");
-  revalidatePath("/coach");
-  revalidatePath("/flow");
-  revalidatePath("/insights");
+  revalidateLedgerPaths(yearMonth, [
+    "overview",
+    "coach",
+    "flow",
+    "insights",
+  ]);
 }
 
 export async function updateNextPaycheckCore(
@@ -194,8 +198,7 @@ export async function updateNextPaycheckCore(
     where: { id: 1 },
     data: { nextPaycheckDate },
   });
-  revalidatePath("/");
-  revalidatePath("/coach");
+  revalidateLedgerPaths(currentYearMonth(), ["overview", "coach"]);
   return { ok: true };
 }
 
@@ -219,7 +222,7 @@ export async function updateMonthlyNotesAction(
     where: { id: period.id },
     data: { notes },
   });
-  revalidatePath("/");
+  revalidateLedgerPaths(yearMonth, ["overview"]);
   return { ok: true };
 }
 
@@ -306,7 +309,7 @@ export async function addBillCore(formData: FormData): Promise<FormActionState> 
       dueDate,
     },
   });
-  revalidateBills();
+  revalidateBills(yearMonth);
   return { ok: true };
 }
 
@@ -340,13 +343,15 @@ export async function toggleBillPaidAction(formData: FormData): Promise<void> {
   ]);
 }
 
-function revalidateBills() {
-  revalidatePath("/");
-  revalidatePath("/bills");
-  revalidatePath("/budgets");
-  revalidatePath("/insights");
-  revalidatePath("/flow");
-  revalidatePath("/coach");
+function revalidateBills(yearMonth: string) {
+  revalidateLedgerPaths(yearMonth, [
+    "overview",
+    "bills",
+    "budgets",
+    "insights",
+    "flow",
+    "coach",
+  ]);
 }
 
 export async function updateBillAction(formData: FormData): Promise<void> {
@@ -369,7 +374,7 @@ export async function updateBillAction(formData: FormData): Promise<void> {
     where: { id: billId },
     data: { title, amountCents: amount, dueDate, paid },
   });
-  revalidateBills();
+  revalidateBills(yearMonth);
 }
 
 export async function deleteBillAction(formData: FormData): Promise<void> {
@@ -381,7 +386,7 @@ export async function deleteBillAction(formData: FormData): Promise<void> {
   await prisma.bill.deleteMany({
     where: { id: billId, monthlyPeriodId: period.id },
   });
-  revalidateBills();
+  revalidateBills(yearMonth);
 }
 
 /** Clone last month’s bills into this month with due dates shifted +1 calendar month. */
@@ -424,7 +429,7 @@ export async function copyBillsFromPreviousMonthAction(
       },
     });
   }
-  revalidateBills();
+  revalidateBills(yearMonth);
 }
 
 export async function addBudgetPlanCore(
@@ -453,12 +458,14 @@ export async function addBudgetPlanCore(
     },
   });
   await linkCategoriesToBudgetEnvelope(name);
-  revalidatePath("/");
-  revalidatePath("/budgets");
-  revalidatePath("/import");
-  revalidatePath("/insights");
-  revalidatePath("/flow");
-  revalidatePath("/coach");
+  revalidateLedgerPaths(yearMonth, [
+    "overview",
+    "budgets",
+    "import",
+    "insights",
+    "flow",
+    "coach",
+  ]);
   return { ok: true };
 }
 

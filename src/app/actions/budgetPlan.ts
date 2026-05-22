@@ -1,7 +1,7 @@
 "use server";
 
 import { addMonths, format } from "date-fns";
-import { revalidatePath } from "next/cache";
+import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
@@ -11,15 +11,17 @@ import { applySuggestedRolloversForYearMonth } from "@/app/actions/rollover";
 import { linkCategoriesToBudgetEnvelope } from "@/lib/categories";
 
 function rev(ym: string) {
-  revalidatePath("/");
-  revalidatePath("/budgets");
-  revalidatePath("/bills");
-  revalidatePath("/insights");
-  revalidatePath("/coach");
-  revalidatePath("/flow");
-  revalidatePath("/import");
-  revalidatePath(`/expenses?ym=${ym}`);
-  revalidatePath("/net-worth");
+  revalidateLedgerPaths(ym, [
+    "overview",
+    "budgets",
+    "bills",
+    "insights",
+    "coach",
+    "flow",
+    "import",
+    "expenses",
+    "net-worth",
+  ]);
 }
 
 export async function updateBudgetPlanAction(formData: FormData): Promise<void> {

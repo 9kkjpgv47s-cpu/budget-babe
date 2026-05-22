@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { addMonths, format } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
@@ -14,15 +14,17 @@ function normName(s: string): string {
 }
 
 function revalidateAfterRollover(yearMonth: string) {
-  revalidatePath("/");
-  revalidatePath("/budgets");
-  revalidatePath("/bills");
-  revalidatePath("/insights");
-  revalidatePath("/coach");
-  revalidatePath("/flow");
-  revalidatePath("/import");
-  revalidatePath(`/expenses?ym=${yearMonth}`);
-  revalidatePath("/net-worth");
+  revalidateLedgerPaths(yearMonth, [
+    "overview",
+    "budgets",
+    "bills",
+    "insights",
+    "coach",
+    "flow",
+    "import",
+    "expenses",
+    "net-worth",
+  ]);
 }
 
 /**

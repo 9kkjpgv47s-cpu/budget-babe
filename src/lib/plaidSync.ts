@@ -7,7 +7,11 @@ import {
   applyMerchantRulesToTagsSync,
   loadMerchantRules,
 } from "@/lib/merchantRules";
-import { getPlaidAccessToken } from "@/lib/plaidStorage";
+import {
+  getPlaidAccessToken,
+  storePlaidAccessToken,
+} from "@/lib/plaidStorage";
+import { isEncryptedToken } from "@/lib/tokenEncryption";
 
 export type PlaidSyncResult = {
   imported: number;
@@ -42,7 +46,15 @@ export async function syncPlaidItemTransactions(
     throw new Error("Plaid item not found.");
   }
 
-  const accessToken = getPlaidAccessToken(row.accessToken);
+  let accessTokenStored = row.accessToken;
+  if (!isEncryptedToken(accessTokenStored)) {
+    accessTokenStored = storePlaidAccessToken(accessTokenStored);
+    await prisma.plaidItem.update({
+      where: { id: row.id },
+      data: { accessToken: accessTokenStored },
+    });
+  }
+  const accessToken = getPlaidAccessToken(accessTokenStored);
   const rules = await loadMerchantRules();
 
   let cursor: string | undefined = row.transactionsCursor ?? undefined;

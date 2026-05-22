@@ -2,8 +2,8 @@
 
 import { randomUUID } from "crypto";
 import { after } from "next/server";
-import { revalidatePath } from "next/cache";
 import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
+import { currentYearMonth } from "@/lib/yearMonth";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
@@ -22,7 +22,16 @@ import type { ParsedReceiptLine } from "@/lib/receiptOcr";
 import { deleteReceiptStored, saveReceiptUpload } from "@/lib/uploads";
 
 function revalidateMoneyFromReceipt(yearMonth: string) {
-  revalidateLedgerPaths(yearMonth);
+  revalidateLedgerPaths(yearMonth, [
+    "overview",
+    "expenses",
+    "bills",
+    "budgets",
+    "insights",
+    "flow",
+    "coach",
+    "receipts",
+  ]);
 }
 
 export async function uploadReceiptCore(
@@ -324,7 +333,6 @@ export async function moveReceiptToMonthAction(formData: FormData): Promise<void
     }
     revalidatePath("/tax");
   }
-  revalidatePath("/receipts");
   revalidateMoneyFromReceipt(targetYm);
   if (oldYm && oldYm !== targetYm) {
     revalidateMoneyFromReceipt(oldYm);
@@ -346,9 +354,8 @@ export async function deleteReceiptAction(formData: FormData): Promise<void> {
   const ym = existing.monthlyPeriod?.yearMonth;
   if (ym) revalidateMoneyFromReceipt(ym);
   else {
-    revalidatePath("/");
-    revalidatePath("/receipts");
-    revalidatePath("/expenses");
+    const fallback = currentYearMonth();
+    revalidateLedgerPaths(fallback, ["overview", "receipts", "expenses"]);
   }
 }
 
@@ -366,9 +373,13 @@ export async function reprocessReceiptOcrAction(formData: FormData): Promise<voi
       ocrConfidence: null,
     },
   });
+  const rec = await prisma.receipt.findUnique({
+    where: { id },
+    include: { monthlyPeriod: { select: { yearMonth: true } } },
+  });
+  const ym = rec?.monthlyPeriod?.yearMonth ?? currentYearMonth();
   after(() => {
     void import("@/lib/receiptOcr").then((m) => m.processReceiptOcrFile(id));
   });
-  revalidatePath("/");
-  revalidatePath("/receipts");
+  revalidateLedgerPaths(ym, ["overview", "receipts"]);
 }

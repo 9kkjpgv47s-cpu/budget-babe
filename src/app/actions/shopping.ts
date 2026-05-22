@@ -1,8 +1,9 @@
 "use server";
 
 import { format } from "date-fns";
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
+import { currentYearMonth } from "@/lib/yearMonth";
 import { requireUser } from "@/lib/auth";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { mergeTagLists } from "@/lib/budgetRollup";
@@ -12,13 +13,18 @@ import { shoppingTripImportHash } from "@/lib/shoppingExpense";
 import type { FormActionState } from "@/lib/formActionState";
 
 function revalidateShoppingExpenseTargets(yearMonth: string) {
-  revalidatePath("/shopping");
-  revalidatePath("/");
-  revalidatePath("/expenses");
-  revalidatePath("/budgets");
-  revalidatePath("/insights");
-  revalidatePath("/flow");
-  revalidatePath(`/expenses?ym=${yearMonth}`);
+  revalidateLedgerPaths(yearMonth, [
+    "shopping",
+    "overview",
+    "expenses",
+    "budgets",
+    "insights",
+    "flow",
+  ]);
+}
+
+function revalidateShoppingOnly() {
+  revalidateLedgerPaths(currentYearMonth(), ["shopping"]);
 }
 
 export async function createFullTripCore(
@@ -67,7 +73,7 @@ export async function createFullTripCore(
       },
     },
   });
-  revalidatePath("/shopping");
+  revalidateShoppingOnly();
   return { ok: true };
 }
 
@@ -151,7 +157,7 @@ export async function updateFullTripCore(
     }
     throw error;
   }
-  revalidatePath("/shopping");
+  revalidateShoppingOnly();
   return { ok: true };
 }
 
@@ -190,7 +196,7 @@ export async function duplicateTripAction(formData: FormData): Promise<void> {
       },
     },
   });
-  revalidatePath("/shopping");
+  revalidateShoppingOnly();
 }
 
 export async function deleteTripAction(formData: FormData): Promise<void> {
@@ -198,7 +204,7 @@ export async function deleteTripAction(formData: FormData): Promise<void> {
   const tripId = String(formData.get("tripId") ?? "");
   if (!tripId) return;
   await prisma.shoppingTrip.delete({ where: { id: tripId } });
-  revalidatePath("/shopping");
+  revalidateShoppingOnly();
 }
 
 export async function createExpenseFromShoppingTripAction(
