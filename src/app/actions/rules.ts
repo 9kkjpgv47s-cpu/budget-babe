@@ -5,6 +5,7 @@ import { revalidateLedgerPaths } from "@/lib/revalidateLedger";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
+import { applyMerchantRulesToExistingExpenses } from "@/lib/merchantRules";
 import type { FormActionState } from "@/lib/formActionState";
 
 function revalidateMerchantRuleTargets(yearMonth: string) {
@@ -71,24 +72,24 @@ export async function applyMerchantRulesToMonthAction(
   }
 
   const period = await getOrCreateMonthlyPeriod(yearMonth);
-  const { applyEntryDefaultsToExistingExpenses } = await import(
-    "@/lib/entryDefaults"
-  );
-  const result = await applyEntryDefaultsToExistingExpenses(period.id, yearMonth);
+  const { updated, scanned, categoriesSet } =
+    await applyMerchantRulesToExistingExpenses(period.id, yearMonth);
   revalidateMerchantRuleTargets(yearMonth);
-  const { updated, scanned, tagsChanged, budgetLinked, payeeSet } = result;
+  revalidatePath("/tax");
   if (updated === 0) {
     return {
       ok: true,
       message: `Scanned ${scanned} expense${scanned === 1 ? "" : "s"} — nothing to update.`,
     };
   }
-  const parts: string[] = [];
-  if (tagsChanged) parts.push(`${tagsChanged} tag${tagsChanged === 1 ? "" : "s"}`);
-  if (budgetLinked) parts.push(`${budgetLinked} budget link${budgetLinked === 1 ? "" : "s"}`);
-  if (payeeSet) parts.push(`${payeeSet} payee${payeeSet === 1 ? "" : "s"}`);
+  const parts: string[] = [`${updated} row${updated === 1 ? "" : "s"} updated`];
+  if (categoriesSet > 0) {
+    parts.push(
+      `${categoriesSet} newly categorized`,
+    );
+  }
   return {
     ok: true,
-    message: `Updated ${updated} of ${scanned} expenses for ${yearMonth} (${parts.join(", ")}).`,
+    message: `${parts.join(" · ")} for ${yearMonth} (tags, payee, budget, categories).`,
   };
 }

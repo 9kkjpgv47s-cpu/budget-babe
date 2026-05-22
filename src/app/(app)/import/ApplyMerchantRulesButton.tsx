@@ -14,7 +14,8 @@ export function ApplyMerchantRulesButton({ yearMonth }: { yearMonth: string }) {
     <div className="mt-4 rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         Rules apply automatically when you <strong>create or edit</strong> an expense.
-        Use this to tag expenses you already imported for{" "}
+        Use this to re-run tags, payee hints, budget links, and category matching on
+        expenses you already imported for{" "}
         <span className="font-mono text-zinc-800 dark:text-zinc-200">{yearMonth}</span>.
       </p>
       <form action={action} className="mt-3 flex flex-wrap items-center gap-3">

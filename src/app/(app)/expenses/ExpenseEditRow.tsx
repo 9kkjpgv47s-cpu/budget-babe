@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import {
   deleteExpenseAction,
   updateExpenseAction,
@@ -43,6 +43,16 @@ export function ExpenseEditRow({
   onToggle: () => void;
 }) {
   const [description, setDescription] = useState(e.description);
+  const [savedAt, setSavedAt] = useState(0);
+  const [, submitUpdate, updatePending] = useActionState(
+    async (_prev: { ok?: boolean } | null, formData: FormData) => {
+      await updateExpenseAction(formData);
+      setSavedAt(Date.now());
+      return { ok: true };
+    },
+    null,
+  );
+  const formKey = `${e.id}-${savedAt}`;
 
   return (
     <li className="rounded-xl border border-zinc-200 bg-white p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -72,7 +82,11 @@ export function ExpenseEditRow({
       {e.splitGroupId ? (
         <p className="mb-2 text-xs text-zinc-400">Split: {e.splitGroupId}</p>
       ) : null}
-      <form action={updateExpenseAction} className="grid gap-2 sm:grid-cols-2">
+      <form
+        key={formKey}
+        action={submitUpdate}
+        className="grid gap-2 sm:grid-cols-2"
+      >
         <input type="hidden" name="id" value={e.id} />
         <input type="hidden" name="yearMonth" value={yearMonth} />
         <div className="sm:col-span-2 space-y-1">
@@ -134,9 +148,10 @@ export function ExpenseEditRow({
         />
         <button
           type="submit"
-          className="rounded bg-emerald-600 py-1 text-xs text-white sm:col-span-2"
+          disabled={updatePending}
+          className="rounded bg-emerald-600 py-1 text-xs text-white disabled:opacity-60 sm:col-span-2"
         >
-          Save changes
+          {updatePending ? "Saving…" : "Save changes"}
         </button>
       </form>
       <form action={deleteExpenseAction} className="mt-2">

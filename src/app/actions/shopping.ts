@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { mergeTagLists } from "@/lib/budgetRollup";
-import { applyMerchantRulesToTags } from "@/lib/merchantRules";
+import { finalizeClassifiedExpenseWrite } from "@/lib/expenseWrite";
 import { parseMoneyToCents, formatCents } from "@/lib/money";
 import { shoppingTripImportHash } from "@/lib/shoppingExpense";
 import type { FormActionState } from "@/lib/formActionState";
@@ -258,9 +258,20 @@ export async function createExpenseFromShoppingTripAction(
 
   const store = trip.storeName?.trim() || "Grocery trip";
   const description = `Shopping: ${store}`;
-  const tagsJson = await applyMerchantRulesToTags(
-    description,
-    mergeTagLists(["grocery"]),
+  const groceries = await prisma.category.findFirst({
+    where: { slug: "groceries" },
+    select: { id: true },
+  });
+  const write = await finalizeClassifiedExpenseWrite(
+    {
+      description,
+      tagsJson: mergeTagLists(["grocery"]),
+      budgetPlanId,
+      payee: store,
+    },
+    period.id,
+    yearMonth,
+    { categoryId: groceries?.id ?? null },
   );
 
   await prisma.expense.create({
@@ -272,12 +283,16 @@ export async function createExpenseFromShoppingTripAction(
       spentAt: trip.shoppedAt,
       source: "shopping",
       importHash,
-      budgetPlanId,
-      tagsJson,
+      payee: write.payee,
+      categoryId: write.categoryId,
+      budgetPlanId: write.budgetPlanId,
+      taxCategory: write.taxCategory,
+      tagsJson: write.tagsJson,
     },
   });
 
   revalidateShoppingExpenseTargets(yearMonth);
+  revalidatePath("/tax");
   return {
     ok: true,
     message: `Logged ${formatCents(amountCents)} to ${yearMonth} spending.`,

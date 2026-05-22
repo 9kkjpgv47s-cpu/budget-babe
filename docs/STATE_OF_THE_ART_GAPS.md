@@ -23,7 +23,7 @@ Comparison against **Mint**, **YNAB**, **Monarch Money**, and **Copilot**-class 
 | Income one number everywhere | Standard | Partial — paycheck sum vs legacy field |
 | Receipt on primary capture surfaces | Monarch/Copilot strong | Partial — `/receipts` + overview link |
 | OCR prefill into expense form | Copilot-like | Partial — async refresh |
-| Form reset after save | Standard | Planned (Agent 3) |
+| Form reset after save | Standard | **Shipped** — expense row remounts after save |
 | Budget pick at quick entry | YNAB envelope | **Shipped** — Quick Add optional envelope |
 | Retroactive categorization rules | Mint rules | **Shipped** — Apply rules to month |
 

@@ -247,6 +247,8 @@ src/app/(app)/import/**                 # Column mapping + category assignment o
 - Tax folder sync from categories (bulk + per-save); budget envelope auto-link on plan create/rename
 - Missing-envelope panel; spending-by-category summary; editable merchant rules
 - CSV export includes `category` / `category_slug`; rollover uses category-aware rollups
+- Shared `finalizeClassifiedExpenseWrite` + `reapplyExpenseClassificationForPeriod` in `src/lib/expenseWrite.ts`
+- Import “Apply rules” runs full tags/payee/budget/category retroactive pass; shopping→expense uses classify pipeline
 
 ---
 

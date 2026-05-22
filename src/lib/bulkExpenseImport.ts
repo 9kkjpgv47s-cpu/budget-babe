@@ -1,13 +1,8 @@
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
-import { classifyExpenseForWrite } from "@/lib/merchantRules";
-import { fieldsFromCategoryId } from "@/lib/categories";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
-import {
-  finalizeExpenseDraftForPeriod,
-  getBudgetPlansForYearMonth,
-  getLastExpenseDefaultsForYearMonth,
-} from "@/lib/entryDefaults";
+import { getLastExpenseDefaultsForYearMonth } from "@/lib/entryDefaults";
+import { finalizeClassifiedExpenseWrite } from "@/lib/expenseWrite";
 
 export type BulkImportRow = {
   date: Date;
@@ -29,10 +24,7 @@ export async function bulkInsertExpenses(
   source: "csv" | "ofx" | "qif",
 ): Promise<{ created: number; skipped: number }> {
   const period = await getOrCreateMonthlyPeriod(yearMonth);
-  const [plans, lastDefaults] = await Promise.all([
-    getBudgetPlansForYearMonth(yearMonth),
-    getLastExpenseDefaultsForYearMonth(yearMonth),
-  ]);
+  const lastDefaults = await getLastExpenseDefaultsForYearMonth(yearMonth);
   let created = 0;
   let skipped = 0;
   for (const parts of rows) {
@@ -61,7 +53,7 @@ export async function bulkInsertExpenses(
       });
       categoryId = cat?.id ?? null;
     }
-    const draft = await finalizeExpenseDraftForPeriod(
+    const write = await finalizeClassifiedExpenseWrite(
       {
         description: parts.description,
         tagsJson: lastDefaults.tagsJson,
@@ -69,28 +61,9 @@ export async function bulkInsertExpenses(
         payee: parts.payee ?? lastDefaults.payee,
       },
       period.id,
-      plans,
+      yearMonth,
+      { categoryId },
     );
-    const classified = await classifyExpenseForWrite(parts.description, period.id, {
-      categoryId,
-      tagsJson: draft.tagsJson,
-      budgetPlanId: draft.budgetPlanId,
-    });
-    let finalBudget = classified.budgetPlanId ?? draft.budgetPlanId;
-    let finalTax = classified.taxCategory;
-    if (classified.categoryId) {
-      const patch = await fieldsFromCategoryId(
-        classified.categoryId,
-        period.id,
-        {
-          budgetPlanId: finalBudget,
-          taxCategory: finalTax,
-        },
-        { forceTaxDefault: true, forceBudgetLink: true },
-      );
-      finalBudget = patch.budgetPlanId;
-      finalTax = patch.taxCategory;
-    }
     await prisma.expense.create({
       data: {
         monthlyPeriodId: period.id,
@@ -100,11 +73,11 @@ export async function bulkInsertExpenses(
         spentAt: parts.date,
         source,
         importHash: fp,
-        payee: draft.payee,
-        categoryId: classified.categoryId,
-        budgetPlanId: finalBudget,
-        taxCategory: finalTax,
-        tagsJson: classified.tagsJson,
+        payee: write.payee,
+        categoryId: write.categoryId,
+        budgetPlanId: write.budgetPlanId,
+        taxCategory: write.taxCategory,
+        tagsJson: write.tagsJson,
       },
     });
     created++;

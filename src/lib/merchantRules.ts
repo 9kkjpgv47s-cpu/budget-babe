@@ -51,15 +51,37 @@ export async function applyMerchantRulesToTags(
 export async function applyMerchantRulesToExistingExpenses(
   monthlyPeriodId: string,
   yearMonth: string,
-): Promise<{ updated: number; scanned: number }> {
-  const { applyEntryDefaultsToExistingExpenses } = await import(
-    "@/lib/entryDefaults"
+): Promise<{
+  updated: number;
+  scanned: number;
+  categoriesSet: number;
+}> {
+  const { prisma } = await import("@/lib/prisma");
+  const { reapplyExpenseClassificationForPeriod } = await import(
+    "@/lib/expenseWrite"
   );
-  const result = await applyEntryDefaultsToExistingExpenses(
+  const expenses = await prisma.expense.findMany({
+    where: { monthlyPeriodId },
+    select: {
+      id: true,
+      description: true,
+      tagsJson: true,
+      categoryId: true,
+      budgetPlanId: true,
+      taxCategory: true,
+      payee: true,
+    },
+  });
+  const result = await reapplyExpenseClassificationForPeriod(
     monthlyPeriodId,
     yearMonth,
+    expenses,
   );
-  return { updated: result.updated, scanned: result.scanned };
+  return {
+    updated: result.updated,
+    scanned: result.scanned,
+    categoriesSet: result.categoriesSet,
+  };
 }
 
 function descriptionMatchesPattern(description: string, pattern: string): boolean {

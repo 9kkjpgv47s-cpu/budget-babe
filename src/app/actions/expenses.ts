@@ -6,16 +6,13 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
 import { mergeTagLists, parseTagsJson } from "@/lib/budgetRollup";
-import {
-  commaListToTagsJson,
-  finalizeExpenseDraftForPeriod,
-  getBudgetPlansForYearMonth,
-} from "@/lib/entryDefaults";
-import {
-  applyMerchantRulesToTags,
-  classifyExpenseForWrite,
-} from "@/lib/merchantRules";
+import { commaListToTagsJson } from "@/lib/entryDefaults";
+import { classifyExpenseForWrite } from "@/lib/merchantRules";
 import { fieldsFromCategoryId } from "@/lib/categories";
+import {
+  finalizeClassifiedExpenseWrite,
+  reapplyExpenseClassificationForPeriod,
+} from "@/lib/expenseWrite";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 
 function revalidateAll(yearMonth: string) {
@@ -49,8 +46,7 @@ export async function bulkApplyTagsToExpensesAction(formData: FormData): Promise
       tagMode === "replace"
         ? mergeTagLists(tagsRaw)
         : mergeTagLists(parseTagsJson(exp.tagsJson), tagsRaw);
-    const plans = await getBudgetPlansForYearMonth(yearMonth);
-    const draft = await finalizeExpenseDraftForPeriod(
+    const write = await finalizeClassifiedExpenseWrite(
       {
         description: exp.description,
         tagsJson: manual ?? exp.tagsJson,
@@ -58,22 +54,17 @@ export async function bulkApplyTagsToExpensesAction(formData: FormData): Promise
         payee: exp.payee,
       },
       period.id,
-      plans,
+      yearMonth,
+      { categoryId: exp.categoryId, taxCategory: exp.taxCategory },
     );
-    const classified = await classifyExpenseForWrite(exp.description, period.id, {
-      categoryId: exp.categoryId,
-      tagsJson: draft.tagsJson,
-      budgetPlanId: draft.budgetPlanId,
-      taxCategory: exp.taxCategory,
-    });
     await prisma.expense.update({
       where: { id },
       data: {
-        tagsJson: classified.tagsJson,
-        categoryId: classified.categoryId,
-        budgetPlanId: classified.budgetPlanId ?? draft.budgetPlanId,
-        taxCategory: classified.taxCategory,
-        payee: draft.payee,
+        tagsJson: write.tagsJson,
+        categoryId: write.categoryId,
+        budgetPlanId: write.budgetPlanId,
+        taxCategory: write.taxCategory,
+        payee: write.payee,
       },
     });
   }
@@ -97,13 +88,12 @@ export async function bulkSetBudgetForExpensesAction(formData: FormData): Promis
     if (!plan) return;
     budgetPlanId = plan.id;
   }
-  const plans = await getBudgetPlansForYearMonth(yearMonth);
   for (const id of ids) {
     const exp = await prisma.expense.findFirst({
       where: { id, monthlyPeriodId: period.id },
     });
     if (!exp) continue;
-    const draft = await finalizeExpenseDraftForPeriod(
+    const write = await finalizeClassifiedExpenseWrite(
       {
         description: exp.description,
         tagsJson: exp.tagsJson,
@@ -111,14 +101,21 @@ export async function bulkSetBudgetForExpensesAction(formData: FormData): Promis
         payee: exp.payee,
       },
       period.id,
-      plans,
+      yearMonth,
+      {
+        categoryId: exp.categoryId,
+        taxCategory: exp.taxCategory,
+        autoSuggest: false,
+      },
     );
     await prisma.expense.update({
       where: { id },
       data: {
-        budgetPlanId: draft.budgetPlanId,
-        tagsJson: draft.tagsJson,
-        payee: draft.payee,
+        budgetPlanId: write.budgetPlanId,
+        tagsJson: write.tagsJson,
+        payee: write.payee,
+        categoryId: write.categoryId,
+        taxCategory: write.taxCategory,
       },
     });
   }
@@ -200,8 +197,7 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
     const cat = await prisma.category.findUnique({ where: { id: categoryId } });
     if (!cat) categoryId = null;
   }
-  const plans = await getBudgetPlansForYearMonth(yearMonth);
-  const draft = await finalizeExpenseDraftForPeriod(
+  const write = await finalizeClassifiedExpenseWrite(
     {
       description,
       tagsJson: commaListToTagsJson(String(formData.get("tags") ?? "")),
@@ -209,32 +205,9 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
       payee,
     },
     period.id,
-    plans,
+    yearMonth,
+    { categoryId, taxCategory: exp.taxCategory, autoSuggest: false },
   );
-  const classified = await classifyExpenseForWrite(description, period.id, {
-    categoryId,
-    tagsJson: draft.tagsJson,
-    budgetPlanId: draft.budgetPlanId ?? exp.budgetPlanId,
-    taxCategory: exp.taxCategory,
-    autoSuggest: false,
-  });
-  let finalCategoryId = classified.categoryId;
-  let finalBudgetPlanId = classified.budgetPlanId ?? draft.budgetPlanId;
-  let finalTaxCategory = classified.taxCategory;
-  if (categoryId) {
-    const patch = await fieldsFromCategoryId(
-      categoryId,
-      period.id,
-      {
-        budgetPlanId: finalBudgetPlanId,
-        taxCategory: finalTaxCategory,
-      },
-      { forceTaxDefault: true, forceBudgetLink: true },
-    );
-    finalCategoryId = patch.categoryId;
-    finalBudgetPlanId = patch.budgetPlanId;
-    finalTaxCategory = patch.taxCategory;
-  }
   const spentAt = spentRaw ? new Date(spentRaw) : exp.spentAt;
   if (Number.isNaN(spentAt.getTime())) return;
 
@@ -244,11 +217,11 @@ export async function updateExpenseAction(formData: FormData): Promise<void> {
       amountCents: amount,
       description,
       spentAt,
-      payee: draft.payee,
-      categoryId: finalCategoryId,
-      budgetPlanId: finalBudgetPlanId,
-      taxCategory: finalTaxCategory,
-      tagsJson: classified.tagsJson,
+      payee: write.payee,
+      categoryId: write.categoryId,
+      budgetPlanId: write.budgetPlanId,
+      taxCategory: write.taxCategory,
+      tagsJson: write.tagsJson,
     },
   });
   revalidateAll(yearMonth);
@@ -270,55 +243,10 @@ export async function reapplyMerchantRulesAction(formData: FormData): Promise<vo
       categoryId: true,
       budgetPlanId: true,
       taxCategory: true,
+      payee: true,
     },
   });
-  for (const exp of expenses) {
-    const tagsJson = await applyMerchantRulesToTags(exp.description, exp.tagsJson);
-    if (exp.categoryId) {
-      const patch = await fieldsFromCategoryId(exp.categoryId, period.id, {
-        budgetPlanId: exp.budgetPlanId,
-        taxCategory: exp.taxCategory,
-      }, { forceBudgetLink: true });
-      await prisma.expense.update({
-        where: { id: exp.id },
-        data: {
-          tagsJson,
-          budgetPlanId: patch.budgetPlanId,
-        },
-      });
-      continue;
-    }
-    const classified = await classifyExpenseForWrite(exp.description, period.id, {
-      tagsJson,
-      budgetPlanId: exp.budgetPlanId,
-      taxCategory: exp.taxCategory,
-    });
-    if (!classified.categoryId) {
-      await prisma.expense.update({
-        where: { id: exp.id },
-        data: { tagsJson },
-      });
-      continue;
-    }
-    const patch = await fieldsFromCategoryId(
-      classified.categoryId,
-      period.id,
-      {
-        budgetPlanId: classified.budgetPlanId,
-        taxCategory: classified.taxCategory,
-      },
-      { forceTaxDefault: true, forceBudgetLink: true },
-    );
-    await prisma.expense.update({
-      where: { id: exp.id },
-      data: {
-        categoryId: patch.categoryId,
-        budgetPlanId: patch.budgetPlanId,
-        taxCategory: patch.taxCategory,
-        tagsJson: classified.tagsJson,
-      },
-    });
-  }
+  await reapplyExpenseClassificationForPeriod(period.id, yearMonth, expenses);
   revalidateAll(yearMonth);
   revalidatePath("/tax");
 }
