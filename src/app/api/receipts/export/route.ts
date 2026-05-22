@@ -4,6 +4,7 @@ import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { prisma } from "@/lib/prisma";
 import { currentYearMonth } from "@/lib/yearMonth";
 import { displayFilename } from "@/app/(app)/receipts/receiptDisplay";
+import { parseMerchantFromOcrText } from "@/lib/receiptOcr";
 
 function csvEscape(value: string): string {
   if (/[",\n\r]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
@@ -20,7 +21,15 @@ export async function GET(req: Request) {
   const receipts = await prisma.receipt.findMany({
     where: { monthlyPeriodId: period.id },
     orderBy: { uploadedAt: "desc" },
-    include: {
+    select: {
+      id: true,
+      filename: true,
+      uploadedAt: true,
+      totalCents: true,
+      ocrStatus: true,
+      ocrConfidence: true,
+      ocrRawText: true,
+      note: true,
       user: { select: { name: true } },
       _count: { select: { expenses: true } },
     },
@@ -35,6 +44,7 @@ export async function GET(req: Request) {
     "ocr_status",
     "ocr_confidence",
     "expense_count",
+    "merchant_guess",
     "note",
   ].join(",");
   const rows = receipts.map((r) =>
@@ -47,6 +57,7 @@ export async function GET(req: Request) {
       r.ocrStatus,
       r.ocrConfidence != null ? String(r.ocrConfidence) : "",
       String(r._count.expenses),
+      parseMerchantFromOcrText(r.ocrRawText ?? "") ?? "",
       r.note ?? "",
     ]
       .map((c) => csvEscape(String(c)))

@@ -5,6 +5,7 @@ import { currentYearMonth } from "@/lib/yearMonth";
 import { ExpensesInteractiveList } from "./ExpensesInteractiveList";
 import { ReceiptQuickCapture } from "../receipts/ReceiptQuickCapture";
 import { ReceiptLinkedExpensesStrip } from "../receipts/ReceiptLinkedExpensesStrip";
+import { ReceiptScanFab } from "../receipts/ReceiptScanFab";
 
 export default async function ExpensesPage({
   searchParams,
@@ -58,6 +59,7 @@ export default async function ExpensesPage({
 
   return (
     <div className="space-y-4">
+      <ReceiptScanFab yearMonth={ym} />
       <ReceiptQuickCapture yearMonth={ym} variant="compact" />
       <ReceiptLinkedExpensesStrip yearMonth={ym} />
       <ExpensesInteractiveList

@@ -22,6 +22,8 @@ import {
 import { ReceiptAutoPostWatcher } from "./ReceiptAutoPostWatcher";
 import { ReceiptFailedBulkActions } from "./ReceiptFailedBulkActions";
 import { ReceiptMonthStats } from "./ReceiptMonthStats";
+import { ReceiptHelpTips } from "./ReceiptHelpTips";
+import { ReceiptScanFab } from "./ReceiptScanFab";
 
 export default async function ReceiptsPage({
   searchParams,
@@ -83,6 +85,7 @@ export default async function ReceiptsPage({
 
   return (
     <div className="space-y-8">
+      <ReceiptScanFab yearMonth={yearMonth} />
       <ReceiptBlobWarning />
       <ReceiptFocusScroll focusId={focusId} />
       <OcrStatusPoller active={ocrPending} />
@@ -116,6 +119,8 @@ export default async function ReceiptsPage({
           </Link>
         </p>
       </div>
+
+      <ReceiptHelpTips />
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">Upload for {yearMonth}</h2>

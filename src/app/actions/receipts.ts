@@ -29,6 +29,7 @@ function revalidateMoneyFromReceipt(yearMonth: string) {
   revalidatePath("/budgets");
   revalidatePath("/bills");
   revalidatePath("/import");
+  revalidatePath("/tax");
 }
 
 export async function uploadReceiptCore(
@@ -44,6 +45,20 @@ export async function uploadReceiptCore(
   }
   if (file.size > 8 * 1024 * 1024) {
     return { error: "File must be 8MB or smaller." };
+  }
+  const name = file.name.toLowerCase();
+  const mime = (file.type || "").toLowerCase();
+  const allowed =
+    mime.startsWith("image/") ||
+    mime === "application/pdf" ||
+    name.endsWith(".pdf") ||
+    name.endsWith(".heic") ||
+    name.endsWith(".heif") ||
+    /\.(jpe?g|png|webp|gif|bmp|tiff?)$/.test(name);
+  if (!allowed) {
+    return {
+      error: "Use a photo (JPEG, PNG, HEIC, …) or PDF receipt.",
+    };
   }
   const period = await getOrCreateMonthlyPeriod(yearMonth);
   const rawBytes = Buffer.from(await file.arrayBuffer());

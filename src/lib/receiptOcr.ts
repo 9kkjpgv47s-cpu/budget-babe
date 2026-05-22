@@ -2,7 +2,6 @@ import path from "path";
 import { readFile } from "fs/promises";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { parseMoneyToCents } from "@/lib/money";
 import {
   filenameHintFromStoragePath,
   readReceiptBinary,
@@ -12,10 +11,18 @@ import {
   pdfHasRichEmbeddedText,
 } from "@/lib/pdfRasterOcr";
 
-export type ParsedReceiptLine = {
-  description: string;
-  amountCents: number | null;
-};
+export type { ParsedReceiptLine } from "@/lib/receiptParse";
+export {
+  defaultExpenseDescriptionFromReceipt,
+  parseLikelyTotalCents,
+  parseMerchantFromOcrText,
+  parseReceiptLineAmountCents,
+  parseReceiptLines,
+} from "@/lib/receiptParse";
+import {
+  parseLikelyTotalCents,
+  parseReceiptLines,
+} from "@/lib/receiptParse";
 
 const IMAGE_EXT = new Set([
   ".jpg",
@@ -30,37 +37,6 @@ const IMAGE_EXT = new Set([
 
 function extOf(filename: string): string {
   return path.extname(filename).toLowerCase();
-}
-
-/**
- * Pull likely line items: text ending in a currency amount.
- */
-export function parseReceiptLines(raw: string): ParsedReceiptLine[] {
-  const lines = raw
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-
-  const amountTail =
-    /\s+(-?[\$€£]?\s*\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|-?\d+\.\d{1,2})\s*$/;
-  const out: ParsedReceiptLine[] = [];
-
-  const skipDesc =
-    /^(?:sub\s*total|subtotal|total|tax|sales\s*tax|vat|tip|gratuity|change|cash|card|balance\s*due|amount\s*due)$/i;
-
-  for (const line of lines) {
-    const m = line.match(amountTail);
-    if (!m) continue;
-    const desc = line.slice(0, m.index).trim();
-    const amtStr = m[1].replace(/[\$€£\s]/g, "").replace(/,/g, "");
-    const amountCents = parseMoneyToCents(amtStr);
-    if (!desc || desc.length < 2) continue;
-    if (desc.length > 200) continue;
-    if (skipDesc.test(desc)) continue;
-    out.push({ description: desc, amountCents });
-  }
-
-  return out;
 }
 
 /**
@@ -112,69 +88,6 @@ export function inferSpentAtFromOcrText(
     return candidate;
   }
   return fallback;
-}
-
-const MERCHANT_SKIP =
-  /^(?:welcome|thank\s*you|thanks|store|receipt|invoice|customer\s*copy|merchant\s*copy|tel|phone|www\.|http|visa|mastercard|amex|discover|debit|credit|auth|approval|cashier|register|trans\s*#|transaction)/i;
-
-/**
- * Best-effort merchant / store name from the top of OCR text (for expense description).
- */
-export function parseMerchantFromOcrText(rawText: string): string | null {
-  const lines = rawText
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length >= 3 && l.length <= 80);
-  let best: { line: string; score: number } | null = null;
-  for (const line of lines.slice(0, 14)) {
-    if (MERCHANT_SKIP.test(line)) continue;
-    if (/^\d{1,2}[\/\-.]\d{1,2}/.test(line)) continue;
-    if (/^[\d\s\-+().#]+$/.test(line)) continue;
-    if (!/[a-zA-Z]/.test(line)) continue;
-    const cleaned = line.replace(/\s{2,}/g, " ").slice(0, 120);
-    if (cleaned.length < 3) continue;
-    const letters = (cleaned.match(/[a-zA-Z]/g) ?? []).length;
-    const digits = (cleaned.match(/\d/g) ?? []).length;
-    let score = letters - digits * 2;
-    if (/^[A-Z0-9\s&'.-]+$/.test(cleaned) && letters >= 4) score += 4;
-    if (cleaned.length <= 40) score += 2;
-    if (!best || score > best.score) best = { line: cleaned, score };
-  }
-  return best?.line ?? null;
-}
-
-export function defaultExpenseDescriptionFromReceipt(
-  rawText: string,
-  parsedLines: ParsedReceiptLine[],
-  filenameLabel: string,
-): string {
-  const merchant = parseMerchantFromOcrText(rawText);
-  if (merchant) return merchant;
-  const first = parsedLines.find(
-    (l) => l.description?.trim() && (l.amountCents ?? 0) > 0,
-  );
-  if (first?.description?.trim()) return first.description.trim().slice(0, 500);
-  return `Receipt: ${filenameLabel}`;
-}
-
-export function parseLikelyTotalCents(raw: string): number | null {
-  const upper = raw.toUpperCase();
-  const patterns = [
-    /TOTAL[:\s]+[\$€£]?\s*([\d,]+\.\d{2})/i,
-    /AMOUNT\s+DUE[:\s]+[\$€£]?\s*([\d,]+\.\d{2})/i,
-    /BALANCE[:\s]+[\$€£]?\s*([\d,]+\.\d{2})/i,
-    /GRAND\s*TOTAL[:\s]+[\$€£]?\s*([\d,]+\.\d{2})/i,
-    /([\d,]+\.\d{2})\s+TOTAL\b/i,
-    /^[\$€£]?\s*([\d,]+\.\d{2})\s*$/m,
-  ];
-  for (const re of patterns) {
-    const m = upper.match(re) ?? raw.match(re);
-    if (m?.[1]) {
-      const cents = parseMoneyToCents(m[1].replace(/,/g, ""));
-      if (cents != null && cents > 0 && cents < 1_000_000_00) return cents;
-    }
-  }
-  return null;
 }
 
 async function extractPdfText(buffer: Buffer): Promise<string> {

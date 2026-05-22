@@ -7,7 +7,12 @@ import { formatCents } from "@/lib/money";
 function parseMoneyInput(raw: string): number | null {
   const t = raw.trim().replace(/[$,\s]/g, "");
   if (!t) return null;
-  const n = Number.parseFloat(t);
+  const eu = t.match(/^(\d+),(\d{2})$/);
+  if (eu && !t.includes(".")) {
+    const n = Number.parseFloat(`${eu[1]}.${eu[2]}`);
+    if (Number.isFinite(n) && n > 0) return Math.round(n * 100);
+  }
+  const n = Number.parseFloat(t.replace(/,/g, ""));
   if (!Number.isFinite(n) || n <= 0) return null;
   return Math.round(n * 100);
 }
@@ -35,25 +40,39 @@ export function ReceiptLineItemsEditor({
     return JSON.stringify(out);
   }, [lines]);
 
-  const validCount = useMemo(() => {
+  const parsedForTotal = useMemo(() => {
     try {
-      return (JSON.parse(linesJson) as ParsedReceiptLine[]).length;
+      return JSON.parse(linesJson) as ParsedReceiptLine[];
     } catch {
-      return 0;
+      return [];
     }
   }, [linesJson]);
+
+  const validCount = parsedForTotal.length;
+  const lineTotal = parsedForTotal.reduce((s, l) => s + (l.amountCents ?? 0), 0);
 
   if (initialLines.length === 0) return null;
 
   return (
     <div className="mt-2 space-y-2 rounded border border-zinc-200 bg-white p-2 dark:border-zinc-700 dark:bg-zinc-950">
-      <p className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300">
-        Edit line items before posting
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300">
+          Edit line items before posting
+        </p>
+        <button
+          type="button"
+          className="text-[10px] font-medium text-emerald-700 underline dark:text-emerald-400"
+          onClick={() =>
+            setLines((prev) => [...prev, { description: "", amount: "" }])
+          }
+        >
+          + Add line
+        </button>
+      </div>
       <input type="hidden" name="linesJson" value={linesJson} />
       <ul className="space-y-1.5">
         {lines.map((row, i) => (
-          <li key={i} className="grid gap-1 sm:grid-cols-[1fr_5rem]">
+          <li key={i} className="grid gap-1 sm:grid-cols-[1fr_5rem_auto]">
             <input
               value={row.description}
               onChange={(e) => {
@@ -74,19 +93,20 @@ export function ReceiptLineItemsEditor({
               placeholder="0.00"
               className="rounded border border-zinc-200 px-2 py-1 text-[11px] tabular-nums dark:border-zinc-700 dark:bg-zinc-900"
             />
+            <button
+              type="button"
+              aria-label="Remove line"
+              className="rounded px-1 text-[10px] text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+              onClick={() => setLines((prev) => prev.filter((_, j) => j !== i))}
+            >
+              ✕
+            </button>
           </li>
         ))}
       </ul>
       <p className="text-[10px] text-zinc-500">
         {validCount} line{validCount === 1 ? "" : "s"} with amount will post
-        {validCount > 0
-          ? ` (${formatCents(
-              (JSON.parse(linesJson) as ParsedReceiptLine[]).reduce(
-                (s, l) => s + (l.amountCents ?? 0),
-                0,
-              ),
-            )} total)`
-          : null}
+        {validCount > 0 ? ` (${formatCents(lineTotal)} total)` : null}
       </p>
     </div>
   );

@@ -20,6 +20,7 @@ import { QuickForms } from "./QuickForms";
 import { ReceiptQuickCapture } from "./receipts/ReceiptQuickCapture";
 import { ReceiptsOverviewStrip } from "./receipts/ReceiptsOverviewStrip";
 import { ReceiptBatchPostButton } from "./receipts/ReceiptBatchPostButton";
+import { ReceiptScanFab } from "./receipts/ReceiptScanFab";
 import { applySuggestedRolloversAction } from "@/app/actions/rollover";
 
 function shiftYearMonth(ym: string, delta: number) {
@@ -256,6 +257,7 @@ export default async function HomePage({
 
   return (
     <div className="space-y-8 md:space-y-10">
+      <ReceiptScanFab yearMonth={yearMonth} />
       <div className="flex flex-wrap items-end justify-between gap-3 md:gap-4">
         <div>
           <h1 className="text-xl font-semibold tracking-tight md:text-2xl">This month</h1>

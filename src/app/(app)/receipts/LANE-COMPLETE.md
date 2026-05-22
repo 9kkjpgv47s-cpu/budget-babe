@@ -33,6 +33,15 @@ Receipt capture, OCR, discoverability, and posting to spending. All items below 
 - `GET /api/receipts/ocr-pending` — nav badge counts
 - `GET /api/receipts/export` — month metadata CSV
 
+## Polish (phase 7)
+
+- Mobile **Scan** FAB on Home, Expenses, Receipts
+- Receipt tips collapsible; stricter upload file types
+- EU-style amounts in line parser (`12,34`)
+- Line editor: add/remove rows; batch post redirects to Spending
+- Export CSV includes `merchant_guess`
+- `npm run test:receipt-parse` smoke script
+
 ## Polish (phase 6)
 
 - Mobile **More** menu (Coach, Budgets, Import, Tax, Flow, Insights)

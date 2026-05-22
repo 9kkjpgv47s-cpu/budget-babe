@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createExpensesFromReceiptLinesAction } from "@/app/actions/receipts";
 import { initialFormState } from "@/lib/formActionState";
 import type { ParsedReceiptLine } from "@/lib/receiptOcr";
@@ -21,10 +22,17 @@ export function ReceiptBatchExpensesForm({
   suggestedBudgetPlanId?: string | null;
   parsedLines: ParsedReceiptLine[];
 }) {
+  const router = useRouter();
   const [state, action, pending] = useActionState(
     createExpensesFromReceiptLinesAction,
     initialFormState,
   );
+
+  useEffect(() => {
+    if (!state?.ok) return;
+    router.push(`/expenses?ym=${yearMonth}`);
+    router.refresh();
+  }, [state?.ok, yearMonth, router]);
 
   return (
     <form action={action} className="mt-2 space-y-2">

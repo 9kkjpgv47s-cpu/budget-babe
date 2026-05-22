@@ -10,25 +10,43 @@ export async function ReceiptLinkedExpensesStrip({
   yearMonth: string;
 }) {
   const period = await getOrCreateMonthlyPeriod(yearMonth);
-  const linked = await prisma.expense.findMany({
-    where: {
-      monthlyPeriodId: period.id,
-      receiptId: { not: null },
-    },
-    orderBy: { spentAt: "desc" },
-    take: 12,
-    include: {
-      receipt: { select: { id: true, filename: true } },
-    },
-  });
+  const [linked, totalLinked] = await Promise.all([
+    prisma.expense.findMany({
+      where: {
+        monthlyPeriodId: period.id,
+        receiptId: { not: null },
+      },
+      orderBy: { spentAt: "desc" },
+      take: 12,
+      include: {
+        receipt: { select: { id: true, filename: true } },
+      },
+    }),
+    prisma.expense.count({
+      where: {
+        monthlyPeriodId: period.id,
+        receiptId: { not: null },
+      },
+    }),
+  ]);
 
   if (linked.length === 0) return null;
 
   return (
     <section className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/80">
-      <h2 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-        Spending linked to receipts
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+          Spending linked to receipts
+        </h2>
+        {totalLinked > linked.length ? (
+          <Link
+            href={`/expenses?ym=${yearMonth}`}
+            className="text-xs font-semibold text-emerald-700 underline dark:text-emerald-400"
+          >
+            View all {totalLinked} →
+          </Link>
+        ) : null}
+      </div>
       <p className="mt-1 text-xs text-zinc-500">
         Jump back to the source photo or PDF for tax documentation.
       </p>
