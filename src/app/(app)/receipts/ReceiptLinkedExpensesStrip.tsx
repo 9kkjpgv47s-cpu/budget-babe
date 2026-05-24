@@ -48,7 +48,13 @@ export async function ReceiptLinkedExpensesStrip({
         ) : null}
       </div>
       <p className="mt-1 text-xs text-zinc-500">
-        Jump back to the source photo or PDF for tax documentation.
+        Jump back to the source photo or PDF for tax documentation.{" "}
+        <Link
+          href={`/receipts?ym=${yearMonth}#upload`}
+          className="font-medium text-emerald-700 underline dark:text-emerald-400"
+        >
+          Scan another receipt
+        </Link>
       </p>
       <ul className="mt-3 space-y-2 text-sm">
         {linked.map((e) => (

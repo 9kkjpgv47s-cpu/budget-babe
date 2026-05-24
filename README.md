@@ -99,7 +99,13 @@ From a receipt you can:
 - **Auto-post when ready** (opt-in on upload)
 - **Re-run OCR** on failures in bulk
 
-Linked spending appears on **`/expenses`** with links back to the scan. Export metadata: **`GET /api/receipts/export?ym=YYYY-MM`**. iPhone **HEIC** photos are converted to JPEG on upload.
+Linked spending appears on **`/expenses`** with links back to the scan.
+
+**Exports & backup:** **`GET /api/receipts/export?ym=YYYY-MM`** (CSV metadata), **`GET /api/receipts/manifest?ym=YYYY-MM`** (JSON with authenticated download paths). Mobile/desktop **Receipts** nav badges deep-link to the **Ready** filter when items need posting.
+
+**Safety:** optional **auto-post on upload** and **Post all ready** skip low-confidence OCR, totals over $5,000, and amounts matching an expense posted in the last 7 days; manual quick post still works with on-screen warnings.
+
+iPhone **HEIC** photos are converted to JPEG on upload. Parser smoke test: **`npm run test:receipt-parse`** (also runs in production build).
 
 First production deploy may download Tesseract language data on demand (~few MB for `eng`).
 

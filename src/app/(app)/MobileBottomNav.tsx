@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MobileReceiptOcrBadge } from "./receipts/MobileReceiptOcrBadge";
+import { ReceiptsNavLink } from "./receipts/ReceiptsNavLink";
 import { MobileNavMoreMenu } from "./MobileNavMoreMenu";
 
 type MobileNavItem = {
@@ -32,20 +32,28 @@ export function MobileBottomNav() {
       <ul className="mx-auto grid max-w-5xl grid-cols-5 gap-1">
         {items.map((item) => {
           const active = isActivePath(pathname, item.href);
+          const navClass = `flex min-h-11 items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-semibold transition-all duration-200 active:scale-[0.98] motion-reduce:transition-none ${
+            active
+              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+              : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+          }`;
           return (
             <li key={item.href}>
-              <Link
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={`relative flex min-h-11 items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-semibold transition-all duration-200 active:scale-[0.98] motion-reduce:transition-none ${
-                  active
-                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                    : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                }`}
-              >
-                {item.label}
-                {item.href === "/receipts" ? <MobileReceiptOcrBadge /> : null}
-              </Link>
+              {item.href === "/receipts" ? (
+                <ReceiptsNavLink
+                  active={active}
+                  className={navClass}
+                  variant="mobile"
+                />
+              ) : (
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={navClass}
+                >
+                  {item.label}
+                </Link>
+              )}
             </li>
           );
         })}

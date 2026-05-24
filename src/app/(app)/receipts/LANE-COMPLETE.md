@@ -33,6 +33,14 @@ Receipt capture, OCR, discoverability, and posting to spending. All items below 
 - `GET /api/receipts/ocr-pending` — nav badge counts
 - `GET /api/receipts/export` — month metadata CSV
 
+## Polish (phase 11)
+
+- `ReceiptsNavLink` — mobile + desktop badges; deep-link to **Ready** when items need posting
+- `ocr-pending` API returns suggested `href`
+- **Copy link** per receipt (focus URL for sharing)
+- Overview strip: “N ready to post” banner; expenses strip: “Scan another”
+- README documents manifest, safety rules, and parser test
+
 ## Polish (phase 10)
 
 - Shared `receiptPostSafety` for status API, auto-post, and batch post

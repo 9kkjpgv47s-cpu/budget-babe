@@ -2,6 +2,7 @@ import Link from "next/link";
 import { logoutAction } from "@/app/actions/auth";
 import { requireUser } from "@/lib/auth";
 import { MobileBottomNav } from "./MobileBottomNav";
+import { ReceiptsNavLink } from "./receipts/ReceiptsNavLink";
 
 /** Prisma requires Node.js; keep authenticated routes off Edge by default. */
 export const runtime = "nodejs";
@@ -39,15 +40,24 @@ export default async function AppLayout({
               Household Budget
             </Link>
             <nav className="hidden flex-wrap gap-3 text-sm md:flex">
-              {links.map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                >
-                  {l.label}
-                </Link>
-              ))}
+              {links.map((l) =>
+                l.href === "/receipts" ? (
+                  <ReceiptsNavLink
+                    key={l.href}
+                    active={false}
+                    variant="desktop"
+                    className="inline-flex items-center text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                  />
+                ) : (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                  >
+                    {l.label}
+                  </Link>
+                ),
+              )}
             </nav>
           </div>
           <div className="flex items-center gap-3 text-sm">

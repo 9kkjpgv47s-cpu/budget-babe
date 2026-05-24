@@ -36,7 +36,26 @@ export function ReceiptsOverviewStrip({
     );
   }
 
+  const readyCount = receipts.filter(
+    (r) =>
+      r._count.expenses === 0 &&
+      r.ocrStatus === "completed" &&
+      r.totalCents != null &&
+      r.totalCents > 0,
+  ).length;
+
   return (
+    <>
+      {readyCount > 0 ? (
+        <p className="mt-2 text-sm">
+          <Link
+            href={`/receipts?ym=${yearMonth}&filter=ready`}
+            className="font-semibold text-emerald-700 underline dark:text-emerald-400"
+          >
+            {readyCount} receipt{readyCount === 1 ? "" : "s"} ready to post →
+          </Link>
+        </p>
+      ) : null}
     <ul className="mt-3 grid gap-3 sm:grid-cols-2">
       {receipts.map((r) => {
         const label = displayFilename(r.filename);
@@ -93,5 +112,6 @@ export function ReceiptsOverviewStrip({
         );
       })}
     </ul>
+    </>
   );
 }

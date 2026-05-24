@@ -17,6 +17,7 @@ import { evaluateReceiptPostSafety } from "./receiptPostSafety";
 import { displayFilename, ocrStatusBadgeClass } from "./receiptDisplay";
 import { ReceiptThumbnail } from "./ReceiptThumbnail";
 import { ReceiptDeleteButton } from "./ReceiptDeleteButton";
+import { ReceiptCopyFocusLink } from "./ReceiptCopyFocusLink";
 
 type ReceiptRow = {
   id: string;
@@ -259,6 +260,9 @@ export async function ReceiptListItem({
         >
           {label}
         </a>
+        <span className="ml-2">
+          <ReceiptCopyFocusLink receiptId={receipt.id} yearMonth={yearMonth} />
+        </span>
         <div className="text-xs text-zinc-500">
           {receipt.uploadedAt.toLocaleString()}
           {receipt.user ? ` · ${receipt.user.name}` : ""}
