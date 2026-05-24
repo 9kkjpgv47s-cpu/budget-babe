@@ -37,6 +37,7 @@ export function QuickForms({
   const router = useRouter();
   const [kind, setKind] = useState<EntryKind>("expense");
   const [expenseDescription, setExpenseDescription] = useState("");
+  const [expenseCategoryId, setExpenseCategoryId] = useState("");
   const [liveDefaults, setLiveDefaults] = useState(expenseDefaults);
   const [state, action, pending] = useActionState(
     unifiedQuickEntryAction,
@@ -65,6 +66,11 @@ export function QuickForms({
     categories.some((c) => c.id === liveDefaults.categoryId)
       ? liveDefaults.categoryId
       : "";
+
+  useEffect(() => {
+    setExpenseCategoryId(defaultCategoryId);
+  }, [defaultCategoryId]);
+
   const formKey = state?.ok
     ? `saved-${defaultBudgetId}-${defaultCategoryId}-${defaultTags}`
     : "idle";
@@ -128,6 +134,7 @@ export function QuickForms({
             <CategorySuggestionHint
               yearMonth={yearMonth}
               description={expenseDescription}
+              onApplyCategory={setExpenseCategoryId}
             />
           </div>
           <input
@@ -146,7 +153,8 @@ export function QuickForms({
             <select
               name="categoryId"
               className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-              defaultValue={defaultCategoryId}
+              value={expenseCategoryId}
+              onChange={(e) => setExpenseCategoryId(e.target.value)}
               key={`cat-${defaultCategoryId}-${state?.ok ? "ok" : "idle"}`}
             >
               <option value="">Category (auto if blank)</option>

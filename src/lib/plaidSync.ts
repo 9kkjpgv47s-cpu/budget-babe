@@ -3,7 +3,7 @@ import { format, parseISO } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { getPlaidApi } from "@/lib/plaidClient";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
-import { applyMerchantRulesToTags } from "@/lib/merchantRules";
+import { finalizeImportedExpense } from "@/lib/entryDefaults";
 
 export type PlaidSyncResult = {
   imported: number;
@@ -85,7 +85,10 @@ export async function syncPlaidItemTransactions(
         .join(" — ")
         .slice(0, 500) || "Plaid import";
       const payee = t.merchant_name?.trim().slice(0, 200) || null;
-      const tagsJson = await applyMerchantRulesToTags(description, null);
+      const fields = await finalizeImportedExpense(
+        { description, payee },
+        ym,
+      );
       await prisma.expense.create({
         data: {
           monthlyPeriodId: period.id,
@@ -95,8 +98,11 @@ export async function syncPlaidItemTransactions(
           spentAt,
           source: "plaid",
           importHash: fp,
-          payee,
-          tagsJson,
+          payee: fields.payee,
+          categoryId: fields.categoryId,
+          budgetPlanId: fields.budgetPlanId,
+          taxCategory: fields.taxCategory,
+          tagsJson: fields.tagsJson,
         },
       });
       imported++;

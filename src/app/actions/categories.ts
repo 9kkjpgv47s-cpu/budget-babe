@@ -142,6 +142,52 @@ export async function deleteCategoryAction(formData: FormData): Promise<void> {
   revalidateCategoryPaths();
 }
 
+/** Reassign expenses (and merchant rules) then delete — required when expenses still use the category. */
+export async function reassignAndDeleteCategoryAction(
+  formData: FormData,
+): Promise<void> {
+  await requireUser();
+  const id = String(formData.get("id") ?? "");
+  const targetRaw = String(formData.get("targetCategoryId") ?? "").trim();
+  if (!id || !targetRaw) return;
+
+  const expenses = await prisma.expense.findMany({
+    where: { categoryId: id },
+    select: { id: true, monthlyPeriodId: true },
+  });
+
+  if (targetRaw === "__none__") {
+    await prisma.expense.updateMany({
+      where: { categoryId: id },
+      data: { categoryId: null },
+    });
+    await prisma.merchantRule.updateMany({
+      where: { categoryId: id },
+      data: { categoryId: null },
+    });
+  } else {
+    const target = await prisma.category.findUnique({ where: { id: targetRaw } });
+    if (!target || target.id === id) return;
+    for (const exp of expenses) {
+      await prisma.expense.update({
+        where: { id: exp.id },
+        data: { categoryId: target.id },
+      });
+      await applyCategoryDefaultsToExpense(exp.id, exp.monthlyPeriodId, target.id, {
+        forceTaxDefault: false,
+        forceBudgetLink: true,
+      });
+    }
+    await prisma.merchantRule.updateMany({
+      where: { categoryId: id },
+      data: { categoryId: target.id },
+    });
+  }
+
+  await prisma.category.delete({ where: { id } });
+  revalidateCategoryPaths();
+}
+
 /** Create budget envelopes for categories that have budgetEnvelopeName but no matching plan this month. */
 export async function createMissingCategoryEnvelopesAction(
   formData: FormData,

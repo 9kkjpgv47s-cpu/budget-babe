@@ -43,6 +43,7 @@ export function ExpenseEditRow({
   onToggle: () => void;
 }) {
   const [description, setDescription] = useState(e.description);
+  const [categoryId, setCategoryId] = useState(e.categoryId ?? "");
   const [savedAt, setSavedAt] = useState(0);
   const [, submitUpdate, updatePending] = useActionState(
     async (_prev: { ok?: boolean } | null, formData: FormData) => {
@@ -96,7 +97,11 @@ export function ExpenseEditRow({
             onChange={(ev) => setDescription(ev.target.value)}
             className="w-full rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
           />
-          <CategorySuggestionHint yearMonth={yearMonth} description={description} />
+          <CategorySuggestionHint
+            yearMonth={yearMonth}
+            description={description}
+            onApplyCategory={setCategoryId}
+          />
         </div>
         <input
           name="amount"
@@ -118,7 +123,8 @@ export function ExpenseEditRow({
         />
         <select
           name="categoryId"
-          defaultValue={e.categoryId ?? ""}
+          value={categoryId}
+          onChange={(ev) => setCategoryId(ev.target.value)}
           className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
         >
           <option value="">No category</option>

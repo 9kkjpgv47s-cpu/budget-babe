@@ -2,10 +2,7 @@ import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { resolveCategoryIdFromLabel } from "@/lib/categories";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
-import {
-  finalizeExpenseForWrite,
-  getLastExpenseDefaultsForYearMonth,
-} from "@/lib/entryDefaults";
+import { finalizeImportedExpense } from "@/lib/entryDefaults";
 
 export type BulkImportRow = {
   date: Date;
@@ -27,7 +24,6 @@ export async function bulkInsertExpenses(
   source: "csv" | "ofx" | "qif",
 ): Promise<{ created: number; skipped: number }> {
   const period = await getOrCreateMonthlyPeriod(yearMonth);
-  const lastDefaults = await getLastExpenseDefaultsForYearMonth(yearMonth);
   let created = 0;
   let skipped = 0;
   for (const parts of rows) {
@@ -44,12 +40,10 @@ export async function bulkInsertExpenses(
       continue;
     }
     const categoryId = await resolveCategoryIdFromLabel(parts.categoryLabel);
-    const fields = await finalizeExpenseForWrite(
+    const fields = await finalizeImportedExpense(
       {
         description: parts.description,
-        tagsJson: lastDefaults.tagsJson,
-        budgetPlanId: lastDefaults.budgetPlanId,
-        payee: parts.payee ?? lastDefaults.payee,
+        payee: parts.payee,
         categoryId,
       },
       yearMonth,

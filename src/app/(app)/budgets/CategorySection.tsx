@@ -2,6 +2,7 @@ import { TAX_CATEGORY_OPTIONS } from "@/lib/taxCategories";
 import {
   addCategoryAction,
   deleteCategoryAction,
+  reassignAndDeleteCategoryAction,
   updateCategoryAction,
 } from "@/app/actions/categories";
 
@@ -112,10 +113,42 @@ export function CategorySection({ categories }: { categories: CategoryRow[] }) {
               </div>
             </form>
             {c.expenseCount > 0 ? (
-              <p className="mt-2 text-xs text-zinc-500">
-                {c.expenseCount} expense{c.expenseCount === 1 ? "" : "s"} use this category —
-                reassign before delete.
-              </p>
+              <form
+                action={reassignAndDeleteCategoryAction}
+                className="mt-2 flex flex-wrap items-end gap-2"
+              >
+                <input type="hidden" name="id" value={c.id} />
+                <label className="flex flex-col gap-1 text-xs text-zinc-500">
+                  <span>
+                    {c.expenseCount} expense{c.expenseCount === 1 ? "" : "s"} — reassign, then
+                    delete
+                  </span>
+                  <select
+                    name="targetCategoryId"
+                    required
+                    defaultValue=""
+                    className="min-w-[12rem] rounded-lg border border-zinc-300 px-2 py-1.5 text-sm text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+                  >
+                    <option value="" disabled>
+                      Move expenses to…
+                    </option>
+                    <option value="__none__">No category (uncategorized)</option>
+                    {categories
+                      .filter((other) => other.id !== c.id)
+                      .map((other) => (
+                        <option key={other.id} value={other.id}>
+                          {other.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <button
+                  type="submit"
+                  className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/30"
+                >
+                  Reassign & delete
+                </button>
+              </form>
             ) : (
               <form action={deleteCategoryAction} className="mt-2">
                 <input type="hidden" name="id" value={c.id} />
