@@ -224,6 +224,7 @@ export async function batchResolveReceiptPostingContexts(
     const plans = plansMap.get(ym) ?? [];
     const defaults = defaultsMap.get(ym) ?? {
       budgetPlanId: null,
+      categoryId: null,
       tagsJson: null,
       payee: null,
     };

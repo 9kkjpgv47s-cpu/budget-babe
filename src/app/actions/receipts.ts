@@ -330,7 +330,6 @@ export async function moveReceiptToMonthAction(formData: FormData): Promise<void
         },
       });
     }
-    revalidatePath("/tax");
   }
   revalidateMoneyFromReceipt(targetYm);
   if (oldYm && oldYm !== targetYm) {

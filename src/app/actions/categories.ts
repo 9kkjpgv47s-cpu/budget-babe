@@ -11,7 +11,6 @@ import { requireUser } from "@/lib/auth";
 import {
   applyCategoryDefaultsToExpense,
   ensureDefaultCategories,
-  fieldsFromCategoryId,
   linkCategoriesToBudgetEnvelope,
   resolveBudgetPlanIdForCategory,
   slugifyCategoryName,
