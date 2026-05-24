@@ -43,6 +43,7 @@ export default async function ImportPage({
   const splitDefaults = sanitizeExpenseDefaultsForPlans(
     await getLastExpenseDefaultsForYearMonth(yearMonth),
     budgetPlans.map((p) => p.id),
+    categories.map((c) => c.id),
   );
 
   return (
