@@ -24,25 +24,26 @@ export default async function ReceiptsPage({
   const yearMonth =
     sp.ym?.match(/^\d{4}-\d{2}$/) ? sp.ym : currentYearMonth();
 
-  const period = await getOrCreateMonthlyPeriod(yearMonth);
-  const categories = await prisma.category.findMany({
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: { id: true, name: true },
-  });
-  const categoryIds = categories.map((c) => c.id);
-
   const monthOptions = Array.from({ length: 13 }, (_, i) =>
     format(addMonths(parseYearMonth(yearMonth), i - 6), "yyyy-MM"),
   );
 
-  const receipts = await prisma.receipt.findMany({
-    where: { monthlyPeriodId: period.id },
-    orderBy: { uploadedAt: "desc" },
-    include: {
-      user: { select: { name: true } },
-      monthlyPeriod: { select: { yearMonth: true } },
-    },
-  });
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const [categories, receipts] = await Promise.all([
+    prisma.category.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
+    }),
+    prisma.receipt.findMany({
+      where: { monthlyPeriodId: period.id },
+      orderBy: { uploadedAt: "desc" },
+      include: {
+        user: { select: { name: true } },
+        monthlyPeriod: { select: { yearMonth: true } },
+      },
+    }),
+  ]);
+  const categoryIds = categories.map((c) => c.id);
 
   const contextByReceipt = await batchResolveReceiptPostingContexts(
     receipts,
