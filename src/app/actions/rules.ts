@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { coerceCategoryId } from "@/lib/categories";
-import { applyMerchantRulesToExistingExpenses } from "@/lib/merchantRules";
+import { applyEntryDefaultsToExistingExpenses } from "@/lib/entryDefaults";
 import type { FormActionState } from "@/lib/formActionState";
 
 function revalidateMerchantRuleTargets(yearMonth: string) {
@@ -65,7 +65,7 @@ export async function applyMerchantRulesToMonthAction(
   }
 
   const period = await getOrCreateMonthlyPeriod(yearMonth);
-  const result = await applyMerchantRulesToExistingExpenses(
+  const result = await applyEntryDefaultsToExistingExpenses(
     period.id,
     yearMonth,
   );

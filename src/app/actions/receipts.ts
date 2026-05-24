@@ -11,9 +11,11 @@ import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import type { FormActionState } from "@/lib/formActionState";
 import {
   expenseDefaultsFromWrite,
+  expensePropagatedData,
   finalizeExpenseForWrite,
   getLastExpenseDefaultsForYearMonth,
   propagateExpenseToTargetPeriod,
+  propagationSummaryFromFields,
   resolveReceiptPostingContext,
   suggestReceiptExpenseDescription,
   type ExpenseWriteFields,
@@ -143,11 +145,7 @@ export async function createExpenseFromReceiptAction(
       spentAt: new Date(),
       source: "ocr",
       receiptId,
-      budgetPlanId: fields.budgetPlanId,
-      tagsJson: fields.tagsJson,
-      payee: fields.payee,
-      categoryId: fields.categoryId,
-      taxCategory: fields.taxCategory,
+      ...expensePropagatedData(fields),
     },
   });
   revalidateMoneyFromReceipt(yearMonth);
@@ -157,7 +155,12 @@ export async function createExpenseFromReceiptAction(
     yearMonth !== pageYearMonth
       ? `Expense added to ${yearMonth} (receipt month).`
       : "Expense added — view on Overview or Expenses.";
-  return { ok: true, message: msg, entryDefaults: expenseDefaultsFromWrite(fields) };
+  const applied = propagationSummaryFromFields(fields);
+  return {
+    ok: true,
+    message: applied ? `${msg} ${applied}` : msg,
+    entryDefaults: expenseDefaultsFromWrite(fields),
+  };
 }
 
 export async function createExpensesFromReceiptLinesAction(
@@ -243,11 +246,7 @@ export async function createExpensesFromReceiptLinesAction(
         source: "ocr",
         receiptId,
         splitGroupId,
-        budgetPlanId: fields.budgetPlanId,
-        tagsJson: fields.tagsJson,
-        payee: fields.payee,
-        categoryId: fields.categoryId,
-        taxCategory: fields.taxCategory,
+        ...expensePropagatedData(fields),
       },
     });
     created++;
@@ -314,11 +313,7 @@ export async function moveReceiptToMonthAction(formData: FormData): Promise<void
         where: { id: exp.id },
         data: {
           monthlyPeriodId: period.id,
-          budgetPlanId: fields.budgetPlanId,
-          categoryId: fields.categoryId,
-          taxCategory: fields.taxCategory,
-          tagsJson: fields.tagsJson,
-          payee: fields.payee,
+          ...expensePropagatedData(fields),
         },
       });
     }

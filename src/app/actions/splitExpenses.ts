@@ -8,6 +8,7 @@ import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
 import { coerceCategoryId } from "@/lib/categories";
 import {
+  expensePropagatedData,
   finalizeExpenseForWrite,
   getLastExpenseDefaultsForYearMonth,
 } from "@/lib/entryDefaults";
@@ -80,11 +81,7 @@ export async function createSplitExpensesAction(
         description: p.description,
         spentAt: new Date(),
         splitGroupId,
-        payee: fields.payee,
-        categoryId: fields.categoryId,
-        budgetPlanId: fields.budgetPlanId,
-        taxCategory: fields.taxCategory,
-        tagsJson: fields.tagsJson,
+        ...expensePropagatedData(fields),
         source: "manual",
       },
     });

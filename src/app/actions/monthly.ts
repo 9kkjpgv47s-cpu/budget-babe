@@ -16,7 +16,9 @@ import type { FormActionState } from "@/lib/formActionState";
 import {
   commaListToTagsJson,
   expenseDefaultsFromWrite,
+  expensePropagatedData,
   finalizeExpenseForWrite,
+  propagationSummaryFromFields,
 } from "@/lib/entryDefaults";
 import { coerceCategoryId, linkCategoriesToBudgetEnvelope } from "@/lib/categories";
 import { guessPaystubAmountFromBuffer } from "@/lib/paystubOcr";
@@ -219,11 +221,7 @@ export async function addExpenseCore(
       userId: user.userId,
       amountCents: amount,
       description,
-      payee: fields.payee,
-      categoryId: fields.categoryId,
-      budgetPlanId: fields.budgetPlanId,
-      taxCategory: fields.taxCategory,
-      tagsJson: fields.tagsJson,
+      ...expensePropagatedData(fields),
       splitGroupId,
       source: "manual",
     },
@@ -233,6 +231,7 @@ export async function addExpenseCore(
   return {
     ok: true,
     entryDefaults: expenseDefaultsFromWrite(fields),
+    message: propagationSummaryFromFields(fields),
   };
 }
 

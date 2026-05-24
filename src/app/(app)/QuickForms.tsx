@@ -296,7 +296,8 @@ export function QuickForms({
       ) : null}
       {state?.ok ? (
         <p className="text-sm text-emerald-700 dark:text-emerald-300">
-          Saved. Budget and tags will pre-fill your next entry this month.
+          {state.message ??
+            "Saved. Budget and tags will pre-fill your next entry this month."}
         </p>
       ) : null}
     </form>

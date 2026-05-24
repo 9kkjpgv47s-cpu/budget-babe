@@ -4,7 +4,10 @@
  */
 import { prisma } from "@/lib/prisma";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
-import { fieldsFromCategoryId } from "@/lib/categories";
+import {
+  fieldsFromCategoryId,
+  remapExpenseCategoryFieldsToPeriod,
+} from "@/lib/categories";
 import {
   applyMerchantRulesToTags,
   classifyExpenseForWrite,
@@ -241,6 +244,31 @@ export function expenseDefaultsFromWrite(
   };
 }
 
+/** Prisma columns shared by all expense creates after propagation. */
+export function expensePropagatedData(fields: ExpenseWriteFields) {
+  return {
+    payee: fields.payee,
+    categoryId: fields.categoryId,
+    budgetPlanId: fields.budgetPlanId,
+    taxCategory: fields.taxCategory,
+    tagsJson: fields.tagsJson,
+  };
+}
+
+/** Short feedback for quick-add / receipt post success banners. */
+export function propagationSummaryFromFields(
+  fields: ExpenseWriteFields,
+): string | undefined {
+  const parts: string[] = [];
+  if (fields.categoryId) parts.push("category");
+  if (fields.budgetPlanId) parts.push("budget");
+  if (fields.taxCategory) parts.push("tax");
+  if (fields.tagsJson) parts.push("tags");
+  if (fields.payee) parts.push("payee");
+  if (parts.length === 0) return undefined;
+  return `Applied ${parts.join(", ")} from rules and defaults.`;
+}
+
 export function expenseDefaultsFromDraft(
   draft: MerchantRuleDraft,
   categoryId?: string | null,
@@ -378,14 +406,19 @@ export async function propagateExpenseToTargetPeriod(
     sourceMonthlyPeriodId,
     targetMonthlyPeriodId,
   );
+  const categoryPatch = await remapExpenseCategoryFieldsToPeriod(
+    expense.categoryId,
+    targetMonthlyPeriodId,
+    { budgetPlanId: remappedBudget, taxCategory: expense.taxCategory },
+  );
   return finalizeExpenseForWrite(
     {
       description: expense.description,
       tagsJson: expense.tagsJson,
-      budgetPlanId: remappedBudget,
+      budgetPlanId: categoryPatch.budgetPlanId ?? remappedBudget,
       payee: expense.payee,
-      categoryId: expense.categoryId,
-      taxCategory: expense.taxCategory,
+      categoryId: categoryPatch.categoryId,
+      taxCategory: categoryPatch.taxCategory,
       autoSuggestCategory: false,
     },
     targetYearMonth,
