@@ -7,11 +7,11 @@ import { requireUser } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
 import { mergeTagLists, parseTagsJson } from "@/lib/budgetRollup";
 import {
+  applyEntryDefaultsToExistingExpenses,
   commaListToTagsJson,
   finalizeExpenseForWrite,
 } from "@/lib/entryDefaults";
 import { coerceCategoryId } from "@/lib/categories";
-import { reapplyExpenseClassificationForPeriod } from "@/lib/expenseWrite";
 import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 
 function revalidateAll(yearMonth: string) {
@@ -220,19 +220,7 @@ export async function reapplyMerchantRulesAction(formData: FormData): Promise<vo
   const yearMonth = String(formData.get("yearMonth") ?? "").trim();
   if (!yearMonth) return;
   const period = await getOrCreateMonthlyPeriod(yearMonth);
-  const expenses = await prisma.expense.findMany({
-    where: { monthlyPeriodId: period.id },
-    select: {
-      id: true,
-      description: true,
-      tagsJson: true,
-      categoryId: true,
-      budgetPlanId: true,
-      taxCategory: true,
-      payee: true,
-    },
-  });
-  await reapplyExpenseClassificationForPeriod(period.id, yearMonth, expenses);
+  await applyEntryDefaultsToExistingExpenses(period.id, yearMonth);
   revalidateAll(yearMonth);
   revalidatePath("/tax");
 }

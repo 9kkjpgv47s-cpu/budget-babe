@@ -16,6 +16,7 @@ import {
   propagateExpenseToTargetPeriod,
   resolveReceiptPostingContext,
   suggestReceiptExpenseDescription,
+  type ExpenseWriteFields,
 } from "@/lib/entryDefaults";
 import type { ParsedReceiptLine } from "@/lib/receiptOcr";
 import { deleteReceiptStored, saveReceiptUpload } from "@/lib/uploads";
@@ -129,6 +130,7 @@ export async function createExpenseFromReceiptAction(
       budgetPlanId: budgetPlanIdRaw || lastDefaults.budgetPlanId,
       payee: payee ?? lastDefaults.payee,
       categoryId,
+      autoSuggestCategory: !categoryId,
     },
     yearMonth,
   );
@@ -207,6 +209,7 @@ export async function createExpensesFromReceiptLinesAction(
   }
   const splitGroupId = randomUUID();
   let created = 0;
+  let lastFields: ExpenseWriteFields | null = null;
   for (const line of parsed) {
     const cents =
       typeof line.amountCents === "number" && line.amountCents > 0
@@ -223,9 +226,11 @@ export async function createExpensesFromReceiptLinesAction(
         budgetPlanId: sharedBudgetId,
         payee: lastDefaults.payee,
         categoryId: sharedCategoryId,
+        autoSuggestCategory: !sharedCategoryId,
       },
       yearMonth,
     );
+    lastFields = fields;
     sharedBudgetId = fields.budgetPlanId;
     sharedCategoryId = fields.categoryId;
     await prisma.expense.create({
@@ -261,6 +266,7 @@ export async function createExpensesFromReceiptLinesAction(
   return {
     ok: true,
     message: `Posted ${created} expense line(s)${monthNote} with one split group.`,
+    entryDefaults: lastFields ? expenseDefaultsFromWrite(lastFields) : undefined,
   };
 }
 

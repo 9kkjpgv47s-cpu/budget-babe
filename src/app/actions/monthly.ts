@@ -206,6 +206,7 @@ export async function addExpenseCore(
       budgetPlanId: budgetPlanIdRaw || null,
       payee,
       categoryId,
+      autoSuggestCategory: !categoryId,
     },
     yearMonth,
   );

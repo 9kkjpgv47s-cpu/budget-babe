@@ -3,8 +3,8 @@
  * `@/lib/entryDefaults` for creates — it wraps draft + classification in one call.
  *
  * Agent 2 (receipts): use `finalizeExpenseForWrite` when posting from OCR.
- * Agent 1 (move month): call `remapExpenseCategoryFieldsToPeriod` from `@/lib/categories`
- * when linked expenses change `monthlyPeriodId`.
+ * Agent 3 (Plaid/CSV): use `finalizeImportedExpense` from `@/lib/entryDefaults`.
+ * Agent 1 (move month): call `propagateExpenseToTargetPeriod` from `@/lib/entryDefaults`.
  */
 import { prisma } from "@/lib/prisma";
 import {

@@ -67,6 +67,7 @@ export async function createSplitExpensesAction(
         budgetPlanId: sharedBudgetId,
         payee: lastDefaults.payee,
         categoryId: sharedCategoryId,
+        autoSuggestCategory: !sharedCategoryId,
       },
       yearMonth,
     );

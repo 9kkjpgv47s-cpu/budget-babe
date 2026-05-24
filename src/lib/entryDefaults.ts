@@ -306,6 +306,33 @@ export async function finalizeExpenseForWrite(
 }
 
 /**
+ * Bank/file import hook (Plaid, CSV, OFX). Agent 3 calls this from `plaidSync` / import paths —
+ * do not duplicate tag-only `applyMerchantRulesToTags` for new rows.
+ */
+export async function finalizeImportedExpense(
+  input: {
+    description: string;
+    payee?: string | null;
+    tagsJson?: string | null;
+    categoryId?: string | null;
+  },
+  yearMonth: string,
+): Promise<ExpenseWriteFields> {
+  const last = await getLastExpenseDefaultsForYearMonth(yearMonth);
+  return finalizeExpenseForWrite(
+    {
+      description: input.description,
+      tagsJson: input.tagsJson ?? last.tagsJson,
+      budgetPlanId: last.budgetPlanId,
+      payee: input.payee ?? last.payee,
+      categoryId: input.categoryId ?? last.categoryId,
+      autoSuggestCategory: input.categoryId == null && last.categoryId == null,
+    },
+    yearMonth,
+  );
+}
+
+/**
  * When an expense moves to another month, map budget by envelope name in the target month.
  */
 export async function remapBudgetPlanToPeriod(
