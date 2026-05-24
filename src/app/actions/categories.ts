@@ -1,5 +1,6 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
@@ -210,7 +211,15 @@ export async function bulkApplyCategoryRulesAction(
   if (!yearMonth) return;
   const period = await getOrCreateMonthlyPeriod(yearMonth);
 
-  await classifyUncategorizedForPeriod(period.id);
+  const { categorized, scanned } = await classifyUncategorizedForPeriod(period.id);
   revalidateCategoryPaths(yearMonth);
   revalidatePath("/tax");
+  const params = new URLSearchParams({ ym: yearMonth });
+  if (categorized > 0) {
+    params.set("classified", String(categorized));
+  } else {
+    params.set("classified", "0");
+    params.set("scanned", String(scanned));
+  }
+  redirect(`/expenses?${params.toString()}`);
 }

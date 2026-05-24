@@ -4,11 +4,13 @@ import { formatCents } from "@/lib/money";
 export function CategorySpendSummary({
   yearMonth,
   rows,
+  uncategorized,
 }: {
   yearMonth: string;
   rows: { name: string; slug: string; count: number; totalCents: number }[];
+  uncategorized?: { count: number; totalCents: number };
 }) {
-  if (rows.length === 0) return null;
+  if (rows.length === 0 && !uncategorized?.count) return null;
   const sorted = [...rows].sort((a, b) => b.totalCents - a.totalCents);
 
   return (
@@ -33,6 +35,23 @@ export function CategorySpendSummary({
             <span className="tabular-nums font-medium">{formatCents(r.totalCents)}</span>
           </li>
         ))}
+        {uncategorized && uncategorized.count > 0 ? (
+          <li className="flex items-center justify-between gap-2 border-t border-zinc-100 py-2 dark:border-zinc-800">
+            <Link
+              href={`/expenses?ym=${yearMonth}&uncategorized=1`}
+              className="text-amber-800 underline hover:no-underline dark:text-amber-200"
+            >
+              Uncategorized
+              <span className="ml-2 text-xs text-zinc-400 no-underline">
+                {uncategorized.count}{" "}
+                {uncategorized.count === 1 ? "expense" : "expenses"}
+              </span>
+            </Link>
+            <span className="tabular-nums font-medium">
+              {formatCents(uncategorized.totalCents)}
+            </span>
+          </li>
+        ) : null}
       </ul>
     </section>
   );

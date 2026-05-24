@@ -73,6 +73,14 @@ export default async function BudgetsPage({
     categorySpendMap.set(cat.id, cur);
   }
   const categorySpendRows = [...categorySpendMap.values()];
+  let uncategorizedSpend = { count: 0, totalCents: 0 };
+  for (const e of expenses) {
+    if (e.categoryId) continue;
+    uncategorizedSpend = {
+      count: uncategorizedSpend.count + 1,
+      totalCents: uncategorizedSpend.totalCents + e.amountCents,
+    };
+  }
 
   const budgetRows = budgetPlans.map((p) => {
     const planR: BudgetPlanForRollup = {
@@ -150,7 +158,13 @@ export default async function BudgetsPage({
         planNames={budgetPlans.map((p) => p.name)}
       />
 
-      <CategorySpendSummary yearMonth={ym} rows={categorySpendRows} />
+      <CategorySpendSummary
+        yearMonth={ym}
+        rows={categorySpendRows}
+        uncategorized={
+          uncategorizedSpend.count > 0 ? uncategorizedSpend : undefined
+        }
+      />
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="font-medium">This month ({budgetPlans.length})</h2>

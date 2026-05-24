@@ -70,21 +70,28 @@ export default async function HomePage({
     id: p.id,
     name: p.name,
   }));
+  const categories = await prisma.category.findMany({
+    select: { id: true, name: true, slug: true, budgetEnvelopeName: true },
+  });
+  const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
   const expenseDefaults = sanitizeExpenseDefaultsForPlans(
     rawDefaults,
     quickAddBudgetPlans.map((p) => p.id),
+    categories.map((c) => c.id),
   );
   const lastBudgetName = expenseDefaults.budgetPlanId
     ? data.budgetPlans.find((p) => p.id === expenseDefaults.budgetPlanId)?.name
     : null;
+  const lastCategoryName = expenseDefaults.categoryId
+    ? categoryNameById.get(expenseDefaults.categoryId)
+    : null;
   const lastTags = parseTagsJson(expenseDefaults.tagsJson);
   const hasLastEntryHint =
-    lastBudgetName != null || lastTags.length > 0 || expenseDefaults.payee;
-  const categories = await prisma.category.findMany({
-    select: { id: true, name: true, budgetEnvelopeName: true },
-  });
+    lastBudgetName != null ||
+    lastCategoryName != null ||
+    lastTags.length > 0 ||
+    expenseDefaults.payee;
   const categoryLookup = buildCategoryEnvelopeLookup(categories);
-  const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
   const prevYm = shiftYearMonth(yearMonth, -1);
   const nextYm = shiftYearMonth(yearMonth, 1);
   const prevPeriodExists =
@@ -345,6 +352,7 @@ export default async function HomePage({
             <p className="mb-3 text-xs text-zinc-500">
               Pre-filled from your last entry this month
               {lastBudgetName ? ` · Budget: ${lastBudgetName}` : ""}
+              {lastCategoryName ? ` · Category: ${lastCategoryName}` : ""}
               {lastTags.length ? ` · Tags: ${lastTags.join(", ")}` : ""}
               {expenseDefaults.payee ? ` · Payee: ${expenseDefaults.payee}` : ""}
             </p>
@@ -620,9 +628,15 @@ export default async function HomePage({
                 <span>
                   {e.description}
                   {e.categoryId && categoryNameById.get(e.categoryId) ? (
-                    <span className="ml-1 text-xs text-emerald-700 dark:text-emerald-300">
+                    <Link
+                      href={`/expenses?ym=${yearMonth}&cat=${encodeURIComponent(
+                        categories.find((c) => c.id === e.categoryId)?.slug ??
+                          e.categoryId,
+                      )}`}
+                      className="ml-1 text-xs text-emerald-700 underline hover:no-underline dark:text-emerald-300"
+                    >
                       [{categoryNameById.get(e.categoryId)}]
-                    </span>
+                    </Link>
                   ) : null}
                   {e.user ? (
                     <span className="text-xs text-zinc-400"> · {e.user.name}</span>

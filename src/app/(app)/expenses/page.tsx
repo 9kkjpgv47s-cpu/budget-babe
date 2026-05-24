@@ -16,6 +16,8 @@ export default async function ExpensesPage({
     taxErr?: string;
     cat?: string;
     uncategorized?: string;
+    classified?: string;
+    scanned?: string;
   }>;
 }) {
   await requireUser();
@@ -27,6 +29,12 @@ export default async function ExpensesPage({
   const taxErr = taxErrRaw ? decodeURIComponent(taxErrRaw.replace(/\+/g, " ")) : null;
   const uncategorizedOnly = sp.uncategorized === "1";
   const catParam = (sp.cat ?? "").trim();
+  const classifiedRaw = sp.classified?.trim();
+  const classifiedCount =
+    classifiedRaw != null && classifiedRaw !== "" ? Number.parseInt(classifiedRaw, 10) : null;
+  const scannedCount = sp.scanned?.trim()
+    ? Number.parseInt(sp.scanned, 10)
+    : null;
   const period = await getOrCreateMonthlyPeriod(ym);
 
   const categories = await prisma.category.findMany({
@@ -53,34 +61,67 @@ export default async function ExpensesPage({
     ...(filterCategoryId ? { categoryId: filterCategoryId } : {}),
   };
 
-  const allExpenses = await prisma.expense.findMany({
-    where: expenseWhere,
-    orderBy: { spentAt: "desc" },
-    include: { user: { select: { name: true } } },
-  });
+  const [allExpenses, monthExpenseTotal, plans, uncategorizedCount, uncategorizedSum] =
+    await Promise.all([
+      prisma.expense.findMany({
+        where: expenseWhere,
+        orderBy: { spentAt: "desc" },
+        include: { user: { select: { name: true } } },
+      }),
+      prisma.expense.count({ where: { monthlyPeriodId: period.id } }),
+      prisma.budgetPlan.findMany({
+        where: { monthlyPeriodId: period.id },
+        orderBy: { name: "asc" },
+      }),
+      prisma.expense.count({
+        where: { monthlyPeriodId: period.id, categoryId: null },
+      }),
+      prisma.expense.aggregate({
+        where: { monthlyPeriodId: period.id, categoryId: null },
+        _sum: { amountCents: true },
+      }),
+    ]);
+
   const ql = q.toLowerCase();
   const expenses =
     q.length > 0
-      ? allExpenses.filter(
-          (e) =>
-            e.description.toLowerCase().includes(ql) ||
-            (e.payee?.toLowerCase().includes(ql) ?? false),
-        )
+      ? allExpenses.filter((e) => {
+          const cat = e.categoryId ? categoryById.get(e.categoryId) : null;
+          const haystack = [
+            e.description,
+            e.payee ?? "",
+            cat?.name ?? "",
+            cat?.slug ?? "",
+          ]
+            .join(" ")
+            .toLowerCase();
+          return haystack.includes(ql);
+        })
       : allExpenses;
 
-  const [plans, uncategorizedCount, uncategorizedSum] = await Promise.all([
-    prisma.budgetPlan.findMany({
-      where: { monthlyPeriodId: period.id },
-      orderBy: { name: "asc" },
-    }),
-    prisma.expense.count({
-      where: { monthlyPeriodId: period.id, categoryId: null },
-    }),
-    prisma.expense.aggregate({
-      where: { monthlyPeriodId: period.id, categoryId: null },
-      _sum: { amountCents: true },
-    }),
-  ]);
+  const categoryChipTotals = new Map<
+    string,
+    { id: string; name: string; slug: string; count: number; totalCents: number }
+  >();
+  const monthExpenses = await prisma.expense.findMany({
+    where: { monthlyPeriodId: period.id },
+    select: { categoryId: true, amountCents: true },
+  });
+  for (const e of monthExpenses) {
+    if (!e.categoryId) continue;
+    const cat = categoryById.get(e.categoryId);
+    if (!cat) continue;
+    const cur = categoryChipTotals.get(cat.id) ?? {
+      id: cat.id,
+      name: cat.name,
+      slug: cat.slug,
+      count: 0,
+      totalCents: 0,
+    };
+    cur.count += 1;
+    cur.totalCents += e.amountCents;
+    categoryChipTotals.set(cat.id, cur);
+  }
 
   const rows = expenses.map((e) => ({
     id: e.id,
@@ -108,28 +149,62 @@ export default async function ExpensesPage({
       ? filterCategoryName
       : null;
 
+  const categoryChips = [...categoryChipTotals.values()].sort(
+    (a, b) => b.totalCents - a.totalCents,
+  );
+
+  let classifyMessage: string | null = null;
+  if (classifiedCount != null && Number.isFinite(classifiedCount)) {
+    if (classifiedCount > 0) {
+      classifyMessage = `Auto-classified ${classifiedCount} expense${classifiedCount === 1 ? "" : "s"}.`;
+    } else if (scannedCount != null && Number.isFinite(scannedCount)) {
+      classifyMessage = `Scanned ${scannedCount} uncategorized — no new matches from rules.`;
+    }
+  }
+
   return (
     <div className="space-y-4">
-      {filterLabel || uncategorizedCount > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          {filterLabel ? (
-            <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100">
-              Filter: {filterLabel}
+      {classifyMessage ? (
+        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100">
+          {classifyMessage}
+        </p>
+      ) : null}
+      {categoryChips.length > 0 || uncategorizedCount > 0 ? (
+        <div className="flex flex-wrap gap-2 text-xs">
+          {categoryChips.map((c) => {
+            const active = filterCategoryId === c.id;
+            return (
               <Link
-                href={`/expenses?ym=${ym}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-                className="ml-2 underline"
+                key={c.id}
+                href={`/expenses?ym=${ym}&cat=${encodeURIComponent(c.slug)}`}
+                className={`rounded-full px-3 py-1 ${
+                  active
+                    ? "bg-emerald-600 text-white"
+                    : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+                }`}
               >
-                Clear
+                {c.name} · {formatCents(c.totalCents)}
               </Link>
-            </span>
-          ) : null}
-          {uncategorizedCount > 0 && !uncategorizedOnly ? (
+            );
+          })}
+          {uncategorizedCount > 0 ? (
             <Link
               href={`/expenses?ym=${ym}&uncategorized=1`}
-              className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-950 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+              className={`rounded-full px-3 py-1 ${
+                uncategorizedOnly
+                  ? "bg-amber-600 text-white"
+                  : "border border-amber-200 bg-amber-50 text-amber-950 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+              }`}
             >
-              {uncategorizedCount} uncategorized (
-              {formatCents(uncategorizedSum._sum.amountCents ?? 0)})
+              Uncategorized · {formatCents(uncategorizedSum._sum.amountCents ?? 0)}
+            </Link>
+          ) : null}
+          {filterLabel ? (
+            <Link
+              href={`/expenses?ym=${ym}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+              className="self-center text-zinc-500 underline"
+            >
+              Clear filter
             </Link>
           ) : null}
         </div>
@@ -139,6 +214,7 @@ export default async function ExpensesPage({
         searchQuery={q}
         expenses={rows}
         allExpenseCount={allExpenses.length}
+        monthExpenseTotal={monthExpenseTotal}
         plans={plans.map((p) => ({ id: p.id, name: p.name }))}
         categories={categories.map((c) => ({ id: c.id, name: c.name, slug: c.slug }))}
         uncategorizedCount={uncategorizedCount}

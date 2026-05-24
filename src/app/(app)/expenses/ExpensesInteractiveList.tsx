@@ -40,6 +40,7 @@ export function ExpensesInteractiveList({
   searchQuery,
   expenses,
   allExpenseCount,
+  monthExpenseTotal,
   plans,
   categories,
   uncategorizedCount,
@@ -49,6 +50,7 @@ export function ExpensesInteractiveList({
   searchQuery: string;
   expenses: ExpenseRowDTO[];
   allExpenseCount: number;
+  monthExpenseTotal: number;
   plans: { id: string; name: string }[];
   categories: { id: string; name: string; slug?: string }[];
   uncategorizedCount: number;
@@ -73,6 +75,12 @@ export function ExpensesInteractiveList({
         <p className="mt-1 text-sm text-zinc-500">
           Select rows to apply tags, category, or budget link in bulk. Categories auto-link
           envelopes and tax folders when rules match.
+          {monthExpenseTotal !== allExpenseCount ? (
+            <>
+              {" "}
+              Showing {allExpenseCount} of {monthExpenseTotal} expenses this month.
+            </>
+          ) : null}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           {uncategorizedCount > 0 ? (
@@ -133,7 +141,7 @@ export function ExpensesInteractiveList({
           <input
             name="q"
             defaultValue={searchQuery}
-            placeholder="Search description or payee"
+            placeholder="Search description, payee, or category"
             className="min-w-[12rem] flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
           />
           <button
