@@ -114,4 +114,21 @@ const sumTotal = inferTotalFromParsedLines([
 ]);
 assert.equal(sumTotal, 775);
 
+function receiptTotalDiffersFromLineSum(totalCents, lines) {
+  if (totalCents == null || totalCents <= 0) return null;
+  const lineSumCents = inferTotalFromParsedLines(lines);
+  if (lineSumCents == null) return null;
+  const diffCents = Math.abs(lineSumCents - totalCents);
+  const threshold = Math.max(50, Math.round(totalCents * 0.05));
+  if (diffCents <= threshold) return null;
+  return { lineSumCents, diffCents };
+}
+
+assert.ok(
+  receiptTotalDiffersFromLineSum(1000, [
+    { description: "A", amountCents: 450 },
+    { description: "B", amountCents: 325 },
+  ]),
+);
+
 console.log("receipt parse checks: ok");

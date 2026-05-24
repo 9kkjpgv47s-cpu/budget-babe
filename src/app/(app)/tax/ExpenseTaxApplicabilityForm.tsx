@@ -86,7 +86,19 @@ export function ExpenseTaxApplicabilityForm({
           <span className="text-xs text-amber-700 dark:text-amber-400">Not reviewed</span>
         ) : null}
       </div>
-      {docWarning ? <p className="text-xs text-amber-800 dark:text-amber-200">{docWarning}</p> : null}
+      {docWarning ? (
+        <p className="text-xs text-amber-800 dark:text-amber-200">
+          {docWarning}{" "}
+          {yearMonth ? (
+            <Link
+              href={`/receipts?ym=${yearMonth}#upload`}
+              className="font-medium underline"
+            >
+              Scan or upload a receipt
+            </Link>
+          ) : null}
+        </p>
+      ) : null}
 
       <form action={saveExpenseTaxAction} className="grid gap-2 sm:grid-cols-2">
         <input type="hidden" name="expenseId" value={expenseId} />

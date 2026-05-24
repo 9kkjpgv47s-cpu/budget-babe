@@ -19,6 +19,7 @@ export {
   parseMerchantFromOcrText,
   parseReceiptLineAmountCents,
   parseReceiptLines,
+  receiptTotalDiffersFromLineSum,
 } from "@/lib/receiptParse";
 import {
   inferTotalFromParsedLines,

@@ -26,8 +26,10 @@ import { ReceiptHelpTips } from "./ReceiptHelpTips";
 import { ReceiptScanFab } from "./ReceiptScanFab";
 import {
   defaultExpenseDescriptionFromReceipt,
+  parseMerchantFromOcrText,
   type ParsedReceiptLine,
 } from "@/lib/receiptOcr";
+import { evaluateReceiptPostSafety } from "./receiptPostSafety";
 import { displayFilename } from "./receiptDisplay";
 
 export default async function ReceiptsPage({
@@ -65,14 +67,25 @@ export default async function ReceiptsPage({
     }),
   ]);
 
-  const rows: ReceiptListRow[] = receipts.map((r) => ({
-    id: r.id,
-    filename: r.filename,
-    note: r.note,
-    ocrStatus: r.ocrStatus,
-    totalCents: r.totalCents,
-    expenseCount: r._count.expenses,
-  }));
+  const rows: ReceiptListRow[] = receipts.map((r) => {
+    const merchant = parseMerchantFromOcrText(r.ocrRawText ?? "");
+    return {
+      id: r.id,
+      filename: r.filename,
+      note: r.note,
+      ocrStatus: r.ocrStatus,
+      totalCents: r.totalCents,
+      expenseCount: r._count.expenses,
+      searchText: [
+        displayFilename(r.filename),
+        r.note,
+        merchant,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase(),
+    };
+  });
   const counts = countByFilter(rows);
   const visible = filterReceipts(rows, filter, query);
   const visibleIds = new Set(visible.map((v) => v.id));
@@ -80,15 +93,15 @@ export default async function ReceiptsPage({
   const ocrPending = receipts.some(
     (r) => r.ocrStatus === "pending" || r.ocrStatus === "processing",
   );
-  const needsPosting = receipts
-    .filter(
-      (r) =>
-        r._count.expenses === 0 &&
-        r.ocrStatus === "completed" &&
-        r.totalCents != null &&
-        r.totalCents > 0,
-    )
-    .map((r) => {
+  const needsPostingCandidates = receipts.filter(
+    (r) =>
+      r._count.expenses === 0 &&
+      r.ocrStatus === "completed" &&
+      r.totalCents != null &&
+      r.totalCents > 0,
+  );
+  const needsPosting = await Promise.all(
+    needsPostingCandidates.map(async (r) => {
       let parsed: ParsedReceiptLine[] = [];
       if (r.ocrParsedLines) {
         try {
@@ -99,6 +112,13 @@ export default async function ReceiptsPage({
         }
       }
       const label = displayFilename(r.filename);
+      const safety = await evaluateReceiptPostSafety({
+        ocrStatus: r.ocrStatus,
+        expenseCount: 0,
+        totalCents: r.totalCents,
+        ocrConfidence: r.ocrConfidence,
+        monthlyPeriodId: r.monthlyPeriodId,
+      });
       return {
         id: r.id,
         filename: r.filename,
@@ -110,8 +130,10 @@ export default async function ReceiptsPage({
           parsed,
           label,
         ),
+        warnings: safety.warnings,
       };
-    });
+    }),
+  );
 
   return (
     <div className="space-y-8">

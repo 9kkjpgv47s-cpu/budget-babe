@@ -83,7 +83,7 @@ Set a long random **`SESSION_PASSWORD`** (32+ characters). Use Postgres and, if 
 
 ### Receipt OCR
 
-**Recommended:** capture the receipt with your phone camera or pick a photo from your gallery (JPEG/PNG/WebP, etc.). That is the fastest and most reliable input.
+**Recommended:** capture the receipt with your phone camera or pick a photo from your gallery (JPEG/PNG/WebP, etc.). That is the fastest and most reliable input. You can upload **multiple receipts** in one batch (up to 12 files).
 
 After each upload, the server runs **OCR in the background** (`next/after`):
 

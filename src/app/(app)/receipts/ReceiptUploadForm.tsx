@@ -25,6 +25,7 @@ export function ReceiptUploadForm({
   const [dragOver, setDragOver] = useState(false);
   const [fileLabel, setFileLabel] = useState<string | null>(null);
   const [autoPost, setAutoPost] = useState(false);
+  const [fileCount, setFileCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileId = `receipt-file${formIdSuffix}`;
 
@@ -36,22 +37,28 @@ export function ReceiptUploadForm({
 
   useEffect(() => {
     if (!state?.ok || !state.receiptId) return;
-    if (autoPost) setAutoPostReceiptId(state.receiptId);
+    if (autoPost && fileCount <= 1) setAutoPostReceiptId(state.receiptId);
     if (!redirectAfterUpload) return;
     router.push(`/receipts?ym=${yearMonth}&focus=${state.receiptId}`);
     router.refresh();
-  }, [redirectAfterUpload, autoPost, state, yearMonth, router]);
+  }, [redirectAfterUpload, autoPost, fileCount, state, yearMonth, router]);
 
-  function applyFile(file: File | null) {
+  function applyFiles(fileList: FileList | null) {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
-    if (!file) {
+    if (!fileList || fileList.length === 0) {
       setPreviewUrl(null);
       setFileLabel(null);
+      setFileCount(0);
       return;
     }
-    setFileLabel(file.name);
-    if (file.type.startsWith("image/")) {
-      setPreviewUrl(URL.createObjectURL(file));
+    const n = fileList.length;
+    setFileCount(n);
+    setFileLabel(
+      n === 1 ? fileList[0]!.name : `${n} files selected`,
+    );
+    const first = fileList[0]!;
+    if (first.type.startsWith("image/")) {
+      setPreviewUrl(URL.createObjectURL(first));
     } else {
       setPreviewUrl(null);
     }
@@ -60,11 +67,18 @@ export function ReceiptUploadForm({
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
-    const fd = new FormData(form);
-    const raw = fd.get("file");
-    if (raw instanceof File && raw.size > 0) {
+    const fd = new FormData();
+    fd.set("yearMonth", yearMonth);
+    const note = new FormData(form).get("note");
+    const total = new FormData(form).get("total");
+    if (typeof note === "string") fd.set("note", note);
+    if (typeof total === "string") fd.set("total", total);
+    const list = fileInputRef.current?.files;
+    if (!list?.length) return;
+    for (let i = 0; i < list.length; i++) {
+      const raw = list[i]!;
       const compressed = await compressReceiptImageIfNeeded(raw);
-      fd.set("file", compressed, compressed.name);
+      fd.append("file", compressed, compressed.name);
     }
     formAction(fd);
   }
@@ -98,12 +112,10 @@ export function ReceiptUploadForm({
         onDrop={(e) => {
           e.preventDefault();
           setDragOver(false);
-          const file = e.dataTransfer.files?.[0];
-          if (!file || !fileInputRef.current) return;
-          const dt = new DataTransfer();
-          dt.items.add(file);
-          fileInputRef.current.files = dt.files;
-          applyFile(file);
+          const dropped = e.dataTransfer.files;
+          if (!dropped?.length || !fileInputRef.current) return;
+          fileInputRef.current.files = dropped;
+          applyFiles(dropped);
         }}
         className={`rounded-xl border-2 border-dashed p-4 transition-colors ${
           dragOver
@@ -113,8 +125,8 @@ export function ReceiptUploadForm({
       >
         <p className="text-xs text-zinc-500">
           <strong className="text-zinc-700 dark:text-zinc-300">Drop a photo here</strong>{" "}
-          or use the file picker. HEIC/iPhone photos convert to JPEG automatically. Large
-        photos are compressed before upload.
+          or use the file picker (multiple files OK). HEIC/iPhone photos convert to JPEG
+          automatically. Large photos are compressed before upload.
         </p>
         {previewUrl ? (
           <div className="mt-3 flex items-start gap-3">
@@ -141,9 +153,10 @@ export function ReceiptUploadForm({
               type="file"
               accept="image/*,image/heic,image/heif,application/pdf"
               capture="environment"
+              multiple
               required
               className="mt-1 block w-full text-sm"
-              onChange={(e) => applyFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => applyFiles(e.target.files)}
             />
           </div>
           <div>
@@ -177,10 +190,15 @@ export function ReceiptUploadForm({
           className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
         />
       </div>
-      <label className="flex cursor-pointer items-start gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+      <label
+        className={`flex items-start gap-2 text-xs text-zinc-600 dark:text-zinc-400 ${
+          fileCount > 1 ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+        }`}
+      >
         <input
           type="checkbox"
           checked={autoPost}
+          disabled={fileCount > 1}
           onChange={(e) => setAutoPost(e.target.checked)}
           className="mt-0.5"
         />
@@ -188,8 +206,9 @@ export function ReceiptUploadForm({
           <strong className="text-zinc-800 dark:text-zinc-200">
             Auto-post total when OCR finishes
           </strong>{" "}
-          — only when confidence is OK, total is under $5,000, and no matching
-          expense was posted in the last 7 days.
+          {fileCount > 1
+            ? "— available for single-file uploads only."
+            : "— only when confidence is OK, total is under $5,000, and no matching expense was posted in the last 7 days."}
         </span>
       </label>
       <button
@@ -197,7 +216,7 @@ export function ReceiptUploadForm({
         disabled={pending}
         className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-60"
       >
-        {pending ? "Uploading…" : "Upload receipt"}
+        {pending ? "Uploading…" : "Upload receipt(s)"}
       </button>
     </form>
   );

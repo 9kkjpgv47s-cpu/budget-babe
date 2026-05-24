@@ -62,6 +62,7 @@ export function TaxFolderTable({
           <ExpenseTaxApplicabilityForm
             expenseId={e.id}
             taxYear={year}
+            yearMonth={e.yearMonth}
             initialApplicability={e.taxApplicability}
             initialCodeRef={e.taxCodeRefId}
             initialCategory={e.taxCategory}

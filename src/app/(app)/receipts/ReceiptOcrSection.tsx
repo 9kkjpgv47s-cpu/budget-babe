@@ -3,6 +3,7 @@ import {
   defaultExpenseDescriptionFromReceipt,
   inferSpentAtFromOcrText,
   parseMerchantFromOcrText,
+  receiptTotalDiffersFromLineSum,
   type ParsedReceiptLine,
 } from "@/lib/receiptOcr";
 import {
@@ -83,6 +84,11 @@ export async function ReceiptOcrSection({
     receipt.totalCents != null &&
     receipt.totalCents > 0;
 
+  const lineSumMismatch = receiptTotalDiffersFromLineSum(
+    receipt.totalCents,
+    parsed,
+  );
+
   const postWarnings = canQuickPost
     ? (
         await evaluateReceiptPostSafety({
@@ -152,6 +158,12 @@ export async function ReceiptOcrSection({
               </>
             ) : null}
           </p>
+          {lineSumMismatch ? (
+            <p className="mt-2 text-[11px] text-amber-800 dark:text-amber-200">
+              Parsed lines sum to {formatCents(lineSumMismatch.lineSumCents)} but OCR
+              total is {formatCents(receipt.totalCents!)} — confirm before posting.
+            </p>
+          ) : null}
           {canQuickPost ? (
             <ReceiptQuickPostButton
               receiptId={receipt.id}

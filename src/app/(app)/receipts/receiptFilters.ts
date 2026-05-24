@@ -9,6 +9,8 @@ export type ReceiptListRow = {
   ocrStatus: string;
   totalCents: number | null;
   expenseCount: number;
+  /** Lowercased filename, note, merchant guess for search */
+  searchText?: string;
 };
 
 export function parseReceiptFilter(raw: string | undefined): ReceiptFilter {
@@ -49,9 +51,10 @@ export function filterReceipts(
       if (r.ocrStatus !== "failed" && r.ocrStatus !== "skipped") return false;
     }
     if (!q) return true;
-    const label = displayFilename(r.filename).toLowerCase();
-    const note = (r.note ?? "").toLowerCase();
-    return label.includes(q) || note.includes(q);
+    const haystack =
+      r.searchText ??
+      `${displayFilename(r.filename)} ${r.note ?? ""}`.toLowerCase();
+    return haystack.includes(q);
   });
 }
 

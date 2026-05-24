@@ -30,7 +30,9 @@ export async function GET(req: Request) {
   const href =
     needsPostingCount > 0
       ? `/receipts?ym=${yearMonth}&filter=ready`
-      : `/receipts?ym=${yearMonth}`;
+      : pendingCount > 0
+        ? `/receipts?ym=${yearMonth}&filter=processing`
+        : `/receipts?ym=${yearMonth}`;
 
   return NextResponse.json({
     count: pendingCount,

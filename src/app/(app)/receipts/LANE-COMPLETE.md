@@ -33,6 +33,15 @@ Receipt capture, OCR, discoverability, and posting to spending. All items below 
 - `GET /api/receipts/ocr-pending` — nav badge counts
 - `GET /api/receipts/export` — month metadata CSV
 
+## Polish (phase 12)
+
+- **Multi-file upload** (up to 12) with shared optional note/total
+- Receipt search includes OCR **merchant guess**
+- Warning when parsed line sum ≠ OCR total
+- Nav deep-link to **Processing** filter while OCR runs
+- Ready queue quick post shows safety warnings
+- Tax folder: link to scan receipt when documentation required but unlinked
+
 ## Polish (phase 11)
 
 - `ReceiptsNavLink` — mobile + desktop badges; deep-link to **Ready** when items need posting

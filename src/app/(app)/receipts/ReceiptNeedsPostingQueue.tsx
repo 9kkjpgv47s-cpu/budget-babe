@@ -11,6 +11,7 @@ type QueueReceipt = {
   ocrStatus: string;
   ocrConfidence: number | null;
   descriptionHint: string;
+  warnings?: string[];
 };
 
 export function ReceiptNeedsPostingQueue({
@@ -60,6 +61,7 @@ export function ReceiptNeedsPostingQueue({
                   totalCents={r.totalCents}
                   descriptionHint={r.descriptionHint}
                   ocrConfidence={r.ocrConfidence}
+                  warnings={r.warnings}
                 />
               ) : null}
               <Link

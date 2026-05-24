@@ -33,35 +33,38 @@ function revalidateMoneyFromReceipt(yearMonth: string) {
   revalidatePath("/tax");
 }
 
-export async function uploadReceiptCore(
-  formData: FormData,
-): Promise<FormActionState> {
-  const user = await requireUser();
-  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
-  const note = String(formData.get("note") ?? "").trim() || null;
-  const total = parseMoneyToCents(String(formData.get("total") ?? ""));
-  const file = formData.get("file");
-  if (!yearMonth || !(file instanceof File) || file.size === 0) {
-    return { error: "Choose a file and month." };
-  }
-  if (file.size > 8 * 1024 * 1024) {
-    return { error: "File must be 8MB or smaller." };
-  }
+const MAX_RECEIPT_UPLOAD_FILES = 12;
+
+function isAllowedReceiptFile(file: File): boolean {
   const name = file.name.toLowerCase();
   const mime = (file.type || "").toLowerCase();
-  const allowed =
+  return (
     mime.startsWith("image/") ||
     mime === "application/pdf" ||
     name.endsWith(".pdf") ||
     name.endsWith(".heic") ||
     name.endsWith(".heif") ||
-    /\.(jpe?g|png|webp|gif|bmp|tiff?)$/.test(name);
-  if (!allowed) {
+    /\.(jpe?g|png|webp|gif|bmp|tiff?)$/.test(name)
+  );
+}
+
+async function persistOneReceiptUpload(params: {
+  userId: string;
+  periodId: string;
+  file: File;
+  note: string | null;
+  totalCents: number | null;
+}): Promise<{ ok: true; receiptId: string } | { ok: false; error: string }> {
+  const { userId, periodId, file, note, totalCents } = params;
+  if (file.size > 8 * 1024 * 1024) {
+    return { ok: false, error: `${file.name}: must be 8MB or smaller.` };
+  }
+  if (!isAllowedReceiptFile(file)) {
     return {
-      error: "Use a photo (JPEG, PNG, HEIC, …) or PDF receipt.",
+      ok: false,
+      error: `${file.name}: use a photo (JPEG, PNG, HEIC, …) or PDF.`,
     };
   }
-  const period = await getOrCreateMonthlyPeriod(yearMonth);
   const rawBytes = Buffer.from(await file.arrayBuffer());
   const normalized = await normalizeReceiptImageBuffer(rawBytes, file.name);
   const storagePath = await saveReceiptUpload({
@@ -70,24 +73,61 @@ export async function uploadReceiptCore(
   });
   const rec = await prisma.receipt.create({
     data: {
-      monthlyPeriodId: period.id,
-      userId: user.userId,
+      monthlyPeriodId: periodId,
+      userId,
       filename: storagePath,
       note,
-      totalCents: total,
+      totalCents,
       ocrStatus: "pending",
     },
   });
   after(() => {
     void import("@/lib/receiptOcr").then((m) => m.processReceiptOcrFile(rec.id));
   });
+  return { ok: true, receiptId: rec.id };
+}
+
+export async function uploadReceiptCore(
+  formData: FormData,
+): Promise<FormActionState> {
+  const user = await requireUser();
+  const yearMonth = String(formData.get("yearMonth") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim() || null;
+  const total = parseMoneyToCents(String(formData.get("total") ?? ""));
+  const files = formData
+    .getAll("file")
+    .filter((f): f is File => f instanceof File && f.size > 0);
+  if (!yearMonth || files.length === 0) {
+    return { error: "Choose a file and month." };
+  }
+  if (files.length > MAX_RECEIPT_UPLOAD_FILES) {
+    return {
+      error: `Upload at most ${MAX_RECEIPT_UPLOAD_FILES} receipts at once.`,
+    };
+  }
+  const period = await getOrCreateMonthlyPeriod(yearMonth);
+  const receiptIds: string[] = [];
+  for (const file of files) {
+    const result = await persistOneReceiptUpload({
+      userId: user.userId,
+      periodId: period.id,
+      file,
+      note,
+      totalCents: total,
+    });
+    if (!result.ok) return { error: result.error };
+    receiptIds.push(result.receiptId);
+  }
   revalidateMoneyFromReceipt(yearMonth);
   let message: string | undefined;
-  if (total != null && total > 0) {
+  if (files.length > 1) {
+    message = `Uploaded ${files.length} receipts — OCR is running on each.`;
+  }
+  if (total != null && total > 0 && receiptIds.length === 1) {
     const similar = await prisma.receipt.findFirst({
       where: {
         monthlyPeriodId: period.id,
-        id: { not: rec.id },
+        id: { not: receiptIds[0]! },
         totalCents: total,
         uploadedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
       },
@@ -98,7 +138,11 @@ export async function uploadReceiptCore(
         "Uploaded. Note: another receipt with the same total was added in the last 7 days.";
     }
   }
-  return { ok: true, receiptId: rec.id, message };
+  return {
+    ok: true,
+    receiptId: receiptIds[receiptIds.length - 1],
+    message,
+  };
 }
 
 export async function uploadReceiptAction(

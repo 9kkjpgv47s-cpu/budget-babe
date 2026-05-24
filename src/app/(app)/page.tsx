@@ -602,7 +602,7 @@ export default async function HomePage({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-medium">Receipts this month</h2>
           <Link
-            href={`/receipts?ym=${yearMonth}`}
+            href={`/receipts?ym=${yearMonth}#upload`}
             className="text-sm text-emerald-600 underline"
           >
             Manage receipts

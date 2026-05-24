@@ -19,7 +19,7 @@ export function ReceiptSearchForm({
         name="q"
         type="search"
         defaultValue={query}
-        placeholder="Search filename or note…"
+        placeholder="Search filename, note, or store…"
         className="min-w-[12rem] flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
       />
       <button

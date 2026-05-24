@@ -126,3 +126,17 @@ export function inferTotalFromParsedLines(
   if (sum <= 0 || sum >= 1_000_000_00) return null;
   return sum;
 }
+
+/** True when OCR total and sum of line items disagree materially. */
+export function receiptTotalDiffersFromLineSum(
+  totalCents: number | null,
+  lines: ParsedReceiptLine[],
+): { lineSumCents: number; diffCents: number } | null {
+  if (totalCents == null || totalCents <= 0) return null;
+  const lineSumCents = inferTotalFromParsedLines(lines);
+  if (lineSumCents == null) return null;
+  const diffCents = Math.abs(lineSumCents - totalCents);
+  const threshold = Math.max(50, Math.round(totalCents * 0.05));
+  if (diffCents <= threshold) return null;
+  return { lineSumCents, diffCents };
+}
