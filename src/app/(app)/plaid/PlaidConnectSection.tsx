@@ -9,6 +9,14 @@ export function PlaidConnectSection({ configured }: { configured: boolean }) {
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  // OAuth institutions (Chase, BofA, …) bounce the browser to PLAID_REDIRECT_URI
+  // with ?oauth_state_id=… — capture it once so Link can resume.
+  const [oauthRedirectUri] = useState<string | null>(() =>
+    typeof window !== "undefined" &&
+    window.location.href.includes("oauth_state_id")
+      ? window.location.href
+      : null,
+  );
 
   const onSuccess = useCallback(
     async (publicToken: string) => {
@@ -35,7 +43,8 @@ export function PlaidConnectSection({ configured }: { configured: boolean }) {
   );
 
   const { open, ready } = usePlaidLink({
-    token: linkToken,
+    token: oauthRedirectUri ? null : linkToken,
+    receivedRedirectUri: oauthRedirectUri ?? undefined,
     onSuccess,
     onExit: () => {
       setLinkToken(null);
@@ -43,10 +52,10 @@ export function PlaidConnectSection({ configured }: { configured: boolean }) {
   });
 
   useEffect(() => {
-    if (linkToken && ready) {
+    if (ready && (linkToken || oauthRedirectUri)) {
       open();
     }
-  }, [linkToken, ready, open]);
+  }, [linkToken, oauthRedirectUri, ready, open]);
 
   async function startLink() {
     if (!configured) return;
