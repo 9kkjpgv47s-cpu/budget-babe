@@ -55,32 +55,30 @@ async function refreshAccounts(
 ): Promise<Map<string, { syncToExpenses: boolean }>> {
   const toggles = new Map<string, { syncToExpenses: boolean }>();
   for (const a of accounts) {
-    const row = await prisma.plaidAccount.upsert({
+    const shared = {
+      plaidItemId: plaidRowId,
+      name: a.name || "Account",
+      officialName: a.official_name ?? null,
+      mask: a.mask ?? null,
+      type: String(a.type ?? "other"),
+      subtype: a.subtype ? String(a.subtype) : null,
+      currentBalanceCents: toCents(a.balances?.current),
+      availableBalanceCents: toCents(a.balances?.available),
+      currency:
+        a.balances?.iso_currency_code ?? a.balances?.unofficial_currency_code ?? null,
+    };
+    const existing = await prisma.plaidAccount.findUnique({
       where: { accountId: a.account_id },
-      create: {
-        plaidItemId: plaidRowId,
-        accountId: a.account_id,
-        name: a.name || "Account",
-        officialName: a.official_name ?? null,
-        mask: a.mask ?? null,
-        type: String(a.type ?? "other"),
-        subtype: a.subtype ? String(a.subtype) : null,
-        currentBalanceCents: toCents(a.balances?.current),
-        availableBalanceCents: toCents(a.balances?.available),
-        currency: a.balances?.iso_currency_code ?? a.balances?.unofficial_currency_code ?? null,
-      },
-      update: {
-        plaidItemId: plaidRowId,
-        name: a.name || "Account",
-        officialName: a.official_name ?? null,
-        mask: a.mask ?? null,
-        type: String(a.type ?? "other"),
-        subtype: a.subtype ? String(a.subtype) : null,
-        currentBalanceCents: toCents(a.balances?.current),
-        availableBalanceCents: toCents(a.balances?.available),
-        currency: a.balances?.iso_currency_code ?? a.balances?.unofficial_currency_code ?? null,
-      },
     });
+    // Neon HTTP adapter has no transaction API — upsert is unsafe there.
+    const row = existing
+      ? await prisma.plaidAccount.update({
+          where: { accountId: a.account_id },
+          data: shared,
+        })
+      : await prisma.plaidAccount.create({
+          data: { ...shared, accountId: a.account_id },
+        });
     toggles.set(a.account_id, { syncToExpenses: row.syncToExpenses });
     await upsertNetWorthAccount(institutionName, a);
   }
