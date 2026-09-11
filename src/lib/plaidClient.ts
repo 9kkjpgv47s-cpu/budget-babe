@@ -24,6 +24,13 @@ function normalizeEnvCredential(raw: string | undefined, key: string): string | 
   return value || null;
 }
 
+/** Placeholder-looking values ("real-client-id-here", "your_key", …) should
+ *  surface as "not configured", not as a Plaid API 400. */
+function looksLikePlaceholder(value: string | null): boolean {
+  if (!value) return true;
+  return /your|real|xxx|example|placeholder|-here|change-?me/i.test(value);
+}
+
 export function getPlaidCredentials(): {
   clientId: string;
   secret: string;
@@ -36,6 +43,7 @@ export function getPlaidCredentials(): {
     raw === "development" || raw === "production" ? raw : "sandbox"
   ) as PlaidEnvName;
   if (!clientId || !secret) return null;
+  if (looksLikePlaceholder(clientId) || looksLikePlaceholder(secret)) return null;
   return { clientId, secret, env };
 }
 

@@ -70,10 +70,11 @@ export function PlaidConnectSection({ configured }: { configured: boolean }) {
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
         <p className="font-medium">Plaid is not configured on this server.</p>
         <p className="mt-2 text-amber-900/90 dark:text-amber-100/80">
-          Add <code className="rounded bg-amber-100/80 px-1 py-0.5 text-xs dark:bg-amber-900/60">PLAID_CLIENT_ID</code>,{" "}
-          <code className="rounded bg-amber-100/80 px-1 py-0.5 text-xs dark:bg-amber-900/60">PLAID_SECRET</code>, and{" "}
-          <code className="rounded bg-amber-100/80 px-1 py-0.5 text-xs dark:bg-amber-900/60">PLAID_ENV</code>{" "}
-          (<span className="whitespace-nowrap">sandbox</span>, development, or production), then restart the app.
+          Set real values for <code className="rounded bg-amber-100/80 px-1 py-0.5 text-xs dark:bg-amber-900/60">PLAID_CLIENT_ID</code> and{" "}
+          <code className="rounded bg-amber-100/80 px-1 py-0.5 text-xs dark:bg-amber-900/60">PLAID_SECRET</code> from the{" "}
+          Plaid Dashboard (Team Settings → Keys), matching <code className="rounded bg-amber-100/80 px-1 py-0.5 text-xs dark:bg-amber-900/60">PLAID_ENV</code>{" "}
+          (<span className="whitespace-nowrap">sandbox</span>, development, or production). Placeholder values count as
+          &quot;not configured&quot; — update them in Vercel env vars and redeploy.
         </p>
       </div>
     );
