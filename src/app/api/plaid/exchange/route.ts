@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { getPlaidApi } from "@/lib/plaidClient";
+import { encryptAccessToken } from "@/lib/plaidToken";
 import { prisma } from "@/lib/prisma";
 import { formatPlaidError } from "@/lib/plaidError";
 
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     await prisma.plaidItem.create({
       data: {
         itemId: item_id,
-        accessToken: access_token,
+        accessToken: encryptAccessToken(access_token),
         institutionId: it.institution_id ?? null,
         institutionName,
         userId: session.user.userId,

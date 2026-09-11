@@ -161,7 +161,7 @@ model MerchantRule {
   createdAt  DateTime  @default(now())
 }
 
-/// Linked bank institution via Plaid Link (access token stored — encrypt in production)
+/// Linked bank institution via Plaid Link (access token encrypted when PLAID_TOKEN_ENC_KEY is set)
 model PlaidItem {
   id                  String    @id @default(cuid())
   itemId              String    @unique
@@ -171,11 +171,40 @@ model PlaidItem {
   userId              String?
   user                User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   transactionsCursor  String?
+  lastSyncAt          DateTime?
+  /// Last Plaid/user-facing sync error (e.g. ITEM_LOGIN_REQUIRED — needs re-link)
+  lastSyncError       String?
+  accounts            PlaidAccount[]
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 }
 
-/// Simple manual debt tracking (no bank sync)
+/// One bank/credit/loan/investment account under a linked Plaid item.
+/// accountId is Plaid's stable account_id — survives item re-link.
+model PlaidAccount {
+  id                     String     @id @default(cuid())
+  plaidItemId            String
+  plaidItem              PlaidItem  @relation(fields: [plaidItemId], references: [id], onDelete: Cascade)
+  accountId              String     @unique
+  name                   String
+  officialName           String?
+  mask                   String?
+  /// depository | credit | loan | investment | other
+  type                   String
+  subtype                String?
+  currentBalanceCents    Int?
+  availableBalanceCents  Int?
+  currency               String?
+  /// When false, this account's transactions do not import as expenses
+  /// (exclude savings, own-account transfers, business cards, etc.)
+  syncToExpenses         Boolean    @default(true)
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+
+  @@index([plaidItemId])
+}
+
+/// Debt tracking — rows with plaidAccountId are auto-filled from Plaid liabilities/balances
 model DebtAccount {
   id                  String   @id @default(cuid())
   name                String
@@ -183,11 +212,13 @@ model DebtAccount {
   minimumPaymentCents Int?
   aprPercent          Float?
   note                String?
+  /// Plaid account_id when this row is synced from a linked account (decoupled, survives re-link)
+  plaidAccountId      String?  @unique
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }
 
-/// Manual asset/liability for net worth (no bank sync)
+/// Asset/liability for net worth — rows with plaidAccountId are auto-filled from Plaid balances
 model NetWorthAccount {
   id           String   @id @default(cuid())
   kind         String
@@ -195,6 +226,8 @@ model NetWorthAccount {
   balanceCents Int
   sortOrder    Int      @default(0)
   note         String?
+  /// Plaid account_id when this row is synced from a linked account (decoupled, survives re-link)
+  plaidAccountId String? @unique
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }

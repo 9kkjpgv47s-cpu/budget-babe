@@ -55,8 +55,11 @@ See **[docs/STATE_OF_THE_ART_GAPS.md](./docs/STATE_OF_THE_ART_GAPS.md)** for a f
 
 ### Plaid (optional bank sync)
 
-- **`/plaid`**: connect an institution with **Plaid Link** (Transactions product), then **Sync transactions** to import posted rows as expenses (deduped by Plaid transaction id). Each household user links under their own login; **Disconnect** revokes the item at Plaid when possible and removes the local row.
-- Environment: `PLAID_CLIENT_ID`, `PLAID_SECRET`, and `PLAID_ENV` (`sandbox` | `development` | `production`). See `.env.example`. Treat stored access tokens as secrets (encrypt at rest in production).
+- **`/plaid`**: connect an institution with **Plaid Link**, then **Sync transactions** (or **Sync all**) to import posted rows as expenses (deduped by Plaid transaction id; `modified`/`removed` updates apply on later syncs). Each household user links under their own login; **Disconnect** revokes the item at Plaid when possible and removes the local row.
+- **What syncs:** posted outflows only — deposits, refunds, and transfers between your own accounts are counted but never become expenses. Per-account **"to expenses"** toggles exclude accounts (savings, business cards) from import. Account balances auto-fill **Net worth** rows; with the Liabilities product, credit-card APRs/minimums and loan terms auto-fill **Debt** rows.
+- **Auto-sync:** set `PLAID_WEBHOOK_URL` to `https://<app>/api/plaid/webhook` and new links register signed webhooks — transactions import themselves (1–4×/day per institution).
+- **History:** new links request 24 months (`days_requested: 730`). Links created before that option only have 90 days — disconnect and re-link to extend.
+- Environment: `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV` (`sandbox` | `development` | `production`); optional `PLAID_WEBHOOK_URL`, `PLAID_TOKEN_ENC_KEY` (encrypts stored access tokens, AES-256-GCM), `PLAID_OPTIONAL_PRODUCTS` (e.g. `liabilities,investments`). See `docs/PLAID.md` for products, limits, and cost.
 
 ### Envelope rollover
 

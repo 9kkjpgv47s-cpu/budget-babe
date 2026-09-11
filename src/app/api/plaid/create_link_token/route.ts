@@ -4,6 +4,25 @@ import { getSession } from "@/lib/auth";
 import { getPlaidApi } from "@/lib/plaidClient";
 import { formatPlaidError } from "@/lib/plaidError";
 
+const OPTIONAL_PRODUCT_MAP: Record<string, Products> = {
+  liabilities: Products.Liabilities,
+  investments: Products.Investments,
+  recurring: Products.RecurringTransactions,
+  income: Products.Income,
+  identity: Products.Identity,
+  statements: Products.Statements,
+};
+
+/** Extra products requested at Link time — e.g. PLAID_OPTIONAL_PRODUCTS=liabilities,investments */
+function optionalProducts(): Products[] {
+  const raw = process.env.PLAID_OPTIONAL_PRODUCTS?.trim();
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => OPTIONAL_PRODUCT_MAP[s.trim().toLowerCase()])
+    .filter((p): p is Products => Boolean(p));
+}
+
 export async function POST() {
   const session = await getSession();
   if (!session.user) {
@@ -21,13 +40,22 @@ export async function POST() {
   }
   try {
     const redirectUri = process.env.PLAID_REDIRECT_URI?.trim();
+    const webhookUrl = process.env.PLAID_WEBHOOK_URL?.trim();
+    const optional = optionalProducts();
     const request: Parameters<typeof client.linkTokenCreate>[0] = {
       user: { client_user_id: session.user.userId },
       client_name: "Household Budget",
       products: [Products.Transactions],
       country_codes: [CountryCode.Us],
       language: "en",
+      transactions: { days_requested: 730 },
     };
+    if (optional.length > 0) {
+      request.optional_products = optional;
+    }
+    if (webhookUrl) {
+      request.webhook = webhookUrl;
+    }
     if (redirectUri) {
       request.redirect_uri = redirectUri;
     }

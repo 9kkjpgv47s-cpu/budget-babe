@@ -5,6 +5,7 @@ import { currentYearMonth } from "@/lib/yearMonth";
 import { PlaidConnectSection } from "./PlaidConnectSection";
 import { PlaidItemRow } from "./PlaidItemRow";
 import { PlaidMonthNote } from "./PlaidMonthNote";
+import { PlaidSyncAllButton } from "./PlaidSyncAllButton";
 
 export default async function PlaidPage({
   searchParams,
@@ -25,6 +26,20 @@ export default async function PlaidPage({
       itemId: true,
       createdAt: true,
       transactionsCursor: true,
+      lastSyncAt: true,
+      lastSyncError: true,
+      accounts: {
+        orderBy: { name: "asc" },
+        select: {
+          id: true,
+          name: true,
+          mask: true,
+          type: true,
+          subtype: true,
+          currentBalanceCents: true,
+          syncToExpenses: true,
+        },
+      },
     },
   });
 
@@ -33,9 +48,10 @@ export default async function PlaidPage({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Bank sync (Plaid)</h1>
         <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Connect your institution with Plaid Link, then run <strong>Sync transactions</strong> to pull posted
-          transactions into this household app as expenses (deduped). Pending transactions are skipped until they
-          post.
+          Connect your institution with Plaid Link, then sync pulls posted transactions into expenses
+          (deduped), refreshes account balances into <strong>Net worth</strong>, and fills{" "}
+          <strong>Debt</strong> when the Liabilities product is enabled. Deposits, refunds, and
+          transfers between your own accounts are never imported as spending.
         </p>
       </div>
 
@@ -47,7 +63,10 @@ export default async function PlaidPage({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium">Your linked accounts</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-medium">Your linked accounts</h2>
+          {items.length > 1 ? <PlaidSyncAllButton /> : null}
+        </div>
         {items.length === 0 ? (
           <p className="text-sm text-zinc-500">No banks linked yet for {user.name}.</p>
         ) : (
@@ -62,6 +81,9 @@ export default async function PlaidPage({
                   itemId: it.itemId,
                   createdAt: it.createdAt.toISOString(),
                   transactionsCursor: it.transactionsCursor,
+                  lastSyncAt: it.lastSyncAt?.toISOString() ?? null,
+                  lastSyncError: it.lastSyncError,
+                  accounts: it.accounts,
                 }}
               />
             ))}
@@ -70,8 +92,11 @@ export default async function PlaidPage({
       </section>
 
       <p className="text-xs text-zinc-500">
-        Access tokens are stored in your database — use encryption at rest in production. This integration uses the
-        Transactions product and <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">/transactions/sync</code>.
+        Access tokens are AES-256-GCM encrypted at rest when <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">PLAID_TOKEN_ENC_KEY</code>{" "}
+        is set. Auto-sync runs on Plaid webhooks when{" "}
+        <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">PLAID_WEBHOOK_URL</code> is set
+        (e.g. <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">https://your-app.vercel.app/api/plaid/webhook</code>).
+        New links request 24 months of history.
       </p>
     </div>
   );
