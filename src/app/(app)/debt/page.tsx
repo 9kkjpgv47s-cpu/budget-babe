@@ -27,7 +27,7 @@ export default async function DebtPage({
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Debt (manual)</h1>
-        <p className="mt-1 text-sm text-zinc-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Track balances and minimums — edit in place or remove.
         </p>
         <div className="mt-2">
@@ -39,19 +39,19 @@ export default async function DebtPage({
 
       <DebtCashFlowCompare yearMonth={yearMonth} />
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">Totals</h2>
         <p className="mt-2 text-lg font-semibold tabular-nums">
           {formatCents(total)} owed
         </p>
         {minTotal ? (
-          <p className="text-sm text-zinc-600">
+          <p className="text-sm text-muted-foreground">
             Minimum payments (sum): {formatCents(minTotal)}
           </p>
         ) : null}
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">Add account</h2>
         <form action={addDebtAccountAction} className="mt-4 grid gap-2 sm:grid-cols-2">
           <input
@@ -93,9 +93,9 @@ export default async function DebtPage({
         </form>
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">Accounts</h2>
-        <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
+        <ul className="mt-4 divide-y divide-border">
           {accounts.map((a) => (
             <li
               key={a.id}
@@ -103,17 +103,17 @@ export default async function DebtPage({
             >
               <div>
                 <div className="font-medium">{a.name}</div>
-                <div className="tabular-nums text-zinc-700 dark:text-zinc-300">
+                <div className="tabular-nums text-foreground">
                   {formatCents(a.balanceCents)}
                 </div>
                 {a.minimumPaymentCents != null ? (
-                  <div className="text-xs text-zinc-500">
+                  <div className="text-xs text-muted-foreground">
                     Min {formatCents(a.minimumPaymentCents)}
                     {a.aprPercent != null ? ` · ${a.aprPercent}% APR` : ""}
                   </div>
                 ) : null}
                 {a.note ? (
-                  <div className="text-xs text-zinc-500">{a.note}</div>
+                  <div className="text-xs text-muted-foreground">{a.note}</div>
                 ) : null}
               </div>
               <form action={updateDebtAccountAction} className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -121,13 +121,13 @@ export default async function DebtPage({
                 <input
                   name="name"
                   defaultValue={a.name}
-                  className="sm:col-span-2 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+                  className="sm:col-span-2 rounded border border-border px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
                 />
                 <input
                   name="balance"
                   defaultValue={(a.balanceCents / 100).toFixed(2)}
                   inputMode="decimal"
-                  className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+                  className="rounded border border-border px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
                 />
                 <input
                   name="minimumPayment"
@@ -138,20 +138,20 @@ export default async function DebtPage({
                   }
                   placeholder="Min pay"
                   inputMode="decimal"
-                  className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+                  className="rounded border border-border px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
                 />
                 <input
                   name="apr"
                   defaultValue={a.aprPercent != null ? String(a.aprPercent) : ""}
                   placeholder="APR %"
                   inputMode="decimal"
-                  className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
+                  className="rounded border border-border px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
                 />
                 <input
                   name="note"
                   defaultValue={a.note ?? ""}
                   placeholder="Note"
-                  className="sm:col-span-2 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+                  className="sm:col-span-2 rounded border border-border px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
                 />
                 <button
                   type="submit"
@@ -173,7 +173,7 @@ export default async function DebtPage({
           ))}
         </ul>
         {accounts.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500">No debt accounts yet.</p>
+          <p className="mt-2 text-sm text-muted-foreground">No debt accounts yet.</p>
         ) : null}
       </section>
     </div>

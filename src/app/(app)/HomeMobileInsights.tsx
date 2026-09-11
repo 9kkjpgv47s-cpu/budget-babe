@@ -74,8 +74,8 @@ function semanticToneForValue(value: number): {
     };
   }
   return {
-    text: "text-emerald-600 dark:text-emerald-400",
-    pill: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+    text: "text-accent ",
+    pill: "bg-emerald-50 text-accent dark:bg-emerald-950/40 ",
   };
 }
 
@@ -156,7 +156,7 @@ export function HomeMobileInsights({
 
   return (
     <>
-      <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="rounded-2xl border border-border bg-white p-4 shadow-sm dark:border-border dark:bg-zinc-900">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 font-semibold">
             <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
@@ -164,7 +164,7 @@ export function HomeMobileInsights({
             </span>
             Two-week trend
           </h2>
-          <p className="text-xs text-zinc-600 dark:text-zinc-300">
+          <p className="text-xs text-muted-foreground">
             Projected end-of-period cash included
           </p>
         </div>
@@ -176,8 +176,8 @@ export function HomeMobileInsights({
               onClick={() => setTrendIdx(idx)}
               className={`min-h-10 rounded-lg border px-2 py-1 text-xs font-semibold transition-all duration-200 active:scale-[0.98] motion-reduce:transition-none ${
                 idx === trendIdx
-                  ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm dark:bg-emerald-950/30 dark:text-emerald-300"
-                  : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+                  ? "border-emerald-500 bg-emerald-50 text-accent shadow-sm dark:bg-emerald-950/30 "
+                  : "border-zinc-300 text-muted-foreground hover:border-zinc-400 hover:bg-muted dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
               }`}
             >
               {m.yearMonth}
@@ -189,7 +189,7 @@ export function HomeMobileInsights({
             {selectedTrend.slices.map((slice) => (
               <div
                 key={slice.label}
-                className="min-w-[88%] snap-start rounded-xl border border-zinc-200 bg-zinc-50 p-3 transition-shadow duration-200 hover:shadow-sm dark:border-zinc-700 dark:bg-zinc-950 sm:min-w-[48%]"
+                className="min-w-[88%] snap-start rounded-xl border border-border bg-muted p-3 transition-shadow duration-200 hover:shadow-sm dark:border-zinc-700 dark:bg-zinc-950 sm:min-w-[48%]"
               >
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-medium">{slice.label}</div>
@@ -230,13 +230,13 @@ export function HomeMobileInsights({
             ))}
           </div>
         </div>
-        <div className="mt-3 rounded-xl bg-zinc-50 p-3 text-xs dark:bg-zinc-950">
+        <div className="mt-3 rounded-xl bg-muted p-3 text-xs dark:bg-zinc-950">
           <div className="flex justify-between">
-            <span className="text-zinc-600 dark:text-zinc-300">Income</span>
+            <span className="text-muted-foreground">Income</span>
             <span className="tabular-nums">{formatCents(selectedTrend.incomeCents)}</span>
           </div>
           <div className="mt-1 flex justify-between">
-            <span className="text-zinc-600 dark:text-zinc-300">
+            <span className="text-muted-foreground">
               Projected cash after spending plan
             </span>
             <span
@@ -250,18 +250,18 @@ export function HomeMobileInsights({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="rounded-2xl border border-border bg-white p-4 shadow-sm dark:border-border dark:bg-zinc-900">
         <h2 className="flex items-center gap-2 font-semibold">
           <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
             C
           </span>
           Spending calendar habits
         </h2>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+        <p className="mt-1 text-sm text-muted-foreground">
           Filter by budget line/category and review spending streaks by month.
         </p>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <label className="text-xs text-zinc-600 dark:text-zinc-300">
+          <label className="text-xs text-muted-foreground">
             Budget line
             <select
               value={selectedPlanId}
@@ -276,7 +276,7 @@ export function HomeMobileInsights({
               ))}
             </select>
           </label>
-          <label className="text-xs text-zinc-600 dark:text-zinc-300">
+          <label className="text-xs text-muted-foreground">
             Category
             <select
               value={selectedCategory}
@@ -319,7 +319,7 @@ export function HomeMobileInsights({
             selectedCategory,
           ).length === 0,
         ) ? (
-          <p className="mt-3 rounded-lg bg-zinc-50 p-3 text-sm text-zinc-600 dark:bg-zinc-950 dark:text-zinc-300">
+          <p className="mt-3 rounded-lg bg-muted p-3 text-sm text-muted-foreground dark:bg-zinc-950 dark:text-zinc-300">
             No spending matches the current filter for these months.
           </p>
         ) : null}
@@ -343,7 +343,7 @@ function TrendBar({
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-xs">
-        <span className="text-zinc-500">{label}</span>
+        <span className="text-muted-foreground">{label}</span>
         <span className="tabular-nums">{formatCents(value)}</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
@@ -375,12 +375,12 @@ function MonthCalendarCard({
   const monthTotal = sumCents([...totals.values()]);
 
   return (
-    <div className="rounded-xl border border-zinc-200 p-3 transition-shadow duration-200 hover:shadow-sm dark:border-zinc-700">
+    <div className="rounded-xl border border-border p-3 transition-shadow duration-200 hover:shadow-sm dark:border-zinc-700">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold">{yearMonth}</h3>
-        <span className="text-xs tabular-nums text-zinc-500">{formatCents(monthTotal)}</span>
+        <span className="text-xs tabular-nums text-muted-foreground">{formatCents(monthTotal)}</span>
       </div>
-      <p className="mb-2 text-[11px] text-zinc-500">
+      <p className="mb-2 text-[11px] text-muted-foreground">
         Longest streak:{" "}
         <span
           className={`font-semibold ${
@@ -388,13 +388,13 @@ function MonthCalendarCard({
               ? "text-red-600 dark:text-red-400"
               : longestStreak >= 2
                 ? "text-amber-600 dark:text-amber-400"
-                : "text-emerald-600 dark:text-emerald-400"
+                : "text-accent "
           }`}
         >
           {longestStreak} day(s)
         </span>
       </p>
-      <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-zinc-500">
+      <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-muted-foreground">
         {["S", "M", "T", "W", "T", "F", "S"].map((d, idx) => (
           <div key={`${d}-${idx}`}>{d}</div>
         ))}
@@ -412,11 +412,11 @@ function MonthCalendarCard({
               className={`rounded border p-1 text-center text-[10px] ${
                 spent > 0
                   ? "border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/30"
-                  : "border-zinc-200 dark:border-zinc-800"
+                  : "border-border"
               }`}
             >
               <div className="font-medium">{day}</div>
-              <div className="truncate tabular-nums text-[9px] text-zinc-500">
+              <div className="truncate tabular-nums text-[9px] text-muted-foreground">
                 {spent > 0 ? formatCents(spent) : "-"}
               </div>
             </div>

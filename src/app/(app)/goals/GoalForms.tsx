@@ -66,7 +66,7 @@ export function GoalForms({
 
       <div>
         <h2 className="font-medium">Spending adjustment</h2>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs text-muted-foreground">
           Planned cuts or extra monthly savings toward a goal.
         </p>
         <form action={addAdj} className="mt-3 grid gap-2">
@@ -98,7 +98,7 @@ export function GoalForms({
           <button
             type="submit"
             disabled={adjPending}
-            className="rounded-lg border border-zinc-300 py-2 text-sm font-medium hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-600 dark:hover:bg-zinc-800"
+            className="rounded-lg border border-zinc-300 py-2 text-sm font-medium hover:bg-muted disabled:opacity-60 dark:border-zinc-600 dark:hover:bg-zinc-800"
           >
             Save adjustment
           </button>
@@ -123,7 +123,7 @@ export function UpdateSavedForm({
     <form action={action} className="mt-2 flex flex-wrap items-end gap-2 text-sm">
       <input type="hidden" name="goalId" value={goalId} />
       <div>
-        <label className="text-xs text-zinc-500" htmlFor={`saved-${goalId}`}>
+        <label className="text-xs text-muted-foreground" htmlFor={`saved-${goalId}`}>
           Update saved
         </label>
         <input
@@ -137,7 +137,7 @@ export function UpdateSavedForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded bg-zinc-900 px-2 py-1 text-xs text-white disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
+        className="btn btn-primary"
       >
         Save
       </button>

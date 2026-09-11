@@ -15,6 +15,7 @@ import {
   toExpenseForRollup,
 } from "@/lib/expenseRollup";
 import { ensureDefaultCategories } from "@/lib/categories";
+import { MonthNav, PageHeader, StackedBar } from "@/components/ui";
 import { BudgetCopyHeader } from "./BudgetCopyHeader";
 import { BillRow, BillsSectionHeader } from "./BillRow";
 import { BudgetPlanRow } from "./BudgetPlanRow";
@@ -294,62 +295,93 @@ export default async function HomePage({
     ).values(),
   );
 
-  return (
-    <div className="space-y-8 md:space-y-10">
-      <div className="flex flex-wrap items-end justify-between gap-3 md:gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">This month</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-            Income, spending, bills before payday, and what is left.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <a
-            className="rounded px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            href={`/?ym=${prevYm}`}
-          >
-            ←
-          </a>
-          <span className="min-w-[7rem] text-center font-medium tabular-nums">
-            {yearMonth}
-          </span>
-          <a
-            className="rounded px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            href={`/?ym=${nextYm}`}
-          >
-            →
-          </a>
-        </div>
-      </div>
+  const monthLabel = parseYearMonth(yearMonth).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+  const heroSegments = [
+    { label: "Spent", valueCents: data.spentTotal, color: "#065f46" },
+    { label: "Bills due", valueCents: data.billsBeforePaySum, color: "#fcd34d" },
+    {
+      label: "Left",
+      valueCents: Math.max(0, data.leftAfterUpcomingBills),
+      color: "rgb(255 255 255 / 0.92)",
+    },
+  ];
 
-      <section className="rounded-2xl border-2 border-emerald-300 bg-emerald-50/60 p-4 shadow-sm dark:border-emerald-800 dark:bg-emerald-950/30">
+  return (
+    <div className="space-y-6 md:space-y-8">
+      <PageHeader
+        title={monthLabel}
+        subtitle="Income, spending, bills before payday, and what is left."
+        actions={<MonthNav yearMonth={yearMonth} prevYm={prevYm} nextYm={nextYm} />}
+      />
+
+      <section className="card overflow-hidden">
+        <div className="bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-500 p-5 text-white md:p-7">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/75">
+            Left to spend
+          </p>
+          <p className="stat-value mt-1 text-4xl tracking-tight md:text-[2.75rem]">
+            {formatCents(data.leftAfterUpcomingBills)}
+          </p>
+          <p className="mt-1.5 text-sm text-white/80">
+            {data.nextPaycheckDate
+              ? `Income minus spending and bills due before ${data.nextPaycheckDate.toLocaleDateString()}`
+              : "Income minus spending and upcoming bills"}
+          </p>
+          <div className="mt-6">
+            <StackedBar trackColor="rgb(255 255 255 / 0.25)" segments={heroSegments} />
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-white/85">
+              {heroSegments.map((s) => (
+                <span key={s.label} className="inline-flex items-center gap-1.5">
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ background: s.color }}
+                  />
+                  {s.label} · {formatCents(s.valueCents)}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 divide-border sm:grid-cols-4 sm:divide-x">
+          {[
+            { label: "Income", value: formatCents(data.incomeCents) },
+            { label: "Spent", value: formatCents(data.spentTotal) },
+            { label: "Bills before payday", value: formatCents(data.billsBeforePaySum) },
+            { label: "Left after all bills", value: formatCents(data.leftAfterAllBills) },
+          ].map((s) => (
+            <div key={s.label} className="px-4 py-3.5">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                {s.label}
+              </p>
+              <p className="stat-value mt-0.5 text-lg">{s.value}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="card p-4 md:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-emerald-900 dark:text-emerald-100">
-              Add entries first
-            </h2>
-            <p className="mt-1 text-sm text-emerald-900/80 dark:text-emerald-100/80">
-              Primary input zone for {yearMonth}: spending, bills, envelopes, and paychecks.
+            <h2 className="text-base font-semibold">Quick add</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Spending, bills, envelopes, and paychecks for {monthLabel}.
             </p>
           </div>
           <div className="flex gap-2">
-            <Link
-              href="/receipts"
-              className="rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm font-semibold text-emerald-800 transition-all duration-200 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900/60"
-            >
+            <Link href="/receipts" className="btn btn-outline">
               Receipt upload
             </Link>
-            <Link
-              href={`/expenses?ym=${yearMonth}`}
-              className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-all duration-200 hover:bg-emerald-500"
-            >
+            <Link href={`/expenses?ym=${yearMonth}`} className="btn btn-primary">
               Open entries
             </Link>
           </div>
         </div>
-        <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-3 dark:border-emerald-900/60 dark:bg-zinc-900">
+        <div className="mt-4 rounded-xl border border-border bg-muted/40 p-3">
           {hasLastEntryHint ? (
-            <p className="mb-3 text-xs text-zinc-500">
+            <p className="mb-3 text-xs text-muted-foreground">
               Pre-filled from your last entry this month
               {lastBudgetName ? ` · Budget: ${lastBudgetName}` : ""}
               {lastCategoryName ? ` · Category: ${lastCategoryName}` : ""}
@@ -361,181 +393,106 @@ export default async function HomePage({
         </div>
       </section>
 
-      <section className="md:hidden">
-        <div className="flex snap-x gap-3 overflow-x-auto pb-1">
-          <div className="min-w-[84%] snap-start">
-            <StatCard
-              label="Income"
-              value={formatCents(data.incomeCents)}
-              hint={
-                data.paychecks.length > 0
-                  ? `${data.paychecks.length} paycheck${data.paychecks.length === 1 ? "" : "s"} this month`
-                  : data.period.incomeCents > 0
-                    ? "Legacy planned income until you add paycheck rows"
-                    : "Add paychecks via Household settings or Quick add"
-              }
-            />
-          </div>
-          <div className="min-w-[84%] snap-start">
-            <StatCard label="Spent so far" value={formatCents(data.spentTotal)} />
-          </div>
-          <div className="min-w-[84%] snap-start">
-            <StatCard
-              label="Bills before next paycheck"
-              value={formatCents(data.billsBeforePaySum)}
-              hint={
-                data.nextPaycheckDate
-                  ? `Due on or before ${data.nextPaycheckDate.toLocaleDateString()}`
-                  : "Set your next paycheck date below"
-              }
-            />
-          </div>
-          <div className="min-w-[84%] snap-start">
-            <StatCard
-              label="Left after those bills & spending"
-              value={formatCents(data.leftAfterUpcomingBills)}
-              hint="Income minus spending minus unpaid bills due on or before payday"
-            />
-          </div>
-          <div className="min-w-[84%] snap-start">
-            <StatCard
-              label="Left after all unpaid bills"
-              value={formatCents(data.leftAfterAllBills)}
-              hint="Income minus spending minus every bill still marked unpaid"
-            />
-          </div>
-        </div>
-      </section>
-      <section className="hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        <StatCard
-          label="Income"
-          value={formatCents(data.incomeCents)}
-          hint={
-            data.paychecks.length > 0
-              ? `${data.paychecks.length} paycheck${data.paychecks.length === 1 ? "" : "s"} this month`
-              : data.period.incomeCents > 0
-                ? "Legacy planned income until you add paycheck rows"
-                : "Add paychecks via Household settings or Quick add"
-          }
-        />
-        <StatCard label="Spent so far" value={formatCents(data.spentTotal)} />
-        <StatCard
-          label="Bills before next paycheck"
-          value={formatCents(data.billsBeforePaySum)}
-          hint={
-            data.nextPaycheckDate
-              ? `Due on or before ${data.nextPaycheckDate.toLocaleDateString()}`
-              : "Set your next paycheck date below"
-          }
-        />
-        <StatCard
-          label="Left after those bills & spending"
-          value={formatCents(data.leftAfterUpcomingBills)}
-          hint="Income minus spending minus unpaid bills due on or before payday"
-        />
-        <StatCard
-          label="Left after all unpaid bills"
-          value={formatCents(data.leftAfterAllBills)}
-          hint="Income minus spending minus every bill still marked unpaid"
-        />
-      </section>
-
-      <section className="grid grid-cols-2 gap-2 md:hidden">
-        <Link
-          href={`/expenses?ym=${yearMonth}`}
-          className="flex min-h-11 items-center justify-center rounded-lg bg-emerald-600 px-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-emerald-500 active:scale-[0.98] motion-reduce:transition-none"
-        >
-          Add expense
-        </Link>
-        <Link
-          href={`/bills?ym=${yearMonth}`}
-          className="flex min-h-11 items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 text-sm font-semibold text-zinc-800 transition-all duration-200 hover:bg-zinc-100 active:scale-[0.98] motion-reduce:transition-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-        >
-          Review bills
-        </Link>
-      </section>
-
       <HomeMobileInsights
         trendMonths={trendMonths}
         calendarMonths={calendarMonths}
         budgetPlanOptions={budgetPlanOptions}
       />
 
-      <section className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/30">
+      <section className="card card-hover p-4 md:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-medium text-emerald-900 dark:text-emerald-100">
-              Paycheck coach
-            </h2>
-            <p className="mt-1 text-sm text-emerald-800/90 dark:text-emerald-200/90">
-              Savings rate (5–40%), grocery and free-spending caps, and a two-week
-              bill plan after your next pay date.
-            </p>
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <circle cx="12" cy="12" r="9" />
+                <circle cx="12" cy="12" r="4.5" />
+                <circle cx="12" cy="12" r="0.5" fill="currentColor" />
+              </svg>
+            </span>
+            <div>
+              <h2 className="font-medium">Paycheck coach</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Savings rate (5–40%), grocery and free-spending caps, and a two-week
+                bill plan after your next pay date.
+              </p>
+            </div>
           </div>
-          <Link
-            href={`/coach?ym=${yearMonth}`}
-            className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
-          >
+          <Link href={`/coach?ym=${yearMonth}`} className="btn btn-primary shrink-0">
             Open coach
           </Link>
         </div>
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+      <section className="card card-hover p-4 md:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-medium text-zinc-900 dark:text-zinc-100">Tax records</h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              Qualifying expense folder, audit notes, review trail, and CSV export by calendar year.
-            </p>
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+                <path d="M14 2v6h6M9 13h6M9 17h4" />
+              </svg>
+            </span>
+            <div>
+              <h2 className="font-medium">Tax records</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Qualifying expense folder, audit notes, review trail, and CSV export by calendar year.
+              </p>
+            </div>
           </div>
-          <Link
-            href={`/tax?year=${yearMonth.slice(0, 4)}`}
-            className="shrink-0 rounded-lg border border-zinc-300 bg-zinc-50 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-800"
-          >
+          <Link href={`/tax?year=${yearMonth.slice(0, 4)}`} className="btn btn-outline shrink-0">
             Open tax ({yearMonth.slice(0, 4)})
           </Link>
         </div>
       </section>
 
       {data.savingsGoals.length > 0 ? (
-        <section className="rounded-xl border border-violet-200 bg-violet-50/50 p-4 dark:border-violet-900/40 dark:bg-violet-950/20">
+        <section className="card card-hover p-4 md:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-medium text-violet-900 dark:text-violet-100">
-                Savings goals
-              </h2>
-              <ul className="mt-2 space-y-1 text-sm text-violet-950/90 dark:text-violet-100/90">
-                {data.savingsGoals.map((g) => {
-                  const pct =
-                    g.targetAmountCents > 0
-                      ? Math.min(
-                          100,
-                          Math.round(
-                            (g.savedAmountCents / g.targetAmountCents) * 100,
-                          ),
-                        )
-                      : 0;
-                  return (
-                    <li key={g.id} className="flex justify-between gap-2 tabular-nums">
-                      <span>{g.title}</span>
-                      <span>{pct}% saved</span>
-                    </li>
-                  );
-                })}
-              </ul>
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-600 dark:bg-violet-950/60 dark:text-violet-300">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8" />
+                </svg>
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="font-medium">Savings goals</h2>
+                <ul className="mt-3 space-y-2.5 text-sm">
+                  {data.savingsGoals.map((g) => {
+                    const pct =
+                      g.targetAmountCents > 0
+                        ? Math.min(
+                            100,
+                            Math.round(
+                              (g.savedAmountCents / g.targetAmountCents) * 100,
+                            ),
+                          )
+                        : 0;
+                    return (
+                      <li key={g.id} className="w-64 max-w-full">
+                        <div className="flex justify-between gap-2 tabular-nums">
+                          <span className="truncate">{g.title}</span>
+                          <span className="text-muted-foreground">{pct}%</span>
+                        </div>
+                        <div className="progress-track mt-1">
+                          <div
+                            className="progress-fill"
+                            style={{ width: `${pct}%`, background: "linear-gradient(90deg, #7c3aed, #a78bfa)" }}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             </div>
-            <Link
-              href={`/goals?ym=${yearMonth}`}
-              className="shrink-0 rounded-lg bg-violet-700 px-4 py-2 text-sm font-medium text-white hover:bg-violet-600 dark:bg-violet-500 dark:hover:bg-violet-400"
-            >
+            <Link href={`/goals?ym=${yearMonth}`} className="btn btn-outline shrink-0">
               View goals
             </Link>
           </div>
         </section>
       ) : null}
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-4 md:p-5">
         <h2 className="font-medium">Household settings</h2>
         <DashboardPanel
           yearMonth={yearMonth}
@@ -548,14 +505,14 @@ export default async function HomePage({
         />
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-4 md:p-5">
         <h2 className="font-medium">Budget plans</h2>
         <p className="mt-1 text-sm">
-          <Link href={`/budgets?ym=${yearMonth}`} className="text-emerald-600 underline">
+          <Link href={`/budgets?ym=${yearMonth}`} className="text-accent underline">
             Full budgets page
           </Link>
         </p>
-        <p className="mt-1 text-sm text-zinc-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Spending matches by description, tags, or linked budget on each
           expense. Each line has a monthly limit plus optional{" "}
           <strong>rolled-in</strong> balance from last month.
@@ -564,11 +521,11 @@ export default async function HomePage({
           <input type="hidden" name="yearMonth" value={yearMonth} />
           <button
             type="submit"
-            className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100"
+            className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 "
           >
             Apply suggested rollovers from {prevYm}
           </button>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-muted-foreground">
             Sets rolled-in to unused balance from the prior month for lines with
             the same name.
           </p>
@@ -579,9 +536,9 @@ export default async function HomePage({
           hasPrevPeriod={prevPeriodExists}
         />
         {budgetRows.length === 0 ? (
-          <p className="mt-4 text-sm text-zinc-500">No budget lines yet.</p>
+          <p className="mt-4 text-sm text-muted-foreground">No budget lines yet.</p>
         ) : (
-          <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
+          <ul className="mt-4 divide-y divide-border">
             {budgetRows.map(({ plan, spent, remaining }) => (
               <BudgetPlanRow
                 key={plan.id}
@@ -595,11 +552,11 @@ export default async function HomePage({
         )}
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="grid gap-4 lg:grid-cols-2 lg:gap-6">
+        <div className="card p-4 md:p-5">
           <h2 className="font-medium">Bills</h2>
           <p className="mt-1 text-sm">
-            <Link href={`/bills?ym=${yearMonth}`} className="text-emerald-600 underline">
+            <Link href={`/bills?ym=${yearMonth}`} className="text-accent underline">
               Full bills page
             </Link>
           </p>
@@ -613,19 +570,19 @@ export default async function HomePage({
               <BillRow key={b.id} yearMonth={yearMonth} bill={b} />
             ))}
             {data.bills.length === 0 ? (
-              <li className="text-zinc-500">No bills for this month.</li>
+              <li className="text-muted-foreground">No bills for this month.</li>
             ) : null}
           </ul>
         </div>
-        <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="card p-4 md:p-5">
           <h2 className="font-medium">Recent expenses</h2>
           <ul className="mt-3 max-h-72 space-y-2 overflow-y-auto text-sm">
             {data.expenses.map((e) => (
               <li
                 key={e.id}
-                className="flex justify-between gap-2 border-b border-zinc-50 pb-2 dark:border-zinc-800/80"
+                className="flex items-baseline justify-between gap-3 border-b border-border pb-2.5 last:border-0"
               >
-                <span>
+                <span className="min-w-0 truncate">
                   {e.description}
                   {e.categoryId && categoryNameById.get(e.categoryId) ? (
                     <Link
@@ -633,31 +590,31 @@ export default async function HomePage({
                         categories.find((c) => c.id === e.categoryId)?.slug ??
                           e.categoryId,
                       )}`}
-                      className="ml-1 text-xs text-emerald-700 underline hover:no-underline dark:text-emerald-300"
+                      className="ml-1.5 rounded-full bg-accent-soft px-1.5 py-0.5 text-[11px] font-medium text-accent no-underline"
                     >
-                      [{categoryNameById.get(e.categoryId)}]
+                      {categoryNameById.get(e.categoryId)}
                     </Link>
                   ) : null}
                   {e.user ? (
-                    <span className="text-xs text-zinc-400"> · {e.user.name}</span>
+                    <span className="ml-1 text-xs text-muted-foreground">{e.user.name}</span>
                   ) : null}
                 </span>
-                <span className="shrink-0 tabular-nums">
+                <span className="stat-value shrink-0 text-sm">
                   {formatCents(e.amountCents)}
                 </span>
               </li>
             ))}
             {data.expenses.length === 0 ? (
-              <li className="text-zinc-500">No expenses logged.</li>
+              <li className="text-muted-foreground">No expenses logged.</li>
             ) : null}
           </ul>
         </div>
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-4 md:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-medium">Receipts</h2>
-          <a href="/receipts" className="text-sm text-emerald-600 underline">
+          <a href="/receipts" className="text-sm font-medium text-accent hover:underline">
             Manage receipts
           </a>
         </div>
@@ -665,10 +622,10 @@ export default async function HomePage({
           {data.receipts.map((r) => (
             <li
               key={r.id}
-              className="rounded-lg border border-zinc-100 p-3 text-sm dark:border-zinc-800"
+              className="card-hover rounded-xl border border-border p-3 text-sm"
             >
               <a
-                className="font-medium text-emerald-700 underline dark:text-emerald-400"
+                className="font-medium text-accent hover:underline"
                 href={`/api/receipts/${r.id}`}
                 target="_blank"
                 rel="noreferrer"
@@ -676,36 +633,16 @@ export default async function HomePage({
                 {r.filename}
               </a>
               {r.totalCents != null ? (
-                <div className="text-zinc-600">{formatCents(r.totalCents)}</div>
+                <div className="stat-value mt-0.5 text-muted-foreground">{formatCents(r.totalCents)}</div>
               ) : null}
-              {r.note ? <div className="text-xs text-zinc-500">{r.note}</div> : null}
+              {r.note ? <div className="mt-0.5 text-xs text-muted-foreground">{r.note}</div> : null}
             </li>
           ))}
         </ul>
         {data.receipts.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500">No receipts this month.</p>
+          <p className="mt-2 text-sm text-muted-foreground">No receipts this month.</p>
         ) : null}
       </section>
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-}) {
-  return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-4 transition-shadow duration-200 hover:shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-        {label}
-      </div>
-      <div className="mt-1 text-xl font-semibold tabular-nums">{value}</div>
-      {hint ? <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-300">{hint}</p> : null}
     </div>
   );
 }

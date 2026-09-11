@@ -74,7 +74,7 @@ export default async function CoachPage({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Paycheck coach</h1>
-          <p className="mt-1 max-w-2xl text-sm text-zinc-500">
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Recommendations from your income, next paycheck, bills, and savings
             target — geared toward ending each pay period with cushion.
           </p>
@@ -97,24 +97,24 @@ export default async function CoachPage({
 
       <MonthWorkflowLinks yearMonth={ym} />
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">Household snapshot ({ym})</h2>
         <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
           <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Monthly income (this app)
             </dt>
             <dd className="mt-0.5 text-lg font-semibold tabular-nums">
               {formatCents(data.incomeCents)}
             </dd>
-            <dd className="text-xs text-zinc-500">
+            <dd className="text-xs text-muted-foreground">
               {data.paychecks.length > 0
                 ? `${data.paychecks.length} paycheck row${data.paychecks.length === 1 ? "" : "s"} on overview`
                 : "Add paychecks on overview — same number coach uses"}
             </dd>
           </div>
           <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Next paycheck (overview)
             </dt>
             <dd className="mt-0.5 text-lg font-semibold">
@@ -127,8 +127,8 @@ export default async function CoachPage({
                   })
                 : "Not set"}
             </dd>
-            <dd className="text-xs text-zinc-500">
-              <Link href={`/?ym=${ym}`} className="text-emerald-600 underline">
+            <dd className="text-xs text-muted-foreground">
+              <Link href={`/?ym=${ym}`} className="text-accent underline">
                 Edit on overview →
               </Link>
             </dd>
@@ -136,9 +136,9 @@ export default async function CoachPage({
         </dl>
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">Coach settings</h2>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs text-muted-foreground">
           Savings rate and paychecks-per-month live here. Next payday and deposit
           logging stay on the overview so every screen shares the same dates.
         </p>
@@ -154,68 +154,68 @@ export default async function CoachPage({
       </section>
 
       {!coach ? (
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted-foreground">
           Add at least one paycheck on the overview (and paychecks per month ≥
           1) to see recommendations.
         </p>
       ) : (
         <>
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            <div className="card p-4">
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Per paycheck (income ÷ {data.payPeriodsPerMonth})
               </div>
               <div className="mt-1 text-xl font-semibold tabular-nums">
                 {formatCents(coach.perPaycheckIncomeCents)}
               </div>
             </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            <div className="card p-4">
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Save this check ({coach.savingsRatePercent}%)
               </div>
-              <div className="mt-1 text-xl font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+              <div className="mt-1 text-xl font-semibold tabular-nums text-accent ">
                 {formatCents(coach.savingsThisPayCents)}
               </div>
             </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            <div className="card p-4">
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Suggested grocery cap
               </div>
               <div className="mt-1 text-xl font-semibold tabular-nums">
                 {formatCents(coach.suggestedGroceryCapCents)}
               </div>
               {coach.groceryBudgetLimitCents != null ? (
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Budget line: {formatCents(coach.groceryBudgetLimitCents)}
                 </p>
               ) : null}
             </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            <div className="card p-4">
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Free spending cap
               </div>
               <div className="mt-1 text-xl font-semibold tabular-nums">
                 {formatCents(coach.freeSpendingCapCents)}
               </div>
-              <p className="mt-1 text-xs text-zinc-500">
+              <p className="mt-1 text-xs text-muted-foreground">
                 After savings, bills, and grocery cap
               </p>
             </div>
           </section>
 
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+          <section className="card p-5">
             <h2 className="font-medium">Two-week window after pay</h2>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               {data.nextPaycheckDate
                 ? `Bills due after ${data.nextPaycheckDate.toLocaleDateString()} through two weeks out, plus bills due on or before payday.`
                 : "Set next paycheck on the overview to anchor this plan."}
             </p>
             <div className="mt-4 grid gap-6 lg:grid-cols-2">
               <div>
-                <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                <h3 className="text-sm font-semibold text-foreground">
                   Week 1 (days 1–7 after pay)
                 </h3>
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Bills: {formatCents(coach.week1BillsSumCents)} · Soft discretionary
                   guide: {formatCents(coach.week1DiscretionaryGuideCents)}
                 </p>
@@ -223,22 +223,22 @@ export default async function CoachPage({
                   {coach.week1Bills.map((b) => (
                     <li key={b.id} className="flex justify-between gap-2">
                       <span>{b.title}</span>
-                      <span className="shrink-0 tabular-nums text-zinc-600">
+                      <span className="shrink-0 tabular-nums text-muted-foreground">
                         {formatCents(b.amountCents)} ·{" "}
                         {b.dueDate.toLocaleDateString()}
                       </span>
                     </li>
                   ))}
                   {coach.week1Bills.length === 0 ? (
-                    <li className="text-zinc-500">No bills in this slice.</li>
+                    <li className="text-muted-foreground">No bills in this slice.</li>
                   ) : null}
                 </ul>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                <h3 className="text-sm font-semibold text-foreground">
                   Week 2 (days 8–14 after pay)
                 </h3>
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Bills: {formatCents(coach.week2BillsSumCents)} · Soft discretionary
                   guide: {formatCents(coach.week2DiscretionaryGuideCents)}
                 </p>
@@ -246,22 +246,22 @@ export default async function CoachPage({
                   {coach.week2Bills.map((b) => (
                     <li key={b.id} className="flex justify-between gap-2">
                       <span>{b.title}</span>
-                      <span className="shrink-0 tabular-nums text-zinc-600">
+                      <span className="shrink-0 tabular-nums text-muted-foreground">
                         {formatCents(b.amountCents)} ·{" "}
                         {b.dueDate.toLocaleDateString()}
                       </span>
                     </li>
                   ))}
                   {coach.week2Bills.length === 0 ? (
-                    <li className="text-zinc-500">No bills in this slice.</li>
+                    <li className="text-muted-foreground">No bills in this slice.</li>
                   ) : null}
                 </ul>
               </div>
             </div>
-            <div className="mt-4 rounded-lg bg-zinc-50 p-3 text-sm dark:bg-zinc-900/80">
+            <div className="mt-4 rounded-lg bg-muted p-3 text-sm dark:bg-zinc-900/80">
               <span className="font-medium">Bills due on or before payday: </span>
               {formatCents(coach.billsBeforePaySumCents)}
-              <span className="text-zinc-500">
+              <span className="text-muted-foreground">
                 {" "}
                 ({coach.billsBeforePay.length} unpaid)
               </span>
@@ -269,13 +269,13 @@ export default async function CoachPage({
               <span className="font-medium">Bills in two weeks after pay: </span>
               {formatCents(coach.billsAfterPayTwoWeeksSumCents)}
             </div>
-            <p className="mt-3 text-xs text-zinc-500">
+            <p className="mt-3 text-xs text-muted-foreground">
               After savings and all of the above:{" "}
               <span
                 className={
                   coach.afterObligationsCents < 0
                     ? "font-semibold text-red-600"
-                    : "font-semibold text-emerald-700 dark:text-emerald-400"
+                    : "font-semibold text-accent "
                 }
               >
                 {formatCents(coach.afterObligationsCents)}
@@ -284,7 +284,7 @@ export default async function CoachPage({
             </p>
           </section>
 
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+          <section className="card p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-medium">Recommendations</h2>
               <Link
@@ -294,7 +294,7 @@ export default async function CoachPage({
                 Update goal progress →
               </Link>
             </div>
-            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-zinc-700 dark:text-zinc-300">
+            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-foreground">
               {allRecommendations.map((r, i) => (
                 <li key={i}>{r}</li>
               ))}

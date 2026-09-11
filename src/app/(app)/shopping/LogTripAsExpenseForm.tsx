@@ -30,7 +30,7 @@ export function LogTripAsExpenseForm({
 
   if (existingExpense) {
     return (
-      <p className="mt-3 text-sm text-emerald-800 dark:text-emerald-300">
+      <p className="mt-3 text-sm text-accent ">
         Logged to monthly spending ·{" "}
         <Link
           href={`/expenses?ym=${existingExpense.yearMonth}`}
@@ -44,30 +44,30 @@ export function LogTripAsExpenseForm({
 
   if (totalCents <= 0) {
     return (
-      <p className="mt-3 text-xs text-zinc-500">
+      <p className="mt-3 text-xs text-muted-foreground">
         Add item prices (or a non-zero total) to log this trip as spending.
       </p>
     );
   }
 
   return (
-    <form action={action} className="mt-3 flex flex-wrap items-end gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+    <form action={action} className="mt-3 flex flex-wrap items-end gap-2 border-t border-zinc-100 pt-3 dark:border-border">
       <input type="hidden" name="tripId" value={tripId} />
       <input type="hidden" name="yearMonth" value={yearMonth} />
       <div className="min-w-[10rem] flex-1">
         <label
           htmlFor={`budget-${tripId}`}
-          className="text-xs font-medium text-zinc-600 dark:text-zinc-400"
+          className="text-xs font-medium text-muted-foreground"
         >
           Post to month
         </label>
-        <p className="font-mono text-sm text-zinc-800 dark:text-zinc-200">{yearMonth}</p>
+        <p className="font-mono text-sm text-foreground">{yearMonth}</p>
       </div>
       {budgetPlans.length > 0 ? (
         <div className="min-w-[12rem] flex-1">
           <label
             htmlFor={`budget-${tripId}`}
-            className="text-xs font-medium text-zinc-600 dark:text-zinc-400"
+            className="text-xs font-medium text-muted-foreground"
           >
             Budget envelope
           </label>
@@ -97,7 +97,7 @@ export function LogTripAsExpenseForm({
         <p className="w-full text-sm text-red-600">{state.error}</p>
       ) : null}
       {state?.ok && state.message ? (
-        <p className="w-full text-sm text-emerald-700 dark:text-emerald-400">
+        <p className="w-full text-sm text-accent ">
           {state.message}{" "}
           <Link
             href={`/expenses?ym=${yearMonth}`}

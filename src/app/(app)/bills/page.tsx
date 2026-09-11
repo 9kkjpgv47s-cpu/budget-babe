@@ -6,6 +6,7 @@ import { getOrCreateMonthlyPeriod } from "@/lib/dashboardData";
 import { currentYearMonth, parseYearMonth } from "@/lib/yearMonth";
 import { BillAddForm } from "../BillAddForm";
 import { BillRow, BillsSectionHeader } from "../BillRow";
+import { MonthNav } from "@/components/ui";
 
 function shiftYearMonth(ym: string, delta: number) {
   return format(addMonths(parseYearMonth(ym), delta), "yyyy-MM");
@@ -36,33 +37,19 @@ export default async function BillsPage({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Bills</h1>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             All bills for the month, copy from last month, and quick add.
           </p>
           <p className="mt-2 text-sm">
-            <Link href={`/?ym=${ym}`} className="text-emerald-600 underline">
+            <Link href={`/?ym=${ym}`} className="text-accent underline">
               ← Overview ({ym})
             </Link>
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <a
-            className="rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            href={`/bills?ym=${prevYm}`}
-          >
-            ←
-          </a>
-          <span className="min-w-[7rem] text-center font-medium tabular-nums">{ym}</span>
-          <a
-            className="rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            href={`/bills?ym=${nextYm}`}
-          >
-            →
-          </a>
-        </div>
+        <MonthNav yearMonth={ym} prevYm={prevYm} nextYm={nextYm} />
       </div>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">This month ({bills.length})</h2>
         <BillsSectionHeader
           yearMonth={ym}
@@ -75,11 +62,11 @@ export default async function BillsPage({
           ))}
         </ul>
         {bills.length === 0 ? (
-          <p className="mt-4 text-sm text-zinc-500">No bills for this month.</p>
+          <p className="mt-4 text-sm text-muted-foreground">No bills for this month.</p>
         ) : null}
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">Add bill</h2>
         <BillAddForm yearMonth={ym} heading={null} />
       </section>

@@ -91,32 +91,32 @@ export default async function TaxPage({
     <div className="space-y-10">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Tax records</h1>
-        <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Each expense can be <strong>not applicable</strong>, <strong>applicable</strong>, or{" "}
           <strong>applicable with proper documentation</strong> (for example when you have notes but no official receipt
           in this app). Pick the IRC-oriented <strong>guidance</strong> snippet and open <strong>View tax guidance</strong>{" "}
           for the full text. This is record-keeping only — not tax advice.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-          <span className="font-medium text-zinc-700 dark:text-zinc-200">Year:</span>
+          <span className="font-medium text-foreground">Year:</span>
           <Link
             href={`/tax?year=${prevYear}`}
-            className="rounded border border-zinc-300 px-2 py-1 hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
+            className="rounded border border-zinc-300 px-2 py-1 hover:bg-muted dark:border-zinc-600 dark:hover:bg-zinc-800"
           >
             {prevYear}
           </Link>
-          <span className="rounded bg-emerald-100 px-3 py-1 font-semibold text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100">
+          <span className="rounded bg-emerald-100 px-3 py-1 font-semibold text-emerald-900 dark:bg-emerald-900/40 ">
             {year}
           </span>
           <Link
             href={`/tax?year=${nextYear}`}
-            className="rounded border border-zinc-300 px-2 py-1 hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
+            className="rounded border border-zinc-300 px-2 py-1 hover:bg-muted dark:border-zinc-600 dark:hover:bg-zinc-800"
           >
             {nextYear}
           </Link>
           <a
             href={`/api/export/tax?year=${year}`}
-            className="ml-auto rounded-md bg-zinc-900 px-3 py-1.5 text-white dark:bg-zinc-100 dark:text-zinc-900"
+            className="ml-auto btn btn-primary"
           >
             Download workpaper CSV ({year})
           </a>
@@ -132,23 +132,23 @@ export default async function TaxPage({
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Summary</h2>
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-lg border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/40">
-            <p className="text-zinc-500">Applicable lines</p>
+          <div className="rounded-lg border border-border bg-white p-3 text-sm dark:border-border dark:bg-zinc-900/40">
+            <p className="text-muted-foreground">Applicable lines</p>
             <p className="text-xl font-semibold tabular-nums">{workpaper.length}</p>
           </div>
-          <div className="rounded-lg border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/40">
-            <p className="text-zinc-500">Reviewed</p>
+          <div className="rounded-lg border border-border bg-white p-3 text-sm dark:border-border dark:bg-zinc-900/40">
+            <p className="text-muted-foreground">Reviewed</p>
             <p className="text-xl font-semibold tabular-nums">
               {reviewedCount}
-              <span className="text-sm font-normal text-zinc-400"> / {workpaper.length || "—"}</span>
+              <span className="text-sm font-normal text-muted-foreground"> / {workpaper.length || "—"}</span>
             </p>
           </div>
-          <div className="rounded-lg border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/40">
-            <p className="text-zinc-500">Total (applicable)</p>
+          <div className="rounded-lg border border-border bg-white p-3 text-sm dark:border-border dark:bg-zinc-900/40">
+            <p className="text-muted-foreground">Total (applicable)</p>
             <p className="text-xl font-semibold tabular-nums">{formatCents(workpaperCents)}</p>
           </div>
         </div>
-        <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">By preparer folder</h3>
+        <h3 className="text-sm font-medium text-foreground">By preparer folder</h3>
         <TaxCategoryTotals year={year} totals={totals} />
       </section>
 
@@ -164,11 +164,11 @@ export default async function TaxPage({
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Recent audit log</h2>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-muted-foreground">
           Append-only trail when tax fields change (household accountability). Newest first.
         </p>
         {audits.length === 0 ? (
-          <p className="text-sm text-zinc-500">No tax audits yet.</p>
+          <p className="text-sm text-muted-foreground">No tax audits yet.</p>
         ) : (
           <ul className="space-y-2 text-sm">
             {audits.map((a) => {
@@ -185,21 +185,21 @@ export default async function TaxPage({
               return (
                 <li
                   key={a.id}
-                  className="rounded-lg border border-zinc-200 bg-zinc-50/80 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900/50"
+                  className="rounded-lg border border-border bg-muted/80 px-3 py-2 dark:border-border dark:bg-zinc-900/50"
                 >
-                  <span className="font-medium text-emerald-800 dark:text-emerald-300">{a.action}</span>
-                  <span className="text-zinc-500"> · </span>
+                  <span className="font-medium text-accent ">{a.action}</span>
+                  <span className="text-muted-foreground"> · </span>
                   <span>{a.createdAt.toLocaleString()}</span>
                   {a.user?.name ? (
                     <>
-                      <span className="text-zinc-500"> · </span>
+                      <span className="text-muted-foreground"> · </span>
                       <span>{a.user.name}</span>
                     </>
                   ) : null}
-                  <p className="mt-1 text-zinc-700 dark:text-zinc-300">
+                  <p className="mt-1 text-foreground">
                     {formatCents(a.expense.amountCents)} — {a.expense.description}
                   </p>
-                  {detail ? <p className="mt-1 text-xs text-zinc-500">{detail}</p> : null}
+                  {detail ? <p className="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
                 </li>
               );
             })}
@@ -207,7 +207,7 @@ export default async function TaxPage({
         )}
       </section>
 
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted-foreground">
         <Link href="/expenses" className="underline">
           Expenses
         </Link>{" "}

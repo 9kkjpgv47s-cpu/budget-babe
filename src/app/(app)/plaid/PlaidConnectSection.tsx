@@ -90,10 +90,10 @@ export function PlaidConnectSection({ configured }: { configured: boolean }) {
         {busy ? "Starting…" : "Connect a bank (Plaid Link)"}
       </button>
       {message ? <p className="text-sm text-red-600 dark:text-red-400">{message}</p> : null}
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-sm text-muted-foreground">
         Sandbox: use{" "}
         <a
-          className="text-emerald-700 underline dark:text-emerald-400"
+          className="text-accent underline "
           href="https://plaid.com/docs/sandbox/users/"
           target="_blank"
           rel="noreferrer"

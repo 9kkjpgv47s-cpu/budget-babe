@@ -17,9 +17,9 @@ export type CategoryRow = {
 
 export function CategorySection({ categories }: { categories: CategoryRow[] }) {
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+    <section className="card p-5">
       <h2 className="font-medium">Spending categories</h2>
-      <p className="mt-1 text-xs text-zinc-500">
+      <p className="mt-1 text-xs text-muted-foreground">
         Canonical categories link expenses to budget envelope names and default tax
         folders. Merchant rules can assign a category when a pattern matches.
       </p>
@@ -64,7 +64,7 @@ export function CategorySection({ categories }: { categories: CategoryRow[] }) {
           Add category
         </button>
       </form>
-      <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
+      <ul className="mt-4 divide-y divide-border">
         {categories.map((c) => (
           <li key={c.id} className="py-4">
             <form action={updateCategoryAction} className="grid gap-2 sm:grid-cols-2">
@@ -75,7 +75,7 @@ export function CategorySection({ categories }: { categories: CategoryRow[] }) {
                 required
                 className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
               />
-              <span className="self-center font-mono text-xs text-zinc-500 sm:col-span-2">
+              <span className="self-center font-mono text-xs text-muted-foreground sm:col-span-2">
                 slug: {c.slug}
               </span>
               <input
@@ -112,7 +112,7 @@ export function CategorySection({ categories }: { categories: CategoryRow[] }) {
               </div>
             </form>
             {c.expenseCount > 0 ? (
-              <p className="mt-2 text-xs text-zinc-500">
+              <p className="mt-2 text-xs text-muted-foreground">
                 {c.expenseCount} expense{c.expenseCount === 1 ? "" : "s"} use this category —
                 reassign before delete.
               </p>
@@ -131,7 +131,7 @@ export function CategorySection({ categories }: { categories: CategoryRow[] }) {
         ))}
       </ul>
       {categories.length === 0 ? (
-        <p className="mt-2 text-sm text-zinc-500">No categories yet.</p>
+        <p className="mt-2 text-sm text-muted-foreground">No categories yet.</p>
       ) : null}
     </section>
   );

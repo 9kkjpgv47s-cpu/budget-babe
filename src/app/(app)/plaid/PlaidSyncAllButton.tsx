@@ -29,11 +29,11 @@ export function PlaidSyncAllButton() {
         type="button"
         disabled={pending}
         onClick={() => syncAll()}
-        className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+        className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
       >
         {pending ? "Syncing…" : "Sync all"}
       </button>
-      {msg ? <span className="text-sm text-zinc-600 dark:text-zinc-400">{msg}</span> : null}
+      {msg ? <span className="text-sm text-muted-foreground">{msg}</span> : null}
     </div>
   );
 }

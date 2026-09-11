@@ -33,7 +33,7 @@ export function TaxBulkAssign({ year, rows }: { year: number; rows: TaxPickRow[]
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-sm text-muted-foreground">
         Select expenses from {year}, then set them to <strong>Applicable</strong> with a shared preparer folder.
         Lines already marked applicable are hidden here.
       </p>
@@ -68,13 +68,13 @@ export function TaxBulkAssign({ year, rows }: { year: number; rows: TaxPickRow[]
         </div>
       ) : null}
       {unmarked.length === 0 ? (
-        <p className="text-sm text-zinc-500">Every expense in this year is already flagged for tax, or there are no rows.</p>
+        <p className="text-sm text-muted-foreground">Every expense in this year is already flagged for tax, or there are no rows.</p>
       ) : (
-        <ul className="max-h-[28rem] space-y-2 overflow-y-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+        <ul className="max-h-[28rem] space-y-2 overflow-y-auto rounded-lg border border-border">
           {unmarked.map((r) => (
             <li
               key={r.id}
-              className="flex flex-wrap items-center gap-3 border-b border-zinc-100 px-3 py-2 text-sm last:border-0 dark:border-zinc-800"
+              className="flex flex-wrap items-center gap-3 border-b border-zinc-100 px-3 py-2 text-sm last:border-0 dark:border-border"
             >
               <label className="flex cursor-pointer items-center gap-2">
                 <input
@@ -84,9 +84,9 @@ export function TaxBulkAssign({ year, rows }: { year: number; rows: TaxPickRow[]
                   className="rounded border-zinc-300"
                 />
               </label>
-              <span className="text-xs text-zinc-500">{new Date(r.spentAt).toLocaleDateString()}</span>
+              <span className="text-xs text-muted-foreground">{new Date(r.spentAt).toLocaleDateString()}</span>
               <span className="min-w-0 flex-1 truncate">{r.description}</span>
-              <span className="text-xs text-zinc-400">{r.yearMonth}</span>
+              <span className="text-xs text-muted-foreground">{r.yearMonth}</span>
               <span className="tabular-nums font-medium">{formatCents(r.amountCents)}</span>
             </li>
           ))}

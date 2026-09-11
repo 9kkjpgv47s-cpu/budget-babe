@@ -40,7 +40,7 @@ export default async function NetWorthPage({
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Net worth</h1>
-        <p className="mt-1 text-sm text-zinc-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Manual accounts (no bank sync). Record snapshots to track history.
         </p>
         <div className="mt-2">
@@ -52,20 +52,20 @@ export default async function NetWorthPage({
 
       <NetWorthCashFlowCompare yearMonth={yearMonth} />
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">Current totals</h2>
         <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
           <div>
-            <dt className="text-zinc-500">Assets</dt>
+            <dt className="text-muted-foreground">Assets</dt>
             <dd className="text-lg font-semibold tabular-nums">{formatCents(assets)}</dd>
           </div>
           <div>
-            <dt className="text-zinc-500">Liabilities</dt>
+            <dt className="text-muted-foreground">Liabilities</dt>
             <dd className="text-lg font-semibold tabular-nums">{formatCents(liab)}</dd>
           </div>
           <div>
-            <dt className="text-zinc-500">Net</dt>
-            <dd className="text-lg font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+            <dt className="text-muted-foreground">Net</dt>
+            <dd className="text-lg font-semibold tabular-nums text-accent ">
               {formatCents(net)}
             </dd>
           </div>
@@ -85,7 +85,7 @@ export default async function NetWorthPage({
         </form>
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">Add account</h2>
         <form action={addNetWorthAccountAction} className="mt-4 grid gap-2 sm:grid-cols-2">
           <select
@@ -111,24 +111,24 @@ export default async function NetWorthPage({
           />
           <button
             type="submit"
-            className="sm:col-span-2 rounded-lg bg-zinc-900 py-2 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900"
+            className="sm:col-span-2 btn btn-primary"
           >
             Add
           </button>
         </form>
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">Accounts</h2>
         <ul className="mt-4 space-y-6">
           {accounts.map((a) => (
-            <li key={a.id} className="border-b border-zinc-100 pb-4 last:border-0 dark:border-zinc-800">
+            <li key={a.id} className="border-b border-zinc-100 pb-4 last:border-0 dark:border-border">
               <form action={updateNetWorthAccountAction} className="grid gap-2 sm:grid-cols-2">
                 <input type="hidden" name="id" value={a.id} />
                 <select
                   name="kind"
                   defaultValue={a.kind}
-                  className="rounded border border-zinc-200 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                  className="rounded border border-border px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
                 >
                   <option value="asset">Asset</option>
                   <option value="liability">Liability</option>
@@ -136,13 +136,13 @@ export default async function NetWorthPage({
                 <input
                   name="name"
                   defaultValue={a.name}
-                  className="rounded border border-zinc-200 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                  className="rounded border border-border px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
                 />
                 <input
                   name="balance"
                   defaultValue={(a.balanceCents / 100).toFixed(2)}
                   inputMode="decimal"
-                  className="sm:col-span-2 rounded border border-zinc-200 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                  className="sm:col-span-2 rounded border border-border px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
                 />
                 <button
                   type="submit"
@@ -161,22 +161,22 @@ export default async function NetWorthPage({
           ))}
         </ul>
         {accounts.length === 0 ? (
-          <p className="text-sm text-zinc-500">No accounts yet.</p>
+          <p className="text-sm text-muted-foreground">No accounts yet.</p>
         ) : null}
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">Snapshots</h2>
         <ul className="mt-3 space-y-2 text-sm">
           {snapshots.map((s) => (
-            <li key={s.id} className="flex justify-between gap-2 border-b border-zinc-50 py-2 dark:border-zinc-800">
-              <span className="text-zinc-500">{s.recordedAt.toLocaleString()}</span>
+            <li key={s.id} className="flex justify-between gap-2 border-b border-zinc-50 py-2 dark:border-border">
+              <span className="text-muted-foreground">{s.recordedAt.toLocaleString()}</span>
               <span className="tabular-nums font-medium">{formatCents(s.netCents)}</span>
             </li>
           ))}
         </ul>
         {snapshots.length === 0 ? (
-          <p className="text-sm text-zinc-500">No snapshots yet.</p>
+          <p className="text-sm text-muted-foreground">No snapshots yet.</p>
         ) : null}
       </section>
     </div>

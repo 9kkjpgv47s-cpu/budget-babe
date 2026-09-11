@@ -27,16 +27,16 @@ function statusBadge(status: string) {
     "inline-flex rounded-full px-2 py-0.5 text-xs font-medium tabular-nums";
   switch (status) {
     case "completed":
-      return `${base} bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200`;
+      return `${base} bg-emerald-100 text-accent dark:bg-emerald-900/40 dark:text-emerald-200`;
     case "processing":
     case "pending":
       return `${base} bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100`;
     case "failed":
       return `${base} bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200`;
     case "skipped":
-      return `${base} bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200`;
+      return `${base} bg-zinc-200 text-foreground dark:bg-zinc-700 dark:text-zinc-200`;
     default:
-      return `${base} bg-zinc-100 text-zinc-600`;
+      return `${base} bg-muted text-muted-foreground`;
   }
 }
 
@@ -76,11 +76,11 @@ export function ReceiptOcrSection({
   );
 
   return (
-    <div className="mt-3 w-full space-y-2 border-t border-zinc-100 pt-3 text-xs dark:border-zinc-800">
+    <div className="mt-3 w-full space-y-2 border-t border-zinc-100 pt-3 text-xs dark:border-border">
       <div className="flex flex-wrap items-center gap-2">
         <span className={statusBadge(receipt.ocrStatus)}>OCR: {receipt.ocrStatus}</span>
         {receipt.ocrConfidence != null ? (
-          <span className="text-zinc-500">Confidence ~{receipt.ocrConfidence}%</span>
+          <span className="text-muted-foreground">Confidence ~{receipt.ocrConfidence}%</span>
         ) : null}
         {(receipt.ocrStatus === "failed" ||
           receipt.ocrStatus === "skipped" ||
@@ -89,7 +89,7 @@ export function ReceiptOcrSection({
             <input type="hidden" name="id" value={receipt.id} />
             <button
               type="submit"
-              className="text-emerald-700 underline hover:no-underline dark:text-emerald-400"
+              className="text-accent underline hover:no-underline "
             >
               Re-run OCR
             </button>
@@ -101,16 +101,16 @@ export function ReceiptOcrSection({
       ) : null}
       {parsed.length > 0 ? (
         <div>
-          <p className="mb-1 font-medium text-zinc-700 dark:text-zinc-300">
+          <p className="mb-1 font-medium text-foreground">
             Parsed lines (best effort)
           </p>
-          <ul className="max-h-40 space-y-0.5 overflow-y-auto rounded border border-zinc-100 bg-zinc-50/80 px-2 py-1 font-mono text-[11px] dark:border-zinc-800 dark:bg-zinc-950">
+          <ul className="max-h-40 space-y-0.5 overflow-y-auto rounded border border-zinc-100 bg-muted/80 px-2 py-1 font-mono text-[11px] dark:border-border dark:bg-zinc-950">
             {parsed.map((line, i) => (
               <li key={i} className="flex justify-between gap-2">
-                <span className="truncate text-zinc-800 dark:text-zinc-200">
+                <span className="truncate text-foreground">
                   {line.description}
                 </span>
-                <span className="shrink-0 tabular-nums text-zinc-600 dark:text-zinc-400">
+                <span className="shrink-0 tabular-nums text-muted-foreground">
                   {line.amountCents != null ? formatCents(line.amountCents) : "—"}
                 </span>
               </li>
@@ -118,17 +118,17 @@ export function ReceiptOcrSection({
           </ul>
         </div>
       ) : receipt.ocrStatus === "completed" && receipt.ocrRawText ? (
-        <p className="text-zinc-500">
+        <p className="text-muted-foreground">
           No line items matched the parser. Open raw text below and adjust totals
           manually if needed.
         </p>
       ) : null}
       {receipt.ocrRawText && receipt.ocrRawText.length > 0 ? (
-        <details className="rounded border border-zinc-100 dark:border-zinc-800">
-          <summary className="cursor-pointer px-2 py-1 text-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-900">
+        <details className="rounded border border-border">
+          <summary className="cursor-pointer px-2 py-1 text-muted-foreground hover:bg-muted dark:hover:bg-zinc-900">
             Raw extracted text
           </summary>
-          <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words border-t border-zinc-100 p-2 text-[11px] text-zinc-700 dark:border-zinc-800 dark:text-zinc-300">
+          <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words border-t border-zinc-100 p-2 text-[11px] text-foreground dark:border-border dark:text-zinc-300">
             {receipt.ocrRawText}
           </pre>
         </details>
@@ -192,11 +192,11 @@ export function ReceiptListItem({
           href={`/api/receipts/${receipt.id}`}
           target="_blank"
           rel="noreferrer"
-          className="font-medium text-emerald-700 underline dark:text-emerald-400"
+          className="font-medium text-accent underline "
         >
           {receipt.filename}
         </a>
-        <div className="text-xs text-zinc-500">
+        <div className="text-xs text-muted-foreground">
           {receipt.uploadedAt.toLocaleString()}
           {receipt.user ? ` · ${receipt.user.name}` : ""}
         </div>
@@ -205,7 +205,7 @@ export function ReceiptListItem({
             {formatCents(receipt.totalCents)}
           </div>
         ) : null}
-        {receipt.note ? <div className="text-zinc-600">{receipt.note}</div> : null}
+        {receipt.note ? <div className="text-muted-foreground">{receipt.note}</div> : null}
         <ReceiptOcrSection
           receipt={receipt}
           yearMonth={yearMonth}
@@ -219,15 +219,15 @@ export function ReceiptListItem({
         />
         <form
           action={moveReceiptToMonthAction}
-          className="mt-3 flex flex-wrap items-end gap-2 border-t border-zinc-100 pt-2 text-xs dark:border-zinc-800"
+          className="mt-3 flex flex-wrap items-end gap-2 border-t border-zinc-100 pt-2 text-xs dark:border-border"
         >
           <input type="hidden" name="receiptId" value={receipt.id} />
-          <label className="flex items-center gap-1 text-zinc-500">
+          <label className="flex items-center gap-1 text-muted-foreground">
             <span>Month</span>
             <select
               name="targetYearMonth"
               defaultValue={yearMonth}
-              className="rounded border border-zinc-200 px-1 py-0.5 dark:border-zinc-700 dark:bg-zinc-950"
+              className="rounded border border-border px-1 py-0.5 dark:border-zinc-700 dark:bg-zinc-950"
             >
               {monthOptions.map((m) => (
                 <option key={m} value={m}>
@@ -236,7 +236,7 @@ export function ReceiptListItem({
               ))}
             </select>
           </label>
-          <label className="flex items-center gap-1 text-zinc-600 dark:text-zinc-400">
+          <label className="flex items-center gap-1 text-muted-foreground">
             <input
               type="checkbox"
               name="moveLinkedExpenses"

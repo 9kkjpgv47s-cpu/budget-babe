@@ -33,13 +33,13 @@ export function DashboardPanel({
 
   return (
     <div className="mt-4 space-y-6">
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted-foreground">
         Log take-home deposits under <strong>Paychecks this month</strong> below
         (or <strong>Quick add</strong> → Paycheck). Coach and overview use their
         sum as monthly income.{" "}
         <Link
           href={`/coach?ym=${yearMonth}`}
-          className="font-medium text-emerald-700 underline dark:text-emerald-400"
+          className="font-medium text-accent underline "
         >
           Paycheck coach settings →
         </Link>
@@ -49,7 +49,7 @@ export function DashboardPanel({
         <label className="text-sm font-medium" htmlFor="nextPaycheck">
           Next paycheck date
         </label>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-muted-foreground">
           Unpaid bills due on or before this date count toward &quot;bills before
           next paycheck&quot;.
         </p>
@@ -64,7 +64,7 @@ export function DashboardPanel({
           <button
             type="submit"
             disabled={payPending}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+            className="btn btn-primary"
           >
             Save
           </button>
@@ -79,7 +79,7 @@ export function DashboardPanel({
         <label className="text-sm font-medium" htmlFor="month-notes">
           Month notes
         </label>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-muted-foreground">
           Private reminders for this calendar month (both users see the same text).
         </p>
         <textarea
@@ -92,7 +92,7 @@ export function DashboardPanel({
         <button
           type="submit"
           disabled={notesPending}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
+          className="btn btn-primary"
         >
           Save notes
         </button>

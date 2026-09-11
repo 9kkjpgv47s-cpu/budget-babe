@@ -22,15 +22,15 @@ export async function DebtCashFlowCompare({ yearMonth }: { yearMonth: string }) 
     minTotal > 0 && data.leftAfterUpcomingBills >= minTotal;
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+    <section className="card p-5">
       <h2 className="font-medium">Compare to {yearMonth} cash flow</h2>
-      <p className="mt-1 text-xs text-zinc-500">
+      <p className="mt-1 text-xs text-muted-foreground">
         Debt balances here are manual. This table compares minimum payments to
         the same income and bills the overview and coach use.
       </p>
       <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+          <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Overview income
           </dt>
           <dd className="mt-0.5 font-semibold tabular-nums">
@@ -38,7 +38,7 @@ export async function DebtCashFlowCompare({ yearMonth }: { yearMonth: string }) 
           </dd>
         </div>
         <div>
-          <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+          <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Spent ({yearMonth})
           </dt>
           <dd className="mt-0.5 font-semibold tabular-nums">
@@ -46,7 +46,7 @@ export async function DebtCashFlowCompare({ yearMonth }: { yearMonth: string }) 
           </dd>
         </div>
         <div>
-          <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+          <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Cash left before next pay
           </dt>
           <dd className="mt-0.5 font-semibold tabular-nums">
@@ -54,14 +54,14 @@ export async function DebtCashFlowCompare({ yearMonth }: { yearMonth: string }) 
           </dd>
         </div>
         <div>
-          <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+          <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Debt tracked here
           </dt>
           <dd className="mt-0.5 font-semibold tabular-nums">
             {formatCents(totalOwed)}
           </dd>
           {minTotal > 0 ? (
-            <dd className="text-xs text-zinc-500">
+            <dd className="text-xs text-muted-foreground">
               Min payments sum: {formatCents(minTotal)}
             </dd>
           ) : null}
@@ -69,36 +69,36 @@ export async function DebtCashFlowCompare({ yearMonth }: { yearMonth: string }) 
       </dl>
       {minTotal > 0 ? (
         <p
-          className={`mt-4 text-sm ${minFits ? "text-emerald-800 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}
+          className={`mt-4 text-sm ${minFits ? "text-accent " : "text-red-700 dark:text-red-300"}`}
         >
           {minFits
             ? "Sum of minimum payments fits within cash left before next pay on the overview — still log card/loan payments as Bills or Expenses so coach and spent totals stay accurate."
             : "Sum of minimum payments exceeds cash left before next pay on the overview. Add paychecks, trim bills, or log real payments on Expenses — updating balances here alone will not fix monthly cash flow."}
         </p>
       ) : (
-        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="mt-4 text-sm text-muted-foreground">
           Add minimum payment amounts on each account to compare against monthly
           cash left.
         </p>
       )}
-      <p className="mt-3 text-xs text-zinc-500">
+      <p className="mt-3 text-xs text-muted-foreground">
         <Link
           href={`/bills?ym=${yearMonth}`}
-          className="text-emerald-600 underline"
+          className="text-accent underline"
         >
           Bills
         </Link>
         {" · "}
         <Link
           href={`/expenses?ym=${yearMonth}`}
-          className="text-emerald-600 underline"
+          className="text-accent underline"
         >
           Expenses
         </Link>
         {" · "}
         <Link
           href={`/net-worth`}
-          className="text-emerald-600 underline"
+          className="text-accent underline"
         >
           Net worth
         </Link>

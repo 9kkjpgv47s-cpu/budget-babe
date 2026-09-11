@@ -35,7 +35,7 @@ const navGroups: { title: string; links: NavLink[] }[] = [
   {
     title: "Accounts",
     links: [
-      { href: "/plaid", label: "Plaid" },
+      { href: "/plaid", label: "Bank sync" },
       { href: "/tax", label: "Tax" },
       { href: "/debt", label: "Debt" },
       { href: "/net-worth", label: "Net worth" },
@@ -62,49 +62,43 @@ export function AppHeaderNav() {
     : null;
 
   return (
-    <div className="hidden flex-col gap-2 md:flex">
+    <nav
+      className="hidden items-center gap-0.5 overflow-x-auto text-[13px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex md:flex-nowrap"
+      aria-label="Primary"
+    >
       {ym ? (
-        <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-          Viewing {ym}
-          <span className="font-normal text-zinc-500 dark:text-zinc-400">
-            {" "}
-            — month links preserve this context
-          </span>
-        </p>
+        <span
+          className="mr-1 shrink-0 rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent"
+          title="Month context preserved in links"
+        >
+          {ym}
+        </span>
       ) : null}
-      <nav
-        className="flex flex-wrap items-start gap-x-4 gap-y-2 text-sm"
-        aria-label="Primary"
-      >
-        {navGroups.map((group, gi) => (
-          <div key={group.title} className="flex flex-wrap items-center gap-2">
-            {gi > 0 ? (
-              <span
-                className="hidden h-4 w-px bg-zinc-200 dark:bg-zinc-700 lg:inline-block"
-                aria-hidden
-              />
-            ) : null}
-            <span className="sr-only">{group.title}</span>
-            {group.links.map((l) => {
-              const active = isActive(pathname, l.href);
-              return (
-                <Link
-                  key={l.href}
-                  href={hrefWithMonth(l.href, ym)}
-                  aria-current={active ? "page" : undefined}
-                  className={
-                    active
-                      ? "font-semibold text-emerald-700 dark:text-emerald-400"
-                      : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                  }
-                >
-                  {l.label}
-                </Link>
-              );
-            })}
-          </div>
-        ))}
-      </nav>
-    </div>
+      {navGroups.map((group, gi) => (
+        <div key={group.title} className="flex shrink-0 items-center gap-0.5">
+          {gi > 0 ? (
+            <span className="mx-1 h-4 w-px bg-border" aria-hidden />
+          ) : null}
+          <span className="sr-only">{group.title}</span>
+          {group.links.map((l) => {
+            const active = isActive(pathname, l.href);
+            return (
+              <Link
+                key={l.href}
+                href={hrefWithMonth(l.href, ym)}
+                aria-current={active ? "page" : undefined}
+                className={
+                  active
+                    ? "shrink-0 rounded-lg bg-accent-soft px-2.5 py-1.5 font-semibold text-accent"
+                    : "shrink-0 rounded-lg px-2.5 py-1.5 font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                }
+              >
+                {l.label}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
+    </nav>
   );
 }

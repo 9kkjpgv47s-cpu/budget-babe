@@ -11,9 +11,9 @@ export function RegisterForm() {
   );
 
   return (
-    <form action={formAction} className="mt-8 space-y-4">
+    <form action={formAction} className="mt-6 space-y-4">
       {state?.error ? (
-        <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+        <p className="rounded-xl bg-red-500/10 px-3 py-2.5 text-sm text-negative">
           {state.error}
         </p>
       ) : null}
@@ -27,7 +27,7 @@ export function RegisterForm() {
           type="text"
           required
           autoComplete="name"
-          className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+          className="mt-1.5 w-full"
         />
       </div>
       <div>
@@ -40,7 +40,7 @@ export function RegisterForm() {
           type="email"
           required
           autoComplete="email"
-          className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+          className="mt-1.5 w-full"
         />
       </div>
       <div>
@@ -54,14 +54,14 @@ export function RegisterForm() {
           required
           minLength={8}
           autoComplete="new-password"
-          className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+          className="mt-1.5 w-full"
         />
-        <p className="mt-1 text-xs text-zinc-500">At least 8 characters.</p>
+        <p className="mt-1.5 text-xs text-muted-foreground">At least 8 characters.</p>
       </div>
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-lg bg-emerald-600 py-2.5 font-medium text-white hover:bg-emerald-500 disabled:opacity-60"
+        className="btn btn-primary w-full !py-3"
       >
         {pending ? "Creating…" : "Create account"}
       </button>

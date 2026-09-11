@@ -8,14 +8,20 @@ export default function AppError({
   reset: () => void;
 }) {
   return (
-    <div className="mx-auto max-w-lg px-4 py-16 text-center text-zinc-900 dark:text-zinc-50">
+    <div className="mx-auto max-w-lg px-4 py-16 text-center">
+      <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 text-negative">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+          <path d="M12 9v4M12 17h.01" />
+        </svg>
+      </div>
       <h1 className="text-xl font-semibold">Something went wrong</h1>
-      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
         Try signing out and signing back in. If this keeps happening, open{" "}
         <strong>/api/health</strong> on this deployment — check{" "}
-        <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">database</code>{" "}
+        <code className="rounded bg-muted px-1 dark:bg-zinc-800">database</code>{" "}
         and{" "}
-        <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">
+        <code className="rounded bg-muted px-1 dark:bg-zinc-800">
           sessionConfigured
         </code>
         , then review Vercel runtime logs.
@@ -28,7 +34,7 @@ export default function AppError({
       ) : null}
       <button
         type="button"
-        className="mt-6 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+        className="btn btn-primary mt-6"
         onClick={() => reset()}
       >
         Try again

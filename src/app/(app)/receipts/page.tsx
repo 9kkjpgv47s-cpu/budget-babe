@@ -77,8 +77,8 @@ export default async function ReceiptsPage({
       <OcrStatusPoller active={ocrPending} />
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Receipts</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          <strong className="text-zinc-800 dark:text-zinc-200">
+        <p className="mt-1 text-sm text-muted-foreground">
+          <strong className="text-foreground">
             Use your camera or photo library
           </strong>{" "}
           for receipts — that is the path we optimize for (sharp picture, good
@@ -86,18 +86,18 @@ export default async function ReceiptsPage({
           pages are OCR’d.
         </p>
         <p className="mt-2 text-sm">
-          <Link href="/" className="text-emerald-600 underline">
+          <Link href="/" className="text-accent underline">
             ← Back to overview
           </Link>
         </p>
       </div>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">Upload for {yearMonth}</h2>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs text-muted-foreground">
           Change month from the overview using the arrows, then open this page
           again, or add{" "}
-          <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">
+          <code className="rounded bg-muted px-1 dark:bg-zinc-800">
             ?ym=YYYY-MM
           </code>{" "}
           to the URL.
@@ -105,9 +105,9 @@ export default async function ReceiptsPage({
         <ReceiptUploadForm yearMonth={yearMonth} />
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">This month</h2>
-        <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
+        <ul className="mt-4 divide-y divide-border">
           {receiptRows.map((row) => (
             <ReceiptListItem
               key={row.receipt.id}
@@ -125,7 +125,7 @@ export default async function ReceiptsPage({
           ))}
         </ul>
         {receipts.length === 0 ? (
-          <p className="mt-4 text-sm text-zinc-500">No receipts for this month.</p>
+          <p className="mt-4 text-sm text-muted-foreground">No receipts for this month.</p>
         ) : null}
       </section>
     </div>

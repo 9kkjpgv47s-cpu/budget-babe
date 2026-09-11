@@ -18,11 +18,11 @@ export function MerchantRulesList({
   categories: { id: string; name: string }[];
 }) {
   if (rules.length === 0) {
-    return <p className="mt-2 text-sm text-zinc-500">No rules yet.</p>;
+    return <p className="mt-2 text-sm text-muted-foreground">No rules yet.</p>;
   }
 
   return (
-    <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
+    <ul className="mt-4 divide-y divide-border">
       {rules.map((r) => (
         <li key={r.id} className="py-4">
           <form action={updateMerchantRuleAction} className="flex flex-wrap items-end gap-2">
@@ -32,7 +32,7 @@ export function MerchantRulesList({
               defaultValue={r.pattern}
               className="min-w-[6rem] flex-1 rounded-lg border border-zinc-300 px-2 py-1 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-950"
             />
-            <span className="text-zinc-400">→</span>
+            <span className="text-muted-foreground">→</span>
             <input
               name="tag"
               defaultValue={r.tag}

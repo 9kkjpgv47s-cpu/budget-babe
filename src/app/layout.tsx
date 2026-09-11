@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const APP_NAME = "Household Budget";
+const APP_NAME = "Budget Babe";
 
 export const metadata: Metadata = {
   applicationName: APP_NAME,

@@ -52,7 +52,7 @@ export function CashFlowSiloCallout({
       <p className="mt-1 text-amber-900/90 dark:text-amber-100/85">{c.body}</p>
       {c.cta && href ? (
         <p className="mt-2">
-          <Link href={href} className="font-medium text-emerald-800 underline dark:text-emerald-300">
+          <Link href={href} className="font-medium text-accent underline ">
             {c.cta.label} →
           </Link>
         </p>

@@ -47,7 +47,7 @@ export default async function PlaidPage({
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Bank sync (Plaid)</h1>
-        <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Connect your institution with Plaid Link, then sync pulls posted transactions into expenses
           (deduped), refreshes account balances into <strong>Net worth</strong>, and fills{" "}
           <strong>Debt</strong> when the Liabilities product is enabled. Deposits, refunds, and
@@ -68,7 +68,7 @@ export default async function PlaidPage({
           {items.length > 1 ? <PlaidSyncAllButton /> : null}
         </div>
         {items.length === 0 ? (
-          <p className="text-sm text-zinc-500">No banks linked yet for {user.name}.</p>
+          <p className="text-sm text-muted-foreground">No banks linked yet for {user.name}.</p>
         ) : (
           <ul className="space-y-3">
             {items.map((it) => (
@@ -91,11 +91,11 @@ export default async function PlaidPage({
         )}
       </section>
 
-      <p className="text-xs text-zinc-500">
-        Access tokens are AES-256-GCM encrypted at rest when <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">PLAID_TOKEN_ENC_KEY</code>{" "}
+      <p className="text-xs text-muted-foreground">
+        Access tokens are AES-256-GCM encrypted at rest when <code className="rounded bg-muted px-1 dark:bg-zinc-800">PLAID_TOKEN_ENC_KEY</code>{" "}
         is set. Auto-sync runs on Plaid webhooks when{" "}
-        <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">PLAID_WEBHOOK_URL</code> is set
-        (e.g. <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">https://your-app.vercel.app/api/plaid/webhook</code>).
+        <code className="rounded bg-muted px-1 dark:bg-zinc-800">PLAID_WEBHOOK_URL</code> is set
+        (e.g. <code className="rounded bg-muted px-1 dark:bg-zinc-800">https://your-app.vercel.app/api/plaid/webhook</code>).
         New links request 24 months of history.
       </p>
     </div>

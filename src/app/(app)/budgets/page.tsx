@@ -16,6 +16,7 @@ import { BudgetAddForm } from "../BudgetAddForm";
 import { BudgetCopyHeader } from "../BudgetCopyHeader";
 import { BudgetPlanRow } from "../BudgetPlanRow";
 import { CategoryEnvelopePanel } from "./CategoryEnvelopePanel";
+import { MonthNav } from "@/components/ui";
 import { CategorySection } from "./CategorySection";
 import { CategorySpendSummary } from "./CategorySpendSummary";
 
@@ -100,43 +101,29 @@ export default async function BudgetsPage({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Budget lines</h1>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Envelopes, copy from last month, suggested rolled-in, and quick add.
           </p>
           <p className="mt-2 text-sm">
-            <Link href={`/?ym=${ym}`} className="text-emerald-600 underline">
+            <Link href={`/?ym=${ym}`} className="text-accent underline">
               ← Overview ({ym})
             </Link>
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <a
-            className="rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            href={`/budgets?ym=${prevYm}`}
-          >
-            ←
-          </a>
-          <span className="min-w-[7rem] text-center font-medium tabular-nums">{ym}</span>
-          <a
-            className="rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            href={`/budgets?ym=${nextYm}`}
-          >
-            →
-          </a>
-        </div>
+        <MonthNav yearMonth={ym} prevYm={prevYm} nextYm={nextYm} />
       </div>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">Carry-forward & copy</h2>
         <form action={applySuggestedRolloversAction} className="mt-3">
           <input type="hidden" name="yearMonth" value={ym} />
           <button
             type="submit"
-            className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100"
+            className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 "
           >
             Apply suggested rolled-in from {prevYm}
           </button>
-          <p className="mt-1 max-w-xl text-xs text-zinc-500">
+          <p className="mt-1 max-w-xl text-xs text-muted-foreground">
             For each line that shares a name with last month, sets rolled-in to that
             month’s unused envelope balance.
           </p>
@@ -166,12 +153,12 @@ export default async function BudgetsPage({
         }
       />
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">This month ({budgetPlans.length})</h2>
         {budgetRows.length === 0 ? (
-          <p className="mt-4 text-sm text-zinc-500">No budget lines yet.</p>
+          <p className="mt-4 text-sm text-muted-foreground">No budget lines yet.</p>
         ) : (
-          <ul className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
+          <ul className="mt-4 divide-y divide-border">
             {budgetRows.map(({ plan, spent, remaining }) => (
               <BudgetPlanRow
                 key={plan.id}
@@ -185,7 +172,7 @@ export default async function BudgetsPage({
         )}
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">Add budget line</h2>
         <BudgetAddForm yearMonth={ym} heading={null} />
       </section>

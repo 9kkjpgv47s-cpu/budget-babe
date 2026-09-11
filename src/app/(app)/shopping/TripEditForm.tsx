@@ -42,7 +42,7 @@ export function TripEditForm({ trip }: { trip: TripPayload }) {
 
   return (
     <details className="mt-3 text-sm">
-      <summary className="cursor-pointer text-xs text-emerald-700 dark:text-emerald-400">
+      <summary className="cursor-pointer text-xs text-accent ">
         Edit trip
       </summary>
       <form action={formAction} className="mt-3 space-y-3">
@@ -50,36 +50,36 @@ export function TripEditForm({ trip }: { trip: TripPayload }) {
         {state?.error ? <p className="text-xs text-red-600">{state.error}</p> : null}
         <div className="grid gap-2 sm:grid-cols-2">
           <div>
-            <label className="text-xs text-zinc-500">Store</label>
+            <label className="text-xs text-muted-foreground">Store</label>
             <input
               name="storeName"
               defaultValue={trip.storeName ?? ""}
-              className="mt-0.5 w-full rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+              className="mt-0.5 w-full rounded border border-border px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
             />
           </div>
           <div>
-            <label className="text-xs text-zinc-500">Date</label>
+            <label className="text-xs text-muted-foreground">Date</label>
             <input
               name="shoppedAt"
               type="date"
               defaultValue={dateStr}
-              className="mt-0.5 w-full rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+              className="mt-0.5 w-full rounded border border-border px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
             />
           </div>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-zinc-600">Line items</span>
+          <span className="text-xs font-medium text-muted-foreground">Line items</span>
           <button
             type="button"
             onClick={() => setRows((r) => [...r, emptyRow()])}
-            className="text-xs text-emerald-700 underline dark:text-emerald-400"
+            className="text-xs text-accent underline "
           >
             Add row
           </button>
         </div>
-        <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-800">
+        <div className="overflow-x-auto rounded border border-border">
           <table className="min-w-full text-left text-xs">
-            <thead className="bg-zinc-50 text-zinc-500 dark:bg-zinc-900">
+            <thead className="bg-muted text-muted-foreground dark:bg-zinc-900">
               <tr>
                 <th className="px-2 py-1">Item</th>
                 <th className="px-2 py-1">Qty</th>
@@ -88,7 +88,7 @@ export function TripEditForm({ trip }: { trip: TripPayload }) {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id} className="border-t border-zinc-100 dark:border-zinc-800">
+                <tr key={row.id} className="border-t border-border">
                   <td className="px-1 py-0.5">
                     <input
                       name="itemName"

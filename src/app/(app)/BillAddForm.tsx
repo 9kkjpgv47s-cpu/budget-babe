@@ -43,7 +43,7 @@ export function BillAddForm({
         <button
           type="submit"
           disabled={billPending}
-          className="rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
+          className="btn btn-primary"
         >
           Add bill
         </button>

@@ -6,6 +6,9 @@ import { formatCents } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { currentYearMonth } from "@/lib/yearMonth";
 import { ExpensesInteractiveList } from "./ExpensesInteractiveList";
+import { MonthNav } from "@/components/ui";
+import { addMonths, format } from "date-fns";
+import { parseYearMonth } from "@/lib/yearMonth";
 
 export default async function ExpensesPage({
   searchParams,
@@ -162,10 +165,16 @@ export default async function ExpensesPage({
     }
   }
 
+  const prevYm = format(addMonths(parseYearMonth(ym), -1), "yyyy-MM");
+  const nextYm = format(addMonths(parseYearMonth(ym), 1), "yyyy-MM");
+
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <MonthNav yearMonth={ym} prevYm={prevYm} nextYm={nextYm} />
+      </div>
       {classifyMessage ? (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100">
+        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/50 ">
           {classifyMessage}
         </p>
       ) : null}
@@ -177,11 +186,7 @@ export default async function ExpensesPage({
               <Link
                 key={c.id}
                 href={`/expenses?ym=${ym}&cat=${encodeURIComponent(c.slug)}`}
-                className={`rounded-full px-3 py-1 ${
-                  active
-                    ? "bg-emerald-600 text-white"
-                    : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-                }`}
+                className={`chip ${active ? "chip-active" : ""}`}
               >
                 {c.name} · {formatCents(c.totalCents)}
               </Link>
@@ -190,10 +195,10 @@ export default async function ExpensesPage({
           {uncategorizedCount > 0 ? (
             <Link
               href={`/expenses?ym=${ym}&uncategorized=1`}
-              className={`rounded-full px-3 py-1 ${
+              className={`chip ${
                 uncategorizedOnly
-                  ? "bg-amber-600 text-white"
-                  : "border border-amber-200 bg-amber-50 text-amber-950 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+                  ? "!border-amber-500 !bg-amber-500 !text-white"
+                  : "!border-amber-300 !bg-amber-50 !text-amber-900 dark:!border-amber-800 dark:!bg-amber-950/40 dark:!text-amber-100"
               }`}
             >
               Uncategorized · {formatCents(uncategorizedSum._sum.amountCents ?? 0)}
@@ -202,7 +207,7 @@ export default async function ExpensesPage({
           {filterLabel ? (
             <Link
               href={`/expenses?ym=${ym}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-              className="self-center text-zinc-500 underline"
+              className="self-center text-muted-foreground underline"
             >
               Clear filter
             </Link>

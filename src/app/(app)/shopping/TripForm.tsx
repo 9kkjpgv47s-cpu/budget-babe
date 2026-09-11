@@ -114,8 +114,8 @@ export function TripForm({
   return (
     <div className="space-y-4">
       {hasHistory ? (
-        <div className="flex flex-wrap gap-2 rounded-lg border border-zinc-200 bg-zinc-50/80 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/50">
-          <span className="w-full text-xs font-medium uppercase tracking-wide text-zinc-500">
+        <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-muted/80 p-3 text-sm dark:border-border dark:bg-zinc-900/50">
+          <span className="w-full text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Quick fill from history
           </span>
           <button
@@ -131,7 +131,7 @@ export function TripForm({
             type="button"
             disabled={lastTripPrefill.length === 0}
             onClick={() => setRows(fromPrefill(lastTripPrefill))}
-            className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+            className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-950 dark:hover:bg-zinc-900"
           >
             Same as last trip
           </button>
@@ -139,7 +139,7 @@ export function TripForm({
             type="button"
             disabled={suggestedItems.length === 0}
             onClick={() => setRows((r) => mergeSuggested(r, suggestedItems))}
-            className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+            className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-950 dark:hover:bg-zinc-900"
             title="Append items you often buy but skipped on the last trip"
           >
             Add suggested picks
@@ -147,7 +147,7 @@ export function TripForm({
           <button
             type="button"
             onClick={() => setRows([emptyRow(), emptyRow(), emptyRow()])}
-            className="rounded-md px-3 py-1.5 text-xs text-zinc-600 underline hover:text-zinc-900 dark:text-zinc-400"
+            className="rounded-md px-3 py-1.5 text-xs text-muted-foreground underline hover:text-foreground dark:text-muted-foreground"
           >
             Clear to blank rows
           </button>
@@ -189,14 +189,14 @@ export function TripForm({
             <button
               type="button"
               onClick={() => setRows((r) => [...r, emptyRow()])}
-              className="text-xs text-emerald-700 underline dark:text-emerald-400"
+              className="text-xs text-accent underline "
             >
               Add row
             </button>
           </div>
-          <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+          <div className="overflow-x-auto rounded-lg border border-border">
             <table className="min-w-full text-left text-sm">
-              <thead className="bg-zinc-50 text-xs uppercase text-zinc-500 dark:bg-zinc-900">
+              <thead className="bg-muted text-xs uppercase text-muted-foreground dark:bg-zinc-900">
                 <tr>
                   <th className="px-3 py-2">Item</th>
                   <th className="px-3 py-2">Qty</th>
@@ -207,7 +207,7 @@ export function TripForm({
                 {rows.map((row) => (
                   <tr
                     key={row.id}
-                    className="border-t border-zinc-100 dark:border-zinc-800"
+                    className="border-t border-border"
                   >
                     <td className="px-2 py-1">
                       <input
@@ -222,7 +222,7 @@ export function TripForm({
                             ),
                           )
                         }
-                        className="w-full rounded border border-transparent px-2 py-1 hover:border-zinc-200 dark:hover:border-zinc-700"
+                        className="w-full rounded border border-transparent px-2 py-1 hover:border-border dark:hover:border-zinc-700"
                       />
                     </td>
                     <td className="w-20 px-2 py-1">
@@ -247,7 +247,7 @@ export function TripForm({
                             ),
                           )
                         }
-                        className="w-full rounded border border-transparent px-2 py-1 text-center tabular-nums hover:border-zinc-200 dark:hover:border-zinc-700"
+                        className="w-full rounded border border-transparent px-2 py-1 text-center tabular-nums hover:border-border dark:hover:border-zinc-700"
                       />
                     </td>
                     <td className="w-32 px-2 py-1">
@@ -265,7 +265,7 @@ export function TripForm({
                             ),
                           )
                         }
-                        className="w-full rounded border border-transparent px-2 py-1 tabular-nums hover:border-zinc-200 dark:hover:border-zinc-700"
+                        className="w-full rounded border border-transparent px-2 py-1 tabular-nums hover:border-border dark:hover:border-zinc-700"
                       />
                     </td>
                   </tr>

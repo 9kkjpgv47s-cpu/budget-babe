@@ -5,20 +5,20 @@ import Link from "next/link";
  */
 export function MonthWorkflowLinks({ yearMonth }: { yearMonth: string }) {
   return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-600 dark:text-zinc-400">
-      <Link href={`/?ym=${yearMonth}`} className="text-emerald-600 underline">
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+      <Link href={`/?ym=${yearMonth}`} className="text-accent underline">
         Overview ({yearMonth})
       </Link>
       <span aria-hidden>·</span>
-      <Link href={`/expenses?ym=${yearMonth}`} className="text-emerald-600 underline">
+      <Link href={`/expenses?ym=${yearMonth}`} className="text-accent underline">
         Expenses
       </Link>
       <span aria-hidden>·</span>
-      <Link href={`/import?ym=${yearMonth}`} className="text-emerald-600 underline">
+      <Link href={`/import?ym=${yearMonth}`} className="text-accent underline">
         Import & rules
       </Link>
       <span aria-hidden>·</span>
-      <Link href={`/coach?ym=${yearMonth}`} className="text-emerald-600 underline">
+      <Link href={`/coach?ym=${yearMonth}`} className="text-accent underline">
         Coach
       </Link>
     </p>

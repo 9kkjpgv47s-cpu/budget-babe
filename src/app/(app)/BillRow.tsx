@@ -26,11 +26,11 @@ export function BillsSectionHeader({
       <input type="hidden" name="yearMonth" value={yearMonth} />
       <button
         type="submit"
-        className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+        className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium hover:bg-muted dark:border-zinc-600 dark:hover:bg-zinc-800"
       >
         Copy bills from {prevYm}
       </button>
-      <p className="mt-1 text-xs text-zinc-500">
+      <p className="mt-1 text-xs text-muted-foreground">
         Skips a row if this month already has the same title, amount, and due
         date (stops duplicate runs).
       </p>
@@ -52,11 +52,11 @@ export function BillRow({
   };
 }) {
   return (
-    <li className="space-y-2 rounded-lg border border-zinc-100 px-3 py-2 dark:border-zinc-800">
+    <li className="space-y-2 rounded-lg border border-zinc-100 px-3 py-2 dark:border-border">
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <div>
           <div className="font-medium">{bill.title}</div>
-          <div className="text-xs text-zinc-500">
+          <div className="text-xs text-muted-foreground">
             Due {bill.dueDate.toLocaleDateString()} · {formatCents(bill.amountCents)}
           </div>
         </div>
@@ -67,8 +67,8 @@ export function BillRow({
             type="submit"
             className={`rounded-md px-2 py-1 text-xs font-medium ${
               bill.paid
-                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
-                : "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
+                ? "bg-emerald-100 text-accent dark:bg-emerald-900/40 dark:text-emerald-200"
+                : "bg-muted text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
             }`}
           >
             {bill.paid ? "Paid" : "Mark paid"}
@@ -76,7 +76,7 @@ export function BillRow({
         </form>
       </div>
       <details className="text-xs">
-        <summary className="cursor-pointer text-emerald-700 dark:text-emerald-400">
+        <summary className="cursor-pointer text-accent ">
           Edit or remove
         </summary>
         <form action={updateBillAction} className="mt-2 grid gap-1 sm:grid-cols-2">
@@ -85,19 +85,19 @@ export function BillRow({
           <input
             name="title"
             defaultValue={bill.title}
-            className="sm:col-span-2 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+            className="sm:col-span-2 rounded border border-border px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
           />
           <input
             name="amount"
             defaultValue={(bill.amountCents / 100).toFixed(2)}
             inputMode="decimal"
-            className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+            className="rounded border border-border px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
           />
           <input
             name="dueDate"
             type="date"
             defaultValue={toDateInput(bill.dueDate)}
-            className="rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+            className="rounded border border-border px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
           />
           <label className="flex items-center gap-2 sm:col-span-2">
             <input type="checkbox" name="paid" defaultChecked={bill.paid} />

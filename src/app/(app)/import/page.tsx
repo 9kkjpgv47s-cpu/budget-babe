@@ -50,12 +50,12 @@ export default async function ImportPage({
     <div className="space-y-10">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Import & rules</h1>
-        <p className="mt-1 max-w-2xl text-sm text-zinc-500">
+        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
           Paste bank **CSV**, **OFX/QFX**, or **QIF** exports. Duplicates in the
           same month are skipped. Optional column numbers fix weird CSV layouts.
           Rules add tags when a description contains your pattern. Optional category
           assigns a canonical class (links budget envelope + tax folder). CSV import
-          and export support a <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">category</code>{" "}
+          and export support a <code className="rounded bg-muted px-1 dark:bg-zinc-800">category</code>{" "}
           column (name or slug).
         </p>
         <div className="mt-2">
@@ -64,21 +64,21 @@ export default async function ImportPage({
         <p className="mt-2 text-sm">
           <a
             href={`/api/export/expenses?ym=${yearMonth}`}
-            className="text-emerald-600 underline"
+            className="text-accent underline"
           >
             Download expenses CSV
           </a>
           {" · "}
           <a
             href={`/api/export/bills?ym=${yearMonth}`}
-            className="text-emerald-600 underline"
+            className="text-accent underline"
           >
             Download bills CSV
           </a>
           {" · "}
           <a
             href={`/api/export/budgets?ym=${yearMonth}`}
-            className="text-emerald-600 underline"
+            className="text-accent underline"
           >
             Download budgets CSV
           </a>
@@ -106,12 +106,12 @@ export default async function ImportPage({
 
       <section
         id="merchant-rules"
-        className="rounded-xl border border-zinc-200 bg-white p-5 scroll-mt-24 dark:border-zinc-800 dark:bg-zinc-900"
+        className="rounded-xl border border-border bg-white p-5 scroll-mt-24 dark:border-border dark:bg-zinc-900"
       >
         <h2 className="font-medium">Merchant rules</h2>
-        <p className="mt-1 text-xs text-zinc-500">
-          If description contains <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">pattern</code>, add{" "}
-          <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">tag</code>{" "}
+        <p className="mt-1 text-xs text-muted-foreground">
+          If description contains <code className="rounded bg-muted px-1 dark:bg-zinc-800">pattern</code>, add{" "}
+          <code className="rounded bg-muted px-1 dark:bg-zinc-800">tag</code>{" "}
           (used in budget matching and Insights). Optional category links envelope + tax folder.
         </p>
         <form action={addMerchantRuleAction} className="mt-4 flex flex-wrap items-end gap-2">
@@ -139,7 +139,7 @@ export default async function ImportPage({
           </select>
           <button
             type="submit"
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+            className="btn btn-primary"
           >
             Add rule
           </button>

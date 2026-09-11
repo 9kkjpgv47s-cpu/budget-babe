@@ -104,7 +104,7 @@ export function QuickForms({
             </option>
           ))}
         </select>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-muted-foreground">
           {kind === "expense"
             ? "Logs a purchase for this month. Budget, tags, payee, and category carry from your last entry or auto-match."
             : kind === "bill"
@@ -161,7 +161,7 @@ export function QuickForms({
             <div className={categories.length > 0 ? "" : "sm:col-span-2"}>
               <label
                 htmlFor="quickBudgetPlanId"
-                className="text-xs font-medium text-zinc-600 dark:text-zinc-400"
+                className="text-xs font-medium text-muted-foreground"
               >
                 Budget envelope (optional)
               </label>
@@ -187,7 +187,7 @@ export function QuickForms({
             defaultValue={defaultTags}
             className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
           />
-          <p className="text-xs text-zinc-500 sm:col-span-2">
+          <p className="text-xs text-muted-foreground sm:col-span-2">
             Leave category blank to auto-classify from merchant rules and match text.
           </p>
         </div>
@@ -221,7 +221,7 @@ export function QuickForms({
             placeholder="Envelope name (e.g. Groceries)"
             className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
           />
-          <p className="text-xs text-zinc-500 sm:col-span-2">
+          <p className="text-xs text-muted-foreground sm:col-span-2">
             Matching spending categories (same name or slug) auto-link to this envelope.
           </p>
           <input
@@ -295,7 +295,7 @@ export function QuickForms({
         <p className="text-sm text-red-600">{state.error}</p>
       ) : null}
       {state?.ok ? (
-        <p className="text-sm text-emerald-700 dark:text-emerald-300">
+        <p className="text-sm text-accent ">
           {state.message ??
             "Saved. Budget and tags will pre-fill your next entry this month."}
         </p>

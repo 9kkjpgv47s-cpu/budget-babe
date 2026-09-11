@@ -74,14 +74,14 @@ export function ExpenseTaxApplicabilityForm({
   const pad = compact ? "text-xs" : "text-sm";
 
   return (
-    <div className={`space-y-2 border-t border-zinc-100 pt-3 dark:border-zinc-800 ${pad}`}>
+    <div className={`space-y-2 border-t border-zinc-100 pt-3 dark:border-border ${pad}`}>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-medium text-zinc-700 dark:text-zinc-300">Tax:</span>
-        <span className="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
+        <span className="font-medium text-foreground">Tax:</span>
+        <span className="rounded bg-muted px-2 py-0.5 text-xs text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
           {applicabilityLabel(app)}
         </span>
         {taxReviewedAt ? (
-          <span className="text-xs text-emerald-700 dark:text-emerald-400">Reviewed</span>
+          <span className="text-xs text-accent ">Reviewed</span>
         ) : (app === "applicable" || app === "applicable_with_documentation") ? (
           <span className="text-xs text-amber-700 dark:text-amber-400">Not reviewed</span>
         ) : null}
@@ -94,7 +94,7 @@ export function ExpenseTaxApplicabilityForm({
         <input type="hidden" name="from" value={yearMonth ? "expenses" : "tax"} />
         {yearMonth ? <input type="hidden" name="yearMonth" value={yearMonth} /> : null}
 
-        <label className={`text-zinc-600 dark:text-zinc-400 sm:col-span-2 ${compact ? "text-xs" : "text-sm"}`}>
+        <label className={`text-muted-foreground sm:col-span-2 ${compact ? "text-xs" : "text-sm"}`}>
           Applicability
           <select
             name="taxApplicability"
@@ -110,7 +110,7 @@ export function ExpenseTaxApplicabilityForm({
           </select>
         </label>
 
-        <label className={`text-zinc-600 dark:text-zinc-400 sm:col-span-2 ${compact ? "text-xs" : "text-sm"}`}>
+        <label className={`text-muted-foreground sm:col-span-2 ${compact ? "text-xs" : "text-sm"}`}>
           Tax code reference (why this applies or does not)
           <select
             name="taxCodeRefId"
@@ -129,14 +129,14 @@ export function ExpenseTaxApplicabilityForm({
         <div className="sm:col-span-2">
           <button
             type="button"
-            className="text-xs font-medium text-emerald-700 underline hover:no-underline dark:text-emerald-400"
+            className="text-xs font-medium text-accent underline hover:no-underline "
             onClick={() => setOpen(true)}
           >
             View tax guidance
           </button>
         </div>
 
-        <label className={`text-zinc-600 dark:text-zinc-400 sm:col-span-2 ${compact ? "text-xs" : "text-sm"}`}>
+        <label className={`text-muted-foreground sm:col-span-2 ${compact ? "text-xs" : "text-sm"}`}>
           Preparer folder (optional)
           <select
             name="taxCategory"
@@ -152,7 +152,7 @@ export function ExpenseTaxApplicabilityForm({
           </select>
         </label>
 
-        <label className={`text-zinc-600 dark:text-zinc-400 sm:col-span-2 ${compact ? "text-xs" : "text-sm"}`}>
+        <label className={`text-muted-foreground sm:col-span-2 ${compact ? "text-xs" : "text-sm"}`}>
           Audit note (documentation, missing receipt, context)
           <textarea
             name="taxNote"
@@ -172,7 +172,7 @@ export function ExpenseTaxApplicabilityForm({
             type="submit"
             className={
               compact
-                ? "rounded bg-zinc-800 px-2 py-1 text-xs text-white dark:bg-zinc-200 dark:text-zinc-900"
+                ? "rounded bg-zinc-800 px-2 py-1 text-xs text-white dark:bg-zinc-200 dark:text-foreground"
                 : "rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
             }
           >
@@ -195,7 +195,7 @@ export function ExpenseTaxApplicabilityForm({
           </button>
           <Link
             href={`/tax?year=${taxYear}`}
-            className="self-center text-xs font-medium text-emerald-700 underline dark:text-emerald-400"
+            className="self-center text-xs font-medium text-accent underline "
           >
             Open tax year
           </Link>
@@ -209,17 +209,17 @@ export function ExpenseTaxApplicabilityForm({
           aria-modal="true"
           aria-labelledby="tax-guidance-title"
         >
-          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
-            <h3 id="tax-guidance-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-white p-5 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
+            <h3 id="tax-guidance-title" className="text-lg font-semibold text-foreground">
               {activeEntry.title}
             </h3>
-            <p className="mt-1 text-xs font-medium text-emerald-800 dark:text-emerald-300">{activeEntry.citation}</p>
-            <p className="mt-3 text-sm text-zinc-700 dark:text-zinc-300">{activeEntry.summary}</p>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{activeEntry.detail}</p>
-            <p className="mt-4 border-t border-zinc-200 pt-3 text-xs text-zinc-500 dark:border-zinc-700">{TAX_LEGAL_DISCLAIMER}</p>
+            <p className="mt-1 text-xs font-medium text-accent ">{activeEntry.citation}</p>
+            <p className="mt-3 text-sm text-foreground">{activeEntry.summary}</p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{activeEntry.detail}</p>
+            <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground dark:border-zinc-700">{TAX_LEGAL_DISCLAIMER}</p>
             <button
               type="button"
-              className="mt-4 w-full rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+              className="mt-4 w-full btn btn-primary"
               onClick={() => setOpen(false)}
             >
               Close

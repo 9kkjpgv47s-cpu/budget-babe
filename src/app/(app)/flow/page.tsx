@@ -90,7 +90,7 @@ export default async function FlowPage({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Cash flow</h1>
-        <p className="mt-1 text-sm text-zinc-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Income rows are individual paychecks (plus legacy planned income if you have not added paychecks yet).{" "}
           (chronological).
         </p>
@@ -98,28 +98,28 @@ export default async function FlowPage({
           <MonthWorkflowLinks yearMonth={ym} />
         </div>
       </div>
-      <ul className="space-y-2 rounded-xl border border-zinc-200 bg-white p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <ul className="space-y-2 rounded-xl border border-border bg-white p-4 text-sm dark:border-border dark:bg-zinc-900">
         {rows.map((r, i) => (
           <li
             key={`${r.kind}-${i}-${r.sort}`}
-            className="flex flex-wrap items-baseline justify-between gap-2 border-b border-zinc-50 py-2 last:border-0 dark:border-zinc-800"
+            className="flex flex-wrap items-baseline justify-between gap-2 border-b border-zinc-50 py-2 last:border-0 dark:border-border"
           >
             <div>
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-muted-foreground">
                 {r.date.toLocaleDateString()}
               </span>
               <span className="ml-2 font-medium">{r.label}</span>
-              <span className="ml-2 text-xs uppercase text-zinc-400">
+              <span className="ml-2 text-xs uppercase text-muted-foreground">
                 {r.kind}
               </span>
             </div>
             {r.amountCents != null ? (
-              <span className="tabular-nums text-zinc-800 dark:text-zinc-200">
+              <span className="tabular-nums text-foreground">
                 {r.kind === "income" || r.kind === "paycheck" ? "+" : ""}
                 {formatCents(r.amountCents)}
               </span>
             ) : (
-              <span className="text-xs text-zinc-400">—</span>
+              <span className="text-xs text-muted-foreground">—</span>
             )}
           </li>
         ))}

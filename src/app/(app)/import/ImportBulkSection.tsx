@@ -63,9 +63,9 @@ export function ImportBulkSection({
 
   return (
     <div className="space-y-8">
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">CSV import</h2>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs text-muted-foreground">
           Optional: set 0-based column numbers if headers are not recognized.
         </p>
         <div className="mt-2 flex flex-wrap gap-2 text-xs">
@@ -109,7 +109,7 @@ export function ImportBulkSection({
             <p className="text-sm text-red-600">{csvState.error}</p>
           ) : null}
           {csvState?.message ? (
-            <p className="text-sm text-emerald-700 dark:text-emerald-300">
+            <p className="text-sm text-accent ">
               {csvState.message}
             </p>
           ) : null}
@@ -130,7 +130,7 @@ export function ImportBulkSection({
         </form>
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">OFX / QFX paste</h2>
         <form action={ofxAction} className="mt-3 space-y-2">
           <input type="hidden" name="yearMonth" value={yearMonth} />
@@ -138,7 +138,7 @@ export function ImportBulkSection({
             <p className="text-sm text-red-600">{ofxState.error}</p>
           ) : null}
           {ofxState?.message ? (
-            <p className="text-sm text-emerald-700">{ofxState.message}</p>
+            <p className="text-sm text-accent">{ofxState.message}</p>
           ) : null}
           <ImportSuccessNextSteps state={ofxState} yearMonth={yearMonth} />
           <textarea
@@ -149,7 +149,7 @@ export function ImportBulkSection({
           <button
             type="submit"
             disabled={ofxPending}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900"
+            className="btn btn-primary"
           >
             {ofxPending ? "…" : "Import OFX"}
           </button>
@@ -160,7 +160,7 @@ export function ImportBulkSection({
             <p className="text-sm text-red-600">{qifState.error}</p>
           ) : null}
           {qifState?.message ? (
-            <p className="text-sm text-emerald-700">{qifState.message}</p>
+            <p className="text-sm text-accent">{qifState.message}</p>
           ) : null}
           <ImportSuccessNextSteps state={qifState} yearMonth={yearMonth} />
           <textarea
@@ -179,9 +179,9 @@ export function ImportBulkSection({
         </form>
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="card p-5">
         <h2 className="font-medium">Split one purchase across lines</h2>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs text-muted-foreground">
           All lines share one split group id. Optional shared budget link.
         </p>
         <form action={splitAction} className="mt-4 space-y-3">
@@ -202,7 +202,7 @@ export function ImportBulkSection({
             <p className="text-sm text-red-600">{splitState.error}</p>
           ) : null}
           {splitState?.message ? (
-            <p className="text-sm text-emerald-700">{splitState.message}</p>
+            <p className="text-sm text-accent">{splitState.message}</p>
           ) : null}
           {categories.length > 0 ? (
             <select
@@ -259,7 +259,7 @@ export function ImportBulkSection({
             onClick={() =>
               setSplitLines((s) => [...s, { amount: "", description: "" }])
             }
-            className="text-xs text-emerald-700 underline"
+            className="text-xs text-accent underline"
           >
             Add line
           </button>

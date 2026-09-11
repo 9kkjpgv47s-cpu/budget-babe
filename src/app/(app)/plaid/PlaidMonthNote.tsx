@@ -2,8 +2,8 @@ import { MonthWorkflowLinks } from "@/components/MonthWorkflowLinks";
 
 export function PlaidMonthNote({ yearMonth }: { yearMonth: string }) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/50">
-      <p className="text-zinc-700 dark:text-zinc-300">
+    <div className="rounded-xl border border-border bg-muted/80 px-4 py-3 text-sm dark:border-border dark:bg-zinc-900/50">
+      <p className="text-foreground">
         Synced transactions land in <strong>{yearMonth}</strong> by transaction
         date. After sync, assign budget envelopes on Expenses — imports do not
         pick a budget automatically.

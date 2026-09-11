@@ -14,9 +14,9 @@ export function CategorySpendSummary({
   const sorted = [...rows].sort((a, b) => b.totalCents - a.totalCents);
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+    <section className="card p-5">
       <h2 className="font-medium">Spending by category</h2>
-      <p className="mt-1 text-xs text-zinc-500">
+      <p className="mt-1 text-xs text-muted-foreground">
         Totals for expenses with a category assigned this month. Tap a row to filter on
         Expenses.
       </p>
@@ -25,10 +25,10 @@ export function CategorySpendSummary({
           <li key={r.slug} className="flex items-center justify-between gap-2 py-2">
             <Link
               href={`/expenses?ym=${yearMonth}&cat=${encodeURIComponent(r.slug)}`}
-              className="text-emerald-700 underline hover:no-underline dark:text-emerald-300"
+              className="text-accent underline hover:no-underline "
             >
               {r.name}
-              <span className="ml-2 text-xs text-zinc-400 no-underline">
+              <span className="ml-2 text-xs text-muted-foreground no-underline">
                 {r.count} {r.count === 1 ? "expense" : "expenses"}
               </span>
             </Link>
@@ -36,13 +36,13 @@ export function CategorySpendSummary({
           </li>
         ))}
         {uncategorized && uncategorized.count > 0 ? (
-          <li className="flex items-center justify-between gap-2 border-t border-zinc-100 py-2 dark:border-zinc-800">
+          <li className="flex items-center justify-between gap-2 border-t border-zinc-100 py-2 dark:border-border">
             <Link
               href={`/expenses?ym=${yearMonth}&uncategorized=1`}
               className="text-amber-800 underline hover:no-underline dark:text-amber-200"
             >
               Uncategorized
-              <span className="ml-2 text-xs text-zinc-400 no-underline">
+              <span className="ml-2 text-xs text-muted-foreground no-underline">
                 {uncategorized.count}{" "}
                 {uncategorized.count === 1 ? "expense" : "expenses"}
               </span>

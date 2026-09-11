@@ -19,7 +19,7 @@ export function BudgetAddForm({
   return (
     <div>
       {heading ? <h3 className="text-sm font-medium">{heading}</h3> : null}
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted-foreground">
         Envelope name links to spending categories with the same name (e.g. Groceries).
       </p>
       <form
@@ -57,7 +57,7 @@ export function BudgetAddForm({
         <button
           type="submit"
           disabled={budPending}
-          className="sm:col-span-2 rounded-lg border border-zinc-300 py-2 text-sm font-medium hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-600 dark:hover:bg-zinc-800"
+          className="sm:col-span-2 rounded-lg border border-zinc-300 py-2 text-sm font-medium hover:bg-muted disabled:opacity-60 dark:border-zinc-600 dark:hover:bg-zinc-800"
         >
           Add budget line
         </button>

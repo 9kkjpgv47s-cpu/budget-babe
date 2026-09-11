@@ -89,7 +89,7 @@ export async function GoalsHouseholdContext({ yearMonth }: { yearMonth: string }
             <dt className="text-xs font-medium uppercase tracking-wide text-violet-800/70 dark:text-violet-200/70">
               Coach save target (month)
             </dt>
-            <dd className="mt-0.5 font-semibold tabular-nums text-emerald-800 dark:text-emerald-300">
+            <dd className="mt-0.5 font-semibold tabular-nums text-accent ">
               {formatCents(coachMonthlySave)}
             </dd>
             <dd className="text-xs text-violet-900/70 dark:text-violet-100/70">
@@ -125,11 +125,11 @@ export async function GoalsHouseholdContext({ yearMonth }: { yearMonth: string }
         </p>
       ) : null}
       <p className="mt-3 text-xs">
-        <Link href={`/?ym=${yearMonth}`} className="text-emerald-700 underline dark:text-emerald-400">
+        <Link href={`/?ym=${yearMonth}`} className="text-accent underline ">
           Overview
         </Link>
         {" · "}
-        <Link href={`/coach?ym=${yearMonth}`} className="text-emerald-700 underline dark:text-emerald-400">
+        <Link href={`/coach?ym=${yearMonth}`} className="text-accent underline ">
           Coach recommendations
         </Link>
       </p>

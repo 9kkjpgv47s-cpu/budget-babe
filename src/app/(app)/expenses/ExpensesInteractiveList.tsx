@@ -72,7 +72,7 @@ export function ExpensesInteractiveList({
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">All expenses</h1>
-        <p className="mt-1 text-sm text-zinc-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Select rows to apply tags, category, or budget link in bulk. Categories auto-link
           envelopes and tax folders when rules match.
           {monthExpenseTotal !== allExpenseCount ? (
@@ -88,7 +88,7 @@ export function ExpensesInteractiveList({
               <input type="hidden" name="yearMonth" value={yearMonth} />
               <button
                 type="submit"
-                className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100"
+                className="btn btn-outline !py-2 !text-xs"
               >
                 Apply rules to {uncategorizedCount} uncategorized
               </button>
@@ -98,7 +98,7 @@ export function ExpensesInteractiveList({
             <input type="hidden" name="yearMonth" value={yearMonth} />
             <button
               type="submit"
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200"
+              className="btn btn-outline !py-2 !text-xs"
             >
               Link categorized rows to budget envelopes
             </button>
@@ -107,7 +107,7 @@ export function ExpensesInteractiveList({
             <input type="hidden" name="yearMonth" value={yearMonth} />
             <button
               type="submit"
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200"
+              className="btn btn-outline !py-2 !text-xs"
             >
               Re-run merchant rules (tags + categories)
             </button>
@@ -116,7 +116,7 @@ export function ExpensesInteractiveList({
             <input type="hidden" name="yearMonth" value={yearMonth} />
             <button
               type="submit"
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200"
+              className="btn btn-outline !py-2 !text-xs"
             >
               Sync tax folders from categories
             </button>
@@ -128,11 +128,11 @@ export function ExpensesInteractiveList({
           </p>
         ) : null}
         <p className="mt-2 text-sm">
-          <Link href={`/?ym=${yearMonth}`} className="text-emerald-600 underline">
+          <Link href={`/?ym=${yearMonth}`} className="text-accent underline">
             ← Overview ({yearMonth})
           </Link>
           {" · "}
-          <Link href="/import" className="text-emerald-600 underline">
+          <Link href="/import" className="text-accent underline">
             Import
           </Link>
         </p>
@@ -142,18 +142,18 @@ export function ExpensesInteractiveList({
             name="q"
             defaultValue={searchQuery}
             placeholder="Search description, payee, or category"
-            className="min-w-[12rem] flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="min-w-[12rem] flex-1"
           />
           <button
             type="submit"
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900"
+            className="btn btn-primary"
           >
             Search
           </button>
           {searchQuery ? (
             <Link
               href={`/expenses?ym=${yearMonth}`}
-              className="self-center text-sm text-zinc-500 underline"
+              className="self-center text-sm text-muted-foreground underline"
             >
               Clear
             </Link>
@@ -208,13 +208,13 @@ export function ExpensesInteractiveList({
                 </option>
               ))}
             </select>
-            <label className="flex items-center gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+            <label className="flex items-center gap-1 text-xs text-muted-foreground">
               <input type="checkbox" name="applyTaxFromCategory" defaultChecked />
               Tax folder
             </label>
             <button
               type="submit"
-              className="rounded border border-zinc-400 px-3 py-1 text-xs font-medium dark:border-zinc-600"
+              className="btn btn-outline !py-1.5 !text-xs"
             >
               Set category
             </button>
@@ -240,7 +240,7 @@ export function ExpensesInteractiveList({
             </select>
             <button
               type="submit"
-              className="rounded border border-zinc-400 px-3 py-1 text-xs font-medium dark:border-zinc-600"
+              className="btn btn-outline !py-1.5 !text-xs"
             >
               Set budget
             </button>
@@ -248,7 +248,7 @@ export function ExpensesInteractiveList({
         </div>
       ) : null}
 
-      <ul className="space-y-4">
+      <ul className="space-y-2">
         {expenses.map((e) => (
           <ExpenseEditRow
             key={e.id}
@@ -262,7 +262,7 @@ export function ExpensesInteractiveList({
         ))}
       </ul>
       {expenses.length === 0 ? (
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted-foreground">
           {searchQuery && allExpenseCount > 0
             ? "No expenses match your search."
             : "No expenses this month."}

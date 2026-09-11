@@ -94,11 +94,11 @@ export function PlaidItemRow({
   }
 
   return (
-    <li className="flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+    <li className="flex flex-col gap-3 rounded-lg border border-border bg-white p-4 dark:border-border dark:bg-zinc-900/40">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-medium text-zinc-900 dark:text-zinc-50">{item.institutionName ?? "Linked account"}</p>
-          <p className="text-xs text-zinc-500">
+          <p className="font-medium text-foreground">{item.institutionName ?? "Linked account"}</p>
+          <p className="text-xs text-muted-foreground">
             Linked {new Date(item.createdAt).toLocaleString()}
             {item.lastSyncAt
               ? ` · last sync ${new Date(item.lastSyncAt).toLocaleString()}`
@@ -112,7 +112,7 @@ export function PlaidItemRow({
             type="button"
             disabled={pending}
             onClick={() => sync()}
-            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
           >
             Sync transactions
           </button>
@@ -138,23 +138,23 @@ export function PlaidItemRow({
       ) : null}
 
       {item.accounts.length > 0 ? (
-        <ul className="divide-y divide-zinc-100 rounded-md border border-zinc-100 dark:divide-zinc-800 dark:border-zinc-800">
+        <ul className="divide-y divide-zinc-100 rounded-md border border-zinc-100 dark:divide-zinc-800 dark:border-border">
           {item.accounts.map((a) => (
             <li key={a.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
               <div className="min-w-0">
-                <p className="truncate text-zinc-800 dark:text-zinc-200">
+                <p className="truncate text-foreground">
                   {a.name}
-                  {a.mask ? <span className="text-zinc-400"> ··{a.mask}</span> : null}
-                  <span className="ml-2 rounded bg-zinc-100 px-1.5 py-0.5 text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                  {a.mask ? <span className="text-muted-foreground"> ··{a.mask}</span> : null}
+                  <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground dark:bg-zinc-800 dark:text-muted-foreground">
                     {a.subtype ?? a.type}
                   </span>
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-4">
-                <span className="tabular-nums text-zinc-600 dark:text-zinc-300">
+                <span className="tabular-nums text-muted-foreground">
                   {a.currentBalanceCents != null ? formatCents(a.currentBalanceCents) : "—"}
                 </span>
-                <label className="flex items-center gap-1.5 text-xs text-zinc-500">
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <input
                     type="checkbox"
                     className="h-3.5 w-3.5 accent-emerald-600"
@@ -171,14 +171,14 @@ export function PlaidItemRow({
       ) : null}
 
       {msg ? (
-        <p className="text-sm text-zinc-700 dark:text-zinc-300">
+        <p className="text-sm text-foreground">
           {msg}
           {lastImported != null && lastImported > 0 ? (
             <>
               {" "}
               <Link
                 href={`/expenses?ym=${yearMonth}`}
-                className="font-medium text-emerald-700 underline dark:text-emerald-400"
+                className="font-medium text-accent underline "
               >
                 Open expenses for {yearMonth} →
               </Link>

@@ -38,7 +38,7 @@ export function CategorySuggestionHint({
   if (!message) return null;
 
   return (
-    <p className="text-xs text-emerald-700 dark:text-emerald-300">
+    <p className="text-xs text-accent ">
       Suggested: {message}
     </p>
   );
